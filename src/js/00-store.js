@@ -21,7 +21,10 @@
     { name: 'settings',      keyPath: 'k' }
   ];
 
-  var SETTINGS_KEY = 'app';
+  // §5.9 設定はプロフィールごと（"app|tamo"）。台本に属する共有情報は
+  // どちらの部屋のものでもないので、"shared" の1件に分けて置く。
+  var SETTINGS_PREFIX = 'app';
+  var SETTINGS_SHARED_KEY = 'shared';
   var LS_MIRROR_KEY = 'est.settings.mirror'; // 起動直後にテーマを当てるためのミラー
 
   // §5.7 の既定値
@@ -38,9 +41,14 @@
     dailyGoalLaps: 10,
     theme: 'auto',
     fontScale: 1.0,
-    // F1 で足す運用フラグ
-    samplesSeeded: false,
-    autoBackups: []            // §6.4 直近3世代
+    autoBackups: []            // §6.4 直近3世代（部屋ごとに持つ）
+  };
+
+  // 台本に属する共有情報（どちらの部屋からでも同じものを見る）
+  var DEFAULT_SHARED = {
+    samplesSeeded: false,      // サンプル台本を入れたか
+    publishedAt: 0,            // §6.5 最後に取り込んだ配信の publishedAt
+    feedTopicIds: []           // 配信由来のトピックid。手元で作った台本と区別するため
   };
 
   var dbPromise = null;
@@ -104,10 +112,33 @@
     return run(storeName, 'readwrite', function (s) { s.clear(); return true; });
   }
 
+  /* ---- プロフィールつきキー（§5.9） -----------------------------------
+     既存のキーの先頭に profileId を足すだけにする。
+       progress       "tamo|tpc_xxx|ln_001"
+       wordProgress   "mari|tpc_xxx|w_003"
+       topicProgress  "tamo|tpc_xxx"
+       settings       "app|tamo"
+     topics と audio は2人で共有するのでプレフィックスを付けない。
+  --------------------------------------------------------------------- */
+  function pid() {
+    // プロフィール未選択のまま呼ばれたら既定の部屋にしておく。
+    // （起動直後に読む設定のためで、選択画面はこの後すぐ出る）
+    return (EST.profile && EST.profile.get()) || 'tamo';
+  }
+
+  function progressKey(topicId, lineId) { return pid() + '|' + topicId + '|' + lineId; }
+  function wordProgressKey(topicId, wordId) { return pid() + '|' + topicId + '|' + wordId; }
+  function topicProgressKey(topicId) { return pid() + '|' + topicId; }
+  function settingsKey(profileId) { return SETTINGS_PREFIX + '|' + (profileId || pid()); }
+
+  // その行が今の部屋のものか（バックアップの絞り込みに使う）
+  function belongsToProfile(key, profileId) {
+    return String(key || '').indexOf((profileId || pid()) + '|') === 0;
+  }
+
   // ---- 設定 -----------------------------------------------------------
-  // settings ストアは {k:'app', v:{...}} の1件だけを持つ。
-  function deepDefault(v) {
-    var out = JSON.parse(JSON.stringify(DEFAULT_SETTINGS));
+  function withDefaults(defaults, v) {
+    var out = JSON.parse(JSON.stringify(defaults));
     if (v && typeof v === 'object') {
       Object.keys(v).forEach(function (k) {
         if (v[k] !== undefined) out[k] = v[k];
@@ -116,18 +147,32 @@
     return out;
   }
 
-  function loadSettings() {
-    return get('settings', SETTINGS_KEY).then(function (rec) {
+  function deepDefault(v) { return withDefaults(DEFAULT_SETTINGS, v); }
+
+  function loadSettings(profileId) {
+    return get('settings', settingsKey(profileId)).then(function (rec) {
       var s = deepDefault(rec && rec.v);
       mirror(s);
       return s;
     });
   }
 
-  function saveSettings(s) {
+  function saveSettings(s, profileId) {
     var v = deepDefault(s);
     mirror(v);
-    return put('settings', { k: SETTINGS_KEY, v: v }).then(function () { return v; });
+    return put('settings', { k: settingsKey(profileId), v: v }).then(function () { return v; });
+  }
+
+  // 共有情報（サンプル投入済みか、配信の publishedAt）
+  function loadShared() {
+    return get('settings', SETTINGS_SHARED_KEY).then(function (rec) {
+      return withDefaults(DEFAULT_SHARED, rec && rec.v);
+    });
+  }
+
+  function saveShared(v) {
+    var out = withDefaults(DEFAULT_SHARED, v);
+    return put('settings', { k: SETTINGS_SHARED_KEY, v: out }).then(function () { return out; });
   }
 
   // テーマと文字サイズだけは起動直後（DBを開く前）に当てたいので
@@ -152,6 +197,15 @@
     DB_VERSION: DB_VERSION,
     STORES: STORES.map(function (s) { return s.name; }),
     DEFAULT_SETTINGS: DEFAULT_SETTINGS,
+    DEFAULT_SHARED: DEFAULT_SHARED,
+    SETTINGS_SHARED_KEY: SETTINGS_SHARED_KEY,
+    progressKey: progressKey,
+    wordProgressKey: wordProgressKey,
+    topicProgressKey: topicProgressKey,
+    settingsKey: settingsKey,
+    belongsToProfile: belongsToProfile,
+    loadShared: loadShared,
+    saveShared: saveShared,
     open: open,
     get: get,
     getAll: getAll,

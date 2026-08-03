@@ -13,8 +13,9 @@ var ROOT    = __dirname;
 var SRC     = path.join(ROOT, 'src');
 var JS_DIR  = path.join(SRC, 'js');
 var DOCS    = path.join(ROOT, 'docs');
-var OUT_DIR = path.join(ROOT, 'dist');
-var OUT     = path.join(OUT_DIR, 'trainer.html');
+// GitHub Pages はリポジトリ直下の index.html をそのまま公開する（SPEC §6.5 / §10.4）。
+// data/scripts.json は運用データなので、このスクリプトからは一切触らない。
+var OUT     = path.join(ROOT, 'index.html');
 
 // 付録B: 短い台本と長い台本の両方を必ず内蔵する
 var SAMPLE_FILES = ['sample-topic.json', 'sample-topic-simcard.json'];
@@ -80,10 +81,9 @@ function build() {
     throw new Error('src/index.html に差し込み位置のコメントが見つかりません');
   }
 
-  if (!fs.existsSync(OUT_DIR)) fs.mkdirSync(OUT_DIR, { recursive: true });
   fs.writeFileSync(OUT, out, 'utf8');
 
-  console.log('dist/trainer.html を生成しました');
+  console.log('index.html を生成しました');
   files.forEach(function (f) {
     console.log('  + src/js/' + f.name + '  (' + f.code.length.toLocaleString() + ' 文字)');
   });

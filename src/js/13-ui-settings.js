@@ -19,14 +19,73 @@
 
     EST.store.loadSettings().then(function (s) {
       U.mount(box, [
+        profileCard(),
         displayCard(s),
+        EST.profile.canEdit() ? publishCard() : null,
         backupCard(),
         autoBackupCard(),
-        sampleCard(),
+        EST.profile.canEdit() ? sampleCard() : null,
         infoCard(s),
         dangerCard()
       ]);
     });
+  }
+
+  /* ---- プロフィール（部屋）§5.9 ------------------------------------------ */
+  function profileCard() {
+    var U = ui();
+    var cur = EST.profile.get();
+    return h('div', { class: 'card' }, [
+      h('h2', { class: 'card__title', text: '部屋' }),
+      h('div', { class: 'small muted', text: '台本は2人で共有し、練習の記録は部屋ごとに完全に分かれます。相手の記録は見えません。' }),
+      h('div', { class: 'row', style: { marginTop: '.5rem' } }, EST.profile.all().map(function (p) {
+        return h('button', {
+          class: 'btn' + (p.id === cur ? ' btn--primary' : ''),
+          text: p.label + '（' + p.sub + '）',
+          onClick: function () {
+            if (p.id === cur) return;
+            U.confirm('部屋を切り替える', p.label + 'の部屋に切り替えます。練習の記録は部屋ごとに別々です。', '切り替える')
+              .then(function (ok) {
+                if (!ok) return;
+                EST.profile.set(p.id);
+                location.hash = '#/';
+                location.reload();   // 設定も進捗も読み直しになるので、まるごと再起動する
+              });
+          }
+        });
+      }))
+    ]);
+  }
+
+  /* ---- 配信（タモやんのみ）§6.5 ------------------------------------------ */
+  function publishCard() {
+    var U = ui();
+    return h('div', { class: 'card' }, [
+      h('h2', { class: 'card__title', text: '台本の配信' }),
+      h('div', { class: 'small muted', text:
+        'いまアプリに入っている台本を scripts.json として書き出します。これを data/scripts.json に置いて push すると、次にまりが開いたときに反映されます。' }),
+      h('div', { class: 'row', style: { marginTop: '.5rem' } }, [
+        h('button', {
+          class: 'btn btn--primary', text: '配信用に書き出す',
+          onClick: function () {
+            EST.publish.exportFeedFile().then(function (feed) {
+              U.toast(feed.topics.length + '本を書き出しました');
+            });
+          }
+        }),
+        h('button', {
+          class: 'btn', text: 'いま配信を取りに行く',
+          onClick: function () {
+            EST.publish.sync().then(function (r) {
+              if (!r) { U.toast('更新はありませんでした'); return; }
+              U.toast('台本を更新しました');
+              location.hash = '#/';
+              EST.app.route();
+            });
+          }
+        })
+      ])
+    ]);
   }
 
   /* ---- 表示 -------------------------------------------------------------- */
@@ -70,7 +129,10 @@
   function backupCard() {
     return h('div', { class: 'card' }, [
       h('h2', { class: 'card__title', text: 'バックアップ' }),
-      h('div', { class: 'small muted', text: '全トピックと進捗と設定を1つのJSONにまとめます。音声キャッシュは再生成できるので含めません。' }),
+      // §5.9 まりは自分の進捗だけ。台本は配信で届くのでバックアップに含めない。
+      h('div', { class: 'small muted', text: EST.profile.canEdit()
+        ? '全トピックと進捗と設定を1つのJSONにまとめます。音声キャッシュは再生成できるので含めません。'
+        : 'あなたの練習の記録と設定をJSONにまとめます。台本は配信で届くので含めません。' }),
       h('div', { class: 'row', style: { marginTop: '.5rem' } }, [
         h('button', { class: 'btn btn--primary', text: '書き出す', onClick: doExport }),
         h('button', { class: 'btn', text: 'ファイルから復元', onClick: doImport })
@@ -99,12 +161,16 @@
         return;
       }
       var data = r.value;
-      if (!data || !Array.isArray(data.topics)) {
-        U.alert('復元できません', ['このファイルはバックアップではないようです（topics がありません）。']);
+      if (!data || data.kind !== EST.backup.BACKUP_KIND) {
+        U.alert('復元できません', ['このファイルはこのアプリのバックアップではないようです。']);
         return;
       }
+      // まりのバックアップには topics が入っていない（§5.9）
+      var summary = Array.isArray(data.topics)
+        ? ('トピック ' + data.topics.length + '件')
+        : ('練習の記録 ' + ((data.progress || []).length + (data.topicProgress || []).length) + '件');
       U.choose('復元のしかた',
-        'トピック ' + data.topics.length + '件。上書きすると今のデータは消えます。',
+        summary + '。上書きすると今のデータは消えます。',
         [
           { label: '中止', value: null },
           { label: 'マージ（同じidは新しい方）', value: 'merge' },
@@ -190,6 +256,7 @@
       EST.store.getAll('topicProgress')
     ]).then(function (r) {
       var rows = [
+        '部屋 ' + EST.profile.label() + '（' + EST.profile.get() + '）',
         'トピック ' + r[0].length + '件',
         '行の進捗 ' + r[1].length + '件',
         'トピックの進捗 ' + r[2].length + '件',
@@ -213,16 +280,22 @@
   /* ---- 危険な操作 ---------------------------------------------------------- */
   function dangerCard() {
     var U = ui();
+    // §5.9 まりは共有の台本を消せない。自分の記録だけを消す。
+    var full = EST.profile.canEdit();
+    var label = full ? '全データを削除' : 'わたしの記録を削除';
+    var detail = full
+      ? 'トピック・進捗・設定・自動バックアップをすべて消します。'
+      : 'あなたの練習の記録と設定だけを消します。台本は残ります。';
     return h('div', { class: 'card' }, [
       h('h2', { class: 'card__title', text: 'データを消す' }),
       h('div', { class: 'small muted', text: '先にバックアップを書き出しておいてください。元に戻せません。' }),
       h('button', {
-        class: 'btn btn--danger', style: { marginTop: '.5rem' }, text: '全データを削除',
+        class: 'btn btn--danger', style: { marginTop: '.5rem' }, text: label,
         onClick: function () {
-          U.confirm('全データを削除', 'トピック・進捗・設定・自動バックアップをすべて消します。', '削除する', 'danger')
+          U.confirm(label, detail, '削除する', 'danger')
             .then(function (ok) {
               if (!ok) return;
-              return EST.backup.wipeAll().then(function () {
+              return (full ? EST.backup.wipeAll() : EST.backup.wipeProfile()).then(function () {
                 U.toast('削除しました');
                 location.hash = '#/';
                 location.reload();

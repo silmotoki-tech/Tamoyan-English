@@ -28,6 +28,8 @@
      ===================================================================== */
   function renderImport(view) {
     var U = ui();
+    // §5.9 編集できない部屋からURL直打ちで入ってきた場合はホームへ戻す
+    if (!EST.profile.canEdit()) { location.hash = '#/'; return; }
     EST.app.setBar('新規トピック', [
       h('button', { class: 'btn btn--sm', text: 'ホーム', onClick: function () { location.hash = '#/'; } })
     ]);
@@ -163,6 +165,7 @@
 
   function renderEditor(view, id) {
     var U = ui();
+    if (!EST.profile.canEdit()) { location.hash = '#/'; return; }
     if (id === 'new') {
       if (!state) { location.hash = '#/import'; return; }
       build(view);
@@ -668,7 +671,7 @@
     s.push(bestAt);
     state.starts = s;
     fixStarts();
-    renderLines();
+    renderLines(); updateStats();
   }
 
   function removeBoundary(bi) {
@@ -676,7 +679,7 @@
     state.starts.splice(bi, 1);
     state.blockLabels.splice(bi, 1);
     fixStarts();
-    renderLines();
+    renderLines(); updateStats();
   }
 
   function moveBoundary(bi, to) {
@@ -694,7 +697,7 @@
     state.starts = pairs.map(function (p) { return p.s; });
     state.blockLabels = pairs.map(function (p) { return p.l; });
     fixStarts();
-    renderLines();
+    renderLines(); updateStats();
   }
 
   function startDrag(bi, ev, divEl) {

@@ -33,8 +33,9 @@ src/js/04-stage.js    ステージ進行
 src/js/05-mastery.js  定着判定
 src/js/1x-ui-*.js     各画面
 src/js/99-main.js     起動・ルーティング
-build.js              src/ を dist/trainer.html に結合（Node、依存ゼロ）
-dist/trainer.html     成果物。これ1枚で動く
+build.js              src/ を index.html に結合（Node、依存ゼロ）
+index.html            成果物。リポジトリ直下。これが GitHub Pages で公開される
+data/scripts.json     配信台本。build.js は絶対に触らない（タモやんが更新する運用データ）
 ```
 
 ファイルは番号順に結合される。新しいファイルを足すときは番号を振ること。
@@ -58,12 +59,14 @@ dist/trainer.html     成果物。これ1枚で動く
 ## 動作確認
 
 ```
-node build.js          # dist/trainer.html を生成
+node build.js          # 直下に index.html を生成
 ```
 
-生成後、`dist/trainer.html` をブラウザで開いて確認する。
-マイクを使う機能は `file://` では動かないので、確認時は簡易サーバを立てる。
+マイクと台本の取得（`data/scripts.json`）は `file://` では動かないので、
+確認は必ず簡易サーバを立てて行う。ダブルクリックで開かない。
 
 ```
-npx serve dist         # または python -m http.server
+npx serve .            # 表示されたURLをブラウザで開く
 ```
+
+**`data/scripts.json` を build.js から書き換えないこと。** 公開中の台本が消える。

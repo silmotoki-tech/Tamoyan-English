@@ -1,0 +1,3359 @@
+<!doctype html>
+<html lang="ja" data-theme="auto">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>英会話台本トレーナー</title>
+<style>
+/* =====================================================================
+   英会話台本トレーナー スタイル
+   - 英文と日本語でフォントを分ける（英文が日本語フォントだと読みにくく、
+     音読の質に直接響くため。SPEC §12）
+   - 色はすべて変数にしておき、テーマ切り替えは :root の属性だけで行う
+   ===================================================================== */
+
+:root {
+  --fs: 1;
+
+  --font-ja: "Hiragino Sans", "Noto Sans JP", "Yu Gothic UI", Meiryo, sans-serif;
+  --font-en: -apple-system, "Segoe UI", Roboto, sans-serif;
+
+  --bg:      #faf9f7;
+  --panel:   #ffffff;
+  --panel2:  #f4f2ee;
+  --ink:     #1d1c1a;
+  --muted:   #6f6a63;
+  --line:    #e2ded7;
+  --accent:  #2f6f4f;
+  --accent-ink: #ffffff;
+  --danger:  #a8352b;
+  --warn-bg: #fdf3d6;
+  --warn-ink:#6d5400;
+  --err-bg:  #fbe9e7;
+  --err-ink: #8f2a20;
+  --chip:    #eeebe5;
+  --shadow:  0 1px 2px rgba(0,0,0,.06), 0 4px 14px rgba(0,0,0,.05);
+}
+
+/* 端末設定に追従（data-theme="auto" のとき） */
+@media (prefers-color-scheme: dark) {
+  :root[data-theme="auto"] {
+    --bg:      #17181a;
+    --panel:   #212326;
+    --panel2:  #2a2d31;
+    --ink:     #e9e7e3;
+    --muted:   #9a958d;
+    --line:    #383c41;
+    --accent:  #6fbf92;
+    --accent-ink: #10231a;
+    --danger:  #e0796d;
+    --warn-bg: #3a3218;
+    --warn-ink:#e6cf8a;
+    --err-bg:  #3b2320;
+    --err-ink: #f0a99f;
+    --chip:    #32363b;
+    --shadow:  0 1px 2px rgba(0,0,0,.4), 0 4px 14px rgba(0,0,0,.3);
+  }
+}
+:root[data-theme="dark"] {
+  --bg:      #17181a;
+  --panel:   #212326;
+  --panel2:  #2a2d31;
+  --ink:     #e9e7e3;
+  --muted:   #9a958d;
+  --line:    #383c41;
+  --accent:  #6fbf92;
+  --accent-ink: #10231a;
+  --danger:  #e0796d;
+  --warn-bg: #3a3218;
+  --warn-ink:#e6cf8a;
+  --err-bg:  #3b2320;
+  --err-ink: #f0a99f;
+  --chip:    #32363b;
+  --shadow:  0 1px 2px rgba(0,0,0,.4), 0 4px 14px rgba(0,0,0,.3);
+}
+
+* { box-sizing: border-box; }
+
+html {
+  /* 文字サイズ設定（fontScale）は :root の変数だけで効かせる */
+  font-size: calc(16px * var(--fs));
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-ja);
+  line-height: 1.7;
+  font-size: 1rem;
+}
+
+/* 英文はここで必ず英字フォントに切り替える */
+.en, input.en, textarea.en { font-family: var(--font-en); }
+
+.app { min-height: 100vh; }
+
+/* ---- アプリバー -------------------------------------------------- */
+.appbar {
+  position: sticky; top: 0; z-index: 20;
+  display: flex; align-items: center; gap: .5rem;
+  min-height: 3rem;
+  padding: .45rem max(.75rem, env(safe-area-inset-left)) .45rem max(.75rem, env(safe-area-inset-right));
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: saturate(1.4) blur(8px);
+  border-bottom: 1px solid var(--line);
+}
+.appbar__title { font-size: 1rem; font-weight: 700; flex: 1 1 auto; min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.appbar__actions { display: flex; gap: .35rem; flex: 0 0 auto; }
+
+.view {
+  max-width: 44rem; margin: 0 auto;
+  padding: .85rem max(.75rem, env(safe-area-inset-left)) 5rem max(.75rem, env(safe-area-inset-right));
+}
+
+/* ---- 汎用パーツ ---------------------------------------------------- */
+.card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: .7rem;
+  padding: .85rem;
+  margin: 0 0 .75rem;
+  box-shadow: var(--shadow);
+}
+.card--flat { box-shadow: none; }
+.card__head { display: flex; align-items: baseline; gap: .5rem; margin-bottom: .5rem; }
+.card__title { font-size: .95rem; font-weight: 700; margin: 0; flex: 1 1 auto; }
+
+.section-title { font-size: .78rem; font-weight: 700; color: var(--muted);
+  letter-spacing: .04em; margin: 1.2rem 0 .45rem; }
+
+.muted { color: var(--muted); }
+.small { font-size: .8rem; }
+.tiny  { font-size: .72rem; }
+.mono  { font-variant-numeric: tabular-nums; }
+.right { margin-left: auto; }
+.row   { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
+.row--tight { gap: .3rem; }
+.stack > * + * { margin-top: .5rem; }
+.grow  { flex: 1 1 auto; min-width: 0; }
+.hidden { display: none !important; }
+
+/* ボタン */
+.btn {
+  font: inherit; font-size: .85rem; font-family: var(--font-ja);
+  padding: .42rem .8rem; border-radius: .5rem;
+  border: 1px solid var(--line); background: var(--panel); color: var(--ink);
+  cursor: pointer; line-height: 1.4; white-space: nowrap;
+  -webkit-tap-highlight-color: transparent;
+}
+.btn:hover:not(:disabled) { background: var(--panel2); }
+.btn:active:not(:disabled) { transform: translateY(1px); }
+.btn:disabled { opacity: .42; cursor: not-allowed; }
+.btn--primary { background: var(--accent); color: var(--accent-ink); border-color: transparent; font-weight: 700; }
+.btn--primary:hover:not(:disabled) { filter: brightness(1.07); background: var(--accent); }
+.btn--danger { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 35%, var(--line)); }
+.btn--ghost { border-color: transparent; background: transparent; }
+.btn--sm { font-size: .75rem; padding: .25rem .5rem; }
+.btn--icon { font-size: .8rem; padding: .25rem .45rem; min-width: 1.9rem; }
+.btn--block { width: 100%; justify-content: center; }
+.btn--wide { display: block; width: 100%; text-align: left; padding: .7rem .8rem; }
+
+/* 入力 */
+input[type="text"], input[type="number"], textarea, select {
+  font: inherit; font-size: .9rem; font-family: var(--font-ja);
+  width: 100%; padding: .45rem .55rem;
+  border: 1px solid var(--line); border-radius: .45rem;
+  background: var(--panel); color: var(--ink);
+}
+textarea { resize: vertical; line-height: 1.55; }
+input:focus, textarea:focus, select:focus {
+  outline: 2px solid color-mix(in srgb, var(--accent) 55%, transparent); outline-offset: 1px;
+}
+label.field { display: block; }
+label.field > .field__label { display: block; font-size: .72rem; color: var(--muted); margin-bottom: .15rem; }
+
+/* チップ */
+.chip {
+  display: inline-flex; align-items: center; gap: .25rem;
+  font-size: .72rem; padding: .12rem .45rem; border-radius: 1rem;
+  background: var(--chip); color: var(--muted); white-space: nowrap;
+}
+.chip--btn { cursor: pointer; border: none; font-family: var(--font-ja); }
+.chip--btn:hover { filter: brightness(.96); }
+
+/* 通知 */
+.note-box { border-radius: .5rem; padding: .5rem .65rem; font-size: .8rem; }
+.note-box--warn { background: var(--warn-bg); color: var(--warn-ink); }
+.note-box--err  { background: var(--err-bg);  color: var(--err-ink); }
+.note-box ul { margin: .3rem 0 0; padding-left: 1.1rem; }
+.note-box li { margin: .1rem 0; }
+
+/* トースト */
+.toast-root { position: fixed; left: 0; right: 0; bottom: 1.2rem; z-index: 60;
+  display: flex; flex-direction: column; align-items: center; gap: .4rem; pointer-events: none; }
+.toast { background: #22262b; color: #f4f2ee; font-size: .82rem;
+  padding: .5rem .9rem; border-radius: 1.2rem; box-shadow: 0 6px 20px rgba(0,0,0,.28);
+  max-width: 90vw; }
+
+/* ダイアログ */
+.modal-back { position: fixed; inset: 0; z-index: 50; background: rgba(0,0,0,.42);
+  display: flex; align-items: center; justify-content: center; padding: 1rem; }
+.modal { background: var(--panel); border-radius: .8rem; padding: 1rem;
+  width: min(28rem, 100%); max-height: 84vh; overflow: auto; box-shadow: 0 12px 40px rgba(0,0,0,.3); }
+.modal__title { font-size: .95rem; font-weight: 700; margin: 0 0 .5rem; }
+.modal__body { font-size: .87rem; }
+.modal__actions { display: flex; gap: .4rem; justify-content: flex-end; flex-wrap: wrap; margin-top: .9rem; }
+
+/* ---- ホーム -------------------------------------------------------- */
+.home-item { display: flex; align-items: center; gap: .6rem; width: 100%;
+  padding: .7rem .8rem; border: 1px solid var(--line); background: var(--panel);
+  border-radius: .6rem; margin-bottom: .4rem; font: inherit; font-size: .9rem;
+  color: var(--ink); text-align: left; cursor: pointer; }
+.home-item:hover:not(:disabled) { background: var(--panel2); }
+.home-item:disabled { opacity: .5; cursor: default; }
+.home-item__icon { font-size: 1rem; flex: 0 0 auto; width: 1.4rem; text-align: center; }
+.home-item__body { flex: 1 1 auto; min-width: 0; }
+.home-item__sub { font-size: .72rem; color: var(--muted); }
+
+.topic-card { display: block; width: 100%; text-align: left; cursor: pointer;
+  font: inherit; color: var(--ink);
+  background: var(--panel); border: 1px solid var(--line); border-radius: .6rem;
+  padding: .7rem .8rem; margin-bottom: .45rem; }
+.topic-card:hover { background: var(--panel2); }
+.topic-card__title { font-weight: 700; font-size: .92rem; }
+.topic-card__meta { font-size: .74rem; color: var(--muted); margin-top: .15rem; }
+
+.empty { text-align: center; color: var(--muted); font-size: .85rem; padding: 1.6rem .5rem; }
+
+/* ---- トピック詳細 --------------------------------------------------- */
+.line-view { display: flex; gap: .55rem; padding: .5rem 0; border-top: 1px solid var(--line); }
+.line-view:first-child { border-top: none; }
+.line-view__no { flex: 0 0 2.6rem; font-size: .7rem; color: var(--muted); padding-top: .2rem; }
+.line-view__en { font-size: .95rem; }
+.line-view__ja { font-size: .8rem; color: var(--muted); }
+.line-view__mine { color: var(--accent); font-weight: 700; }
+
+.block-head { font-size: .74rem; font-weight: 700; color: var(--muted);
+  background: var(--panel2); border-radius: .35rem; padding: .18rem .5rem; margin: .6rem 0 .2rem; }
+
+/* ---- 編集プレビュー ------------------------------------------------- */
+.stat-bar { position: sticky; top: 3rem; z-index: 15;
+  background: var(--panel2); border: 1px solid var(--line); border-radius: .5rem;
+  padding: .4rem .6rem; font-size: .76rem; color: var(--muted);
+  margin-bottom: .7rem; display: flex; flex-wrap: wrap; gap: .1rem .8rem; }
+.stat-bar b { color: var(--ink); font-variant-numeric: tabular-nums; }
+
+.ed-line { border: 1px solid var(--line); border-radius: .55rem; background: var(--panel);
+  padding: .5rem .55rem; margin-bottom: .35rem; }
+.ed-line.is-drop { border-color: var(--accent); box-shadow: 0 -3px 0 -1px var(--accent) inset; }
+.ed-line__top { display: flex; align-items: center; gap: .35rem; margin-bottom: .35rem; }
+.ed-line__no { font-size: .7rem; color: var(--muted); min-width: 1.6rem; }
+.ed-line__sp { width: auto; max-width: 9rem; font-size: .78rem; padding: .2rem .35rem; }
+.ed-line__tools { display: flex; gap: .2rem; margin-left: auto; flex-wrap: wrap; }
+.ed-line textarea { font-size: .88rem; }
+.ed-line textarea.ja-in { font-size: .82rem; }
+.ed-line__extra { margin-top: .35rem; padding-top: .35rem; border-top: 1px dashed var(--line); }
+
+/* チャンク境界エディタ（§1.8。自動分割は必ず外すのでタップで直せるようにする） */
+.chunks { font-family: var(--font-en); font-size: .82rem; line-height: 2.1; }
+.chunks__w { padding: .05rem 0; }
+.chunks__gap { display: inline-block; width: .85rem; text-align: center; color: var(--line);
+  cursor: pointer; border-radius: .2rem; user-select: none; }
+.chunks__gap:hover { background: var(--chip); color: var(--muted); }
+.chunks__bar { display: inline-block; width: 1rem; text-align: center; color: var(--accent);
+  cursor: pointer; font-weight: 700; border-radius: .2rem; user-select: none; }
+.chunks__bar:hover { background: var(--chip); }
+
+/* ブロック境界（ドラッグで動かす） */
+.blk-div { display: flex; align-items: center; gap: .4rem; margin: .5rem 0 .35rem;
+  padding: .25rem .35rem; border-radius: .4rem; background: var(--panel2);
+  border: 1px dashed var(--line); }
+.blk-div.is-dragging { border-style: solid; border-color: var(--accent); opacity: .85; }
+.blk-div__grip { cursor: grab; touch-action: none; user-select: none;
+  font-size: .8rem; color: var(--muted); padding: .1rem .35rem; border-radius: .3rem; }
+.blk-div__grip:active { cursor: grabbing; }
+.blk-div__label { font-size: .76rem; padding: .15rem .4rem; max-width: 12rem; }
+.blk-div__no { font-size: .7rem; color: var(--muted); font-weight: 700; }
+
+/* 語彙エディタ */
+.word-row { border: 1px solid var(--line); border-radius: .5rem; padding: .45rem .5rem;
+  margin-bottom: .35rem; background: var(--panel); }
+.word-row__grid { display: grid; grid-template-columns: 1fr 1fr auto; gap: .3rem; align-items: start; }
+.word-row__ids { display: flex; flex-wrap: wrap; gap: .25rem; margin-top: .3rem; align-items: center; }
+@media (max-width: 30rem) {
+  .word-row__grid { grid-template-columns: 1fr; }
+}
+
+/* 貼り付け画面 */
+.paste-area { min-height: 12rem; font-size: .85rem; }
+.sample-hint { background: var(--panel2); border-radius: .45rem; padding: .5rem .6rem;
+  font-size: .74rem; color: var(--muted); white-space: pre-wrap; }
+.sample-hint .en { font-size: .76rem; }
+
+/* 設定 */
+.setting-row { display: flex; align-items: center; gap: .6rem; padding: .5rem 0;
+  border-top: 1px solid var(--line); }
+.setting-row:first-child { border-top: none; }
+.setting-row__label { flex: 1 1 auto; font-size: .86rem; }
+.setting-row__sub { font-size: .72rem; color: var(--muted); }
+.setting-row select, .setting-row input { width: auto; min-width: 6rem; }
+
+</style>
+</head>
+<body>
+  <div class="app">
+    <header class="appbar" id="appbar"></header>
+    <main class="view" id="view"></main>
+  </div>
+  <div id="modal-root"></div>
+  <div id="toast-root" class="toast-root" aria-live="polite"></div>
+<script>
+window.EST = window.EST || {};
+window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェックインカウンター","titleEn":"At the Check-in Counter","level":"B1","tags":["旅行","空港"],"myRole":"S2","speakers":[{"id":"S1","label":"Agent","gender":"female"},{"id":"S2","label":"You","gender":"male"}],"blocks":[],"lines":[{"id":"ln_001","speakerId":"S1","en":"Good morning. May I see your passport, please?","ja":"おはようございます。パスポートを拝見してもよろしいですか？","note":"May I 〜 は Can I 〜 より丁寧。カウンター業務では定番。","skip":false},{"id":"ln_002","speakerId":"S2","en":"Sure, here you go.","ja":"はい、どうぞ。","note":"Here you go. は物を手渡すときの定型。","skip":false},{"id":"ln_003","speakerId":"S1","en":"Thank you. Are you checking any bags today?","ja":"ありがとうございます。本日、お預けの荷物はございますか？","note":"check a bag = 荷物を預ける。","skip":false},{"id":"ln_004","speakerId":"S2","en":"Yes, just this one suitcase.","ja":"はい、このスーツケース一つだけです。","note":"just = only。会話では just のほうが自然で柔らかい。","skip":false},{"id":"ln_005","speakerId":"S1","en":"Could you place it on the scale for me?","ja":"こちらの計りに載せていただけますか？","note":"place = put のフォーマル版。","skip":false},{"id":"ln_006","speakerId":"S2","en":"There you go. Is it under the weight limit?","ja":"はい、載せました。重量制限は超えていませんか？","note":"There you go. は動作を完了したときの「はい、どうぞ」。","skip":false},{"id":"ln_007","speakerId":"S1","en":"It's twenty-two kilos, so you're fine. The limit is twenty-three.","ja":"22キロですので大丈夫です。制限は23キロまでです。","note":"you're fine = 問題ありません。","skip":false},{"id":"ln_008","speakerId":"S2","en":"Great. Could I get an aisle seat if possible?","ja":"よかった。できれば通路側の席をお願いできますか？","note":"aisle seat = 通路側。if possible を添えると角が立たない。","skip":false},{"id":"ln_009","speakerId":"S1","en":"Let me check. I have one available near the front.","ja":"確認いたします。前方に一席空きがございます。","note":"Let me check. は「確認します」の最頻出フレーズ。","skip":false},{"id":"ln_010","speakerId":"S2","en":"That would be perfect. Thank you so much.","ja":"それで完璧です。本当にありがとうございます。","note":"提案を受け入れるときの丁寧な言い方。","skip":false},{"id":"ln_011","speakerId":"S1","en":"Here's your boarding pass. Your gate is B12 and boarding starts at ten forty.","ja":"こちらが搭乗券です。ゲートはB12、搭乗開始は10時40分です。","note":"時刻は ten forty のように読む。","skip":false},{"id":"ln_012","speakerId":"S2","en":"Got it. Thanks for your help. Have a good one.","ja":"承知しました。ご対応ありがとうございます。良い一日を。","note":"Have a good one. は Have a nice day. のカジュアル版。","skip":false}],"words":[{"id":"w_001","en":"Here you go.","ja":"はい、どうぞ","type":"phrase","lineIds":["ln_002"],"note":"物を手渡すとき"},{"id":"w_002","en":"check a bag","ja":"荷物を預ける","type":"phrase","lineIds":["ln_003"],"note":""},{"id":"w_003","en":"place it on the scale","ja":"計りに載せる","type":"phrase","lineIds":["ln_005"],"note":""},{"id":"w_004","en":"There you go.","ja":"はい、できました","type":"phrase","lineIds":["ln_006"],"note":"動作を完了したとき"},{"id":"w_005","en":"weight limit","ja":"重量制限","type":"phrase","lineIds":["ln_006"],"note":""},{"id":"w_006","en":"You're fine.","ja":"問題ありません","type":"phrase","lineIds":["ln_007"],"note":""},{"id":"w_007","en":"aisle seat","ja":"通路側の席","type":"phrase","lineIds":["ln_008"],"note":"窓側は window seat"},{"id":"w_008","en":"if possible","ja":"できれば","type":"phrase","lineIds":["ln_008"],"note":"後ろに添えると柔らかくなる"},{"id":"w_009","en":"Let me check.","ja":"確認しますね","type":"phrase","lineIds":["ln_009"],"note":""},{"id":"w_010","en":"available","ja":"空いている、利用できる","type":"word","lineIds":["ln_009"],"note":""},{"id":"w_011","en":"That would be perfect.","ja":"それで完璧です","type":"phrase","lineIds":["ln_010"],"note":"提案を受け入れる丁寧な言い方"},{"id":"w_012","en":"boarding pass","ja":"搭乗券","type":"phrase","lineIds":["ln_011"],"note":""},{"id":"w_013","en":"Have a good one.","ja":"良い一日を","type":"phrase","lineIds":["ln_012"],"note":"Have a nice day. のカジュアル版"}],"createdAt":1754179200000,"updatedAt":1754179200000,"schemaVersion":3},{"id":"tpc_sample_simcard","title":"空港でSIMカードを購入する","titleEn":"Buying a SIM Card at the Airport","level":"B1","tags":["旅行","買い物","空港"],"myRole":"S2","speakers":[{"id":"S1","label":"Staff","gender":"female"},{"id":"S2","label":"You","gender":"male"}],"blocks":[{"id":"b1","label":"用件を伝える","from":"ln_001","to":"ln_006"},{"id":"b2","label":"プランを確認する","from":"ln_007","to":"ln_012"},{"id":"b3","label":"開通してもらう","from":"ln_013","to":"ln_018"},{"id":"b4","label":"支払って締める","from":"ln_019","to":"ln_022"}],"lines":[{"id":"ln_001","speakerId":"S2","en":"Hi, I'd like to get a SIM card for my phone.","ja":"こんにちは、スマホ用のSIMカードが欲しいのですが。","note":"I'd like to 〜 は I want to 〜 より丁寧で、店頭ではこちらが基本。","skip":false},{"id":"ln_002","speakerId":"S1","en":"Sure. How long are you staying?","ja":"かしこまりました。ご滞在はどのくらいですか？","note":"How long are you staying? は滞在期間を聞く定番。現在進行形で未来を表す。","skip":false},{"id":"ln_003","speakerId":"S2","en":"About ten days, and I'll be traveling around a lot.","ja":"10日ほどです。あちこち移動する予定です。","note":"travel around = あちこち回る。理由を一言添えると会話が続きやすい。","skip":false},{"id":"ln_004","speakerId":"S1","en":"Got it. Do you need calls, or just data?","ja":"承知しました。通話も必要ですか、それともデータだけですか？","note":"Got it. は「承知しました」の口語。店員も客も使う。","skip":false},{"id":"ln_005","speakerId":"S2","en":"Mostly data, but I might need to make a few local calls.","ja":"ほとんどデータですが、現地で何回か電話するかもしれません。","note":"might need to 〜 で「〜するかもしれない」と含みを残す言い方。","skip":false},{"id":"ln_006","speakerId":"S1","en":"Then I'd recommend our ten-day plan. Twenty gigs for thirty dollars.","ja":"でしたら10日間プランがおすすめです。20ギガで30ドルです。","note":"gigs = gigabytes の口語。値段は for + 金額。","skip":false},{"id":"ln_007","speakerId":"S2","en":"What happens if I run out of data before I leave?","ja":"帰国前にデータを使い切ったらどうなりますか？","note":"run out of 〜 = 〜を使い切る。旅行英語の最頻出表現のひとつ。","skip":false},{"id":"ln_008","speakerId":"S1","en":"It slows down, but you can still use it. Or you can top up anytime.","ja":"速度が落ちますが、使い続けられます。いつでもチャージもできます。","note":"top up = チャージする、追加購入する。イギリス系英語圏で特によく使う。","skip":false},{"id":"ln_009","speakerId":"S2","en":"That sounds fine. Does it come with a local number?","ja":"それで問題なさそうです。現地の電話番号は付いてきますか？","note":"come with 〜 = 〜が付いてくる。商品説明で頻出。","skip":false},{"id":"ln_010","speakerId":"S1","en":"Yes, you'll get one as soon as we activate it.","ja":"はい、開通した時点ですぐ発番されます。","note":"activate = 開通する、有効化する。as soon as 〜 = 〜したらすぐ。","skip":false},{"id":"ln_011","speakerId":"S2","en":"One more thing. Will it work with my phone?","ja":"もう一つだけ。私のスマホで使えますか？","note":"One more thing. は追加で質問するときの前置き。丸暗記推奨。","skip":false},{"id":"ln_012","speakerId":"S1","en":"Let me check. Is your phone unlocked?","ja":"確認しますね。SIMロックは解除されていますか？","note":"unlocked = SIMロック解除済み。Let me check. は確認の定番。","skip":false},{"id":"ln_013","speakerId":"S2","en":"I think so. I bought it directly from the manufacturer.","ja":"たぶん大丈夫です。メーカーから直接買ったので。","note":"I think so. で断定を避ける。directly from 〜 = 〜から直接。","skip":false},{"id":"ln_014","speakerId":"S1","en":"Perfect. Could I borrow your phone for a second?","ja":"承知しました。少しスマホをお借りできますか？","note":"for a second = ちょっとの間。borrow は「借りる」で使用者が持ち帰らない場面。","skip":false},{"id":"ln_015","speakerId":"S2","en":"Sure, here you go. Should I keep the old SIM?","ja":"はい、どうぞ。元のSIMは取っておいたほうがいいですか？","note":"Here you go. は物を手渡すときの定型。Should I 〜? で助言を求める。","skip":false},{"id":"ln_016","speakerId":"S1","en":"Definitely. Put it somewhere safe so you don't lose it.","ja":"ぜひそうしてください。無くさないよう安全な場所に。","note":"Definitely. は強い肯定の相づち。so + 主語 + 動詞 で目的を表す。","skip":false},{"id":"ln_017","speakerId":"S2","en":"Will do. Do I need to change any settings myself?","ja":"そうします。設定は自分で変える必要がありますか？","note":"Will do. = そうします。I will do it. の省略で、口語では非常によく使う。","skip":false},{"id":"ln_018","speakerId":"S1","en":"No, it's automatic. Just restart your phone if it doesn't connect.","ja":"いいえ、自動です。繋がらなければ再起動だけしてください。","note":"Just 〜 で「〜するだけ」。トラブル対応の説明で頻出。","skip":false},{"id":"ln_019","speakerId":"S2","en":"Got it. Can I pay by card?","ja":"わかりました。カードで払えますか？","note":"pay by card / pay in cash。前置詞が by と in で違う点に注意。","skip":false},{"id":"ln_020","speakerId":"S1","en":"Of course. Just tap here whenever you're ready.","ja":"もちろんです。準備ができたらこちらにタッチしてください。","note":"whenever you're ready = ご準備ができ次第。急かさない丁寧な言い方。","skip":false},{"id":"ln_021","speakerId":"S2","en":"Thanks a lot. You've been really helpful.","ja":"ありがとうございます。とても助かりました。","note":"You've been really helpful. は現在完了で「今までのやりとり全体」への感謝。","skip":false},{"id":"ln_022","speakerId":"S1","en":"No problem at all. Enjoy your trip.","ja":"とんでもないです。良いご旅行を。","note":"No problem at all. は You're welcome. のカジュアルで温かい版。","skip":false}],"words":[{"id":"w_001","en":"travel around","ja":"あちこち回る、移動して回る","type":"phrase","lineIds":["ln_003"],"note":""},{"id":"w_002","en":"Got it.","ja":"わかりました、承知しました","type":"phrase","lineIds":["ln_004","ln_019"],"note":"客も店員も使える万能の相づち"},{"id":"w_003","en":"gigs","ja":"ギガ（ギガバイト）","type":"word","lineIds":["ln_006"],"note":"gigabytes の口語。複数形で使う"},{"id":"w_004","en":"run out of","ja":"使い切る、切らす","type":"phrase","lineIds":["ln_007"],"note":"旅行英語の最頻出表現のひとつ"},{"id":"w_005","en":"slow down","ja":"速度が落ちる、遅くなる","type":"phrase","lineIds":["ln_008"],"note":""},{"id":"w_006","en":"top up","ja":"チャージする、追加購入する","type":"phrase","lineIds":["ln_008"],"note":"イギリス系英語圏で特によく使う"},{"id":"w_007","en":"come with","ja":"〜が付いてくる、〜が含まれる","type":"phrase","lineIds":["ln_009"],"note":"商品説明で頻出"},{"id":"w_008","en":"activate","ja":"開通する、有効化する","type":"word","lineIds":["ln_010"],"note":""},{"id":"w_009","en":"as soon as","ja":"〜したらすぐに","type":"phrase","lineIds":["ln_010"],"note":""},{"id":"w_010","en":"One more thing.","ja":"もう一つだけ（質問が）","type":"phrase","lineIds":["ln_011"],"note":"追加質問の前置き。丸暗記推奨"},{"id":"w_011","en":"Let me check.","ja":"確認しますね","type":"phrase","lineIds":["ln_012"],"note":""},{"id":"w_012","en":"unlocked","ja":"SIMロックが解除された","type":"word","lineIds":["ln_012"],"note":"反対は locked"},{"id":"w_013","en":"manufacturer","ja":"メーカー、製造元","type":"word","lineIds":["ln_013"],"note":""},{"id":"w_014","en":"for a second","ja":"ちょっとの間","type":"phrase","lineIds":["ln_014"],"note":""},{"id":"w_015","en":"Here you go.","ja":"はい、どうぞ","type":"phrase","lineIds":["ln_015"],"note":"物を手渡すときの定型"},{"id":"w_016","en":"Definitely.","ja":"ぜひ、もちろん","type":"phrase","lineIds":["ln_016"],"note":"強い肯定の相づち"},{"id":"w_017","en":"Will do.","ja":"そうします","type":"phrase","lineIds":["ln_017"],"note":"I will do it. の省略。口語で頻出"},{"id":"w_018","en":"restart","ja":"再起動する","type":"word","lineIds":["ln_018"],"note":""},{"id":"w_019","en":"pay by card","ja":"カードで払う","type":"phrase","lineIds":["ln_019"],"note":"現金なら pay in cash。前置詞が違う"},{"id":"w_020","en":"whenever you're ready","ja":"ご準備ができ次第","type":"phrase","lineIds":["ln_020"],"note":"急かさない丁寧な言い方"}],"createdAt":1754179200000,"updatedAt":1754179200000,"schemaVersion":3}];
+</script>
+<script>
+/* ---- 00-store.js ---- */
+/* =====================================================================
+   00-store.js — IndexedDB の薄いラッパ（SPEC §5.8）
+   IndexedDB = ブラウザに内蔵されたデータベース。localStorage と違って
+   大きなデータや Blob（音声）を入れられるので、保存先はこちらに統一する。
+   ===================================================================== */
+;(function (EST) {
+  'use strict';
+
+  var DB_NAME = 'est-db';
+  var DB_VERSION = 3;
+
+  // F1 で実際に使うのは topics / topicProgress / settings の3つだけ。
+  // ただし後から version を上げると移行処理を書く羽目になるので、
+  // §5.8 の6ストアを最初から全部作っておく。
+  var STORES = [
+    { name: 'topics',        keyPath: 'id' },
+    { name: 'progress',      keyPath: 'key' },
+    { name: 'wordProgress',  keyPath: 'key' },
+    { name: 'topicProgress', keyPath: 'topicId' },
+    { name: 'audio',         keyPath: 'key' },
+    { name: 'settings',      keyPath: 'k' }
+  ];
+
+  // §5.9 設定はプロフィールごと（"app|tamo"）。台本に属する共有情報は
+  // どちらの部屋のものでもないので、"shared" の1件に分けて置く。
+  var SETTINGS_PREFIX = 'app';
+  var SETTINGS_SHARED_KEY = 'shared';
+  var LS_MIRROR_KEY = 'est.settings.mirror'; // 起動直後にテーマを当てるためのミラー
+
+  // §5.7 の既定値
+  var DEFAULT_SETTINGS = {
+    engine: 'local',
+    cloud: { endpoint: '', token: '', voiceMap: {}, model: 'tts-1-hd' },
+    ttsRate: 0.95,
+    localVoiceEn: null,
+    mic: { noiseFloor: null, onsetThreshold: null, calibratedAt: null },
+    countRatio: 0.55,
+    masteryBase: 1200,
+    masteryPerWord: 60,
+    inputMode: 'voice',
+    dailyGoalLaps: 10,
+    theme: 'auto',
+    fontScale: 1.0,
+    autoBackups: []            // §6.4 直近3世代（部屋ごとに持つ）
+  };
+
+  // 台本に属する共有情報（どちらの部屋からでも同じものを見る）
+  var DEFAULT_SHARED = {
+    samplesSeeded: false,      // サンプル台本を入れたか
+    publishedAt: 0,            // §6.5 最後に取り込んだ配信の publishedAt
+    feedTopicIds: []           // 配信由来のトピックid。手元で作った台本と区別するため
+  };
+
+  var dbPromise = null;
+
+  function open() {
+    if (dbPromise) return dbPromise;
+    dbPromise = new Promise(function (resolve, reject) {
+      if (!self.indexedDB) { reject(new Error('この環境では IndexedDB が使えません')); return; }
+      var req = indexedDB.open(DB_NAME, DB_VERSION);
+      req.onupgradeneeded = function () {
+        var db = req.result;
+        STORES.forEach(function (s) {
+          if (!db.objectStoreNames.contains(s.name)) {
+            db.createObjectStore(s.name, { keyPath: s.keyPath });
+          }
+        });
+      };
+      req.onsuccess = function () { resolve(req.result); };
+      req.onerror = function () { reject(req.error); };
+      req.onblocked = function () { reject(new Error('別のタブが古いデータベースを開いています')); };
+    });
+    return dbPromise;
+  }
+
+  function run(storeName, mode, fn) {
+    return open().then(function (db) {
+      return new Promise(function (resolve, reject) {
+        var tx = db.transaction(storeName, mode);
+        var store = tx.objectStore(storeName);
+        var out;
+        try { out = fn(store); } catch (e) { reject(e); return; }
+        tx.oncomplete = function () { resolve(out && out.__req ? out.__req.result : out); };
+        tx.onerror = function () { reject(tx.error); };
+        tx.onabort = function () { reject(tx.error || new Error('保存が中断されました')); };
+      });
+    });
+  }
+
+  function wrap(req) { return { __req: req }; }
+
+  function get(storeName, key) {
+    return run(storeName, 'readonly', function (s) { return wrap(s.get(key)); });
+  }
+  function getAll(storeName) {
+    return run(storeName, 'readonly', function (s) { return wrap(s.getAll()); })
+      .then(function (r) { return r || []; });
+  }
+  function put(storeName, value) {
+    return run(storeName, 'readwrite', function (s) { s.put(value); return value; });
+  }
+  function bulkPut(storeName, values) {
+    return run(storeName, 'readwrite', function (s) {
+      (values || []).forEach(function (v) { s.put(v); });
+      return (values || []).length;
+    });
+  }
+  function del(storeName, key) {
+    return run(storeName, 'readwrite', function (s) { s.delete(key); return true; });
+  }
+  function clear(storeName) {
+    return run(storeName, 'readwrite', function (s) { s.clear(); return true; });
+  }
+
+  /* ---- プロフィールつきキー（§5.9） -----------------------------------
+     既存のキーの先頭に profileId を足すだけにする。
+       progress       "tamo|tpc_xxx|ln_001"
+       wordProgress   "mari|tpc_xxx|w_003"
+       topicProgress  "tamo|tpc_xxx"
+       settings       "app|tamo"
+     topics と audio は2人で共有するのでプレフィックスを付けない。
+  --------------------------------------------------------------------- */
+  function pid() {
+    // プロフィール未選択のまま呼ばれたら既定の部屋にしておく。
+    // （起動直後に読む設定のためで、選択画面はこの後すぐ出る）
+    return (EST.profile && EST.profile.get()) || 'tamo';
+  }
+
+  function progressKey(topicId, lineId) { return pid() + '|' + topicId + '|' + lineId; }
+  function wordProgressKey(topicId, wordId) { return pid() + '|' + topicId + '|' + wordId; }
+  function topicProgressKey(topicId) { return pid() + '|' + topicId; }
+  function settingsKey(profileId) { return SETTINGS_PREFIX + '|' + (profileId || pid()); }
+
+  // その行が今の部屋のものか（バックアップの絞り込みに使う）
+  function belongsToProfile(key, profileId) {
+    return String(key || '').indexOf((profileId || pid()) + '|') === 0;
+  }
+
+  // ---- 設定 -----------------------------------------------------------
+  function withDefaults(defaults, v) {
+    var out = JSON.parse(JSON.stringify(defaults));
+    if (v && typeof v === 'object') {
+      Object.keys(v).forEach(function (k) {
+        if (v[k] !== undefined) out[k] = v[k];
+      });
+    }
+    return out;
+  }
+
+  function deepDefault(v) { return withDefaults(DEFAULT_SETTINGS, v); }
+
+  function loadSettings(profileId) {
+    return get('settings', settingsKey(profileId)).then(function (rec) {
+      var s = deepDefault(rec && rec.v);
+      mirror(s);
+      return s;
+    });
+  }
+
+  function saveSettings(s, profileId) {
+    var v = deepDefault(s);
+    mirror(v);
+    return put('settings', { k: settingsKey(profileId), v: v }).then(function () { return v; });
+  }
+
+  // 共有情報（サンプル投入済みか、配信の publishedAt）
+  function loadShared() {
+    return get('settings', SETTINGS_SHARED_KEY).then(function (rec) {
+      return withDefaults(DEFAULT_SHARED, rec && rec.v);
+    });
+  }
+
+  function saveShared(v) {
+    var out = withDefaults(DEFAULT_SHARED, v);
+    return put('settings', { k: SETTINGS_SHARED_KEY, v: out }).then(function () { return out; });
+  }
+
+  // テーマと文字サイズだけは起動直後（DBを開く前）に当てたいので
+  // localStorage にミラーする。SPEC 上も「設定のミラーのみ可」。
+  function mirror(s) {
+    try {
+      localStorage.setItem(LS_MIRROR_KEY, JSON.stringify({
+        theme: s.theme, fontScale: s.fontScale
+      }));
+    } catch (e) { /* プライベートモード等。失敗しても致命的ではない */ }
+  }
+
+  function readMirror() {
+    try {
+      var raw = localStorage.getItem(LS_MIRROR_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch (e) { return null; }
+  }
+
+  EST.store = {
+    DB_NAME: DB_NAME,
+    DB_VERSION: DB_VERSION,
+    STORES: STORES.map(function (s) { return s.name; }),
+    DEFAULT_SETTINGS: DEFAULT_SETTINGS,
+    DEFAULT_SHARED: DEFAULT_SHARED,
+    SETTINGS_SHARED_KEY: SETTINGS_SHARED_KEY,
+    progressKey: progressKey,
+    wordProgressKey: wordProgressKey,
+    topicProgressKey: topicProgressKey,
+    settingsKey: settingsKey,
+    belongsToProfile: belongsToProfile,
+    loadShared: loadShared,
+    saveShared: saveShared,
+    open: open,
+    get: get,
+    getAll: getAll,
+    put: put,
+    bulkPut: bulkPut,
+    del: del,
+    clear: clear,
+    loadSettings: loadSettings,
+    saveSettings: saveSettings,
+    readMirror: readMirror
+  };
+})(window.EST = window.EST || {});
+
+</script>
+<script>
+/* ---- 01-schema.js ---- */
+/* =====================================================================
+   01-schema.js — スキーマ検証・正規化・台本パーサ・自動分割
+   SPEC §1.5 / §1.8 / §5.1-5.3 / §6.1 / §6.3
+   ===================================================================== */
+;(function (EST) {
+  'use strict';
+
+  /* ---- 調整用の定数（実機で必ず調整する。SPEC §12） ------------------ */
+  var SCHEMA_VERSION      = 3;
+
+  var JA_RATIO_MIN        = 0.15;  // §6.1 日本語文字の比率がこれ以上なら JA 行とみなす
+  var SPEAKER_LABEL_MAX   = 6;     // 話者ラベルの種類がこれを超えたら「コロンが多いだけ」
+  var SPEAKER_LABEL_LEN   = 24;    // 話者ラベルとして許す最大文字数
+  var DELIM_RATIO_MIN     = 0.7;   // 区切り文字を含む行がこの比率以上なら列分割へ切り替え
+  var PAIR_PURITY_MIN     = 0.6;   // 英文ブロック／和文ブロック形式と判定する純度
+
+  var BLOCK_AUTO_MIN      = 13;    // §1.5 この行数以上でブロック自動分割
+  var BLOCK_AUTO_SIZE     = 5;     // 機械的に5行ずつ
+
+  var CHUNK_MAX_WORDS     = 5;     // §1.8 これを超えたらもう一度割る
+  var CHUNK_BREAK_MIN     = 3;     // この点数以上の切れ目で割る
+
+  var WORD_MS             = 400;   // §2.3 内蔵TTS想定の1語あたりの所要
+  var LINE_GAP_MS         = 350;   // 行と行のあいだの間
+  var DEFAULT_RATE        = 0.95;  // §5.7 ttsRate の既定
+
+  /* ---- 語のテーブル（チャンク自動分割用。§1.8） ---------------------- */
+  function set(list) { var o = {}; list.forEach(function (w) { o[w] = true; }); return o; }
+
+  var PREP = set(['in','on','at','for','with','about','from','to','of','by','into','onto',
+    'over','under','after','before','during','through','across','around','against',
+    'between','beyond','near','since','until','till','upon','within','without','off','out']);
+  var CONJ = set(['and','but','so','because','if','when','while','although','though',
+    'unless','whether','or','nor','yet','as','than','once','whenever']);
+  var REL  = set(['who','which','that','whom','whose','where','why']);
+
+  var SEP_MARK = '@@EST_SEP@@';   // 英文/和文ブロックの区切りを退避する内部マーカー
+
+  /* ---- 小道具 -------------------------------------------------------- */
+  function pad3(n) { return ('00' + n).slice(-3); }
+
+  function countWords(en) {
+    var t = String(en == null ? '' : en).trim();
+    if (!t) return 0;
+    return t.split(/\s+/).length;
+  }
+
+  function jaRatio(s) {
+    var t = String(s || '').replace(/\s/g, '');
+    if (!t.length) return 0;
+    var m = t.match(/[ぁ-ゖァ-ヺー一-鿿々]/g);
+    return m ? m.length / t.length : 0;
+  }
+
+  // 1行を EN / JA / IGNORE に分類する（§6.1 手順2）
+  function classifyLine(s) {
+    var t = String(s || '').trim();
+    if (!t) return 'IGNORE';
+    if (/^[-=_*—]{3,}$/.test(t)) return 'IGNORE';
+    if (jaRatio(t) >= JA_RATIO_MIN) return 'JA';
+    if (/[A-Za-z]/.test(t)) return 'EN';
+    return 'IGNORE';
+  }
+
+  // 行頭の「ラベル:」を切り出す（§6.1 手順3）。時刻とURLは除外する。
+  function splitLabel(text) {
+    var m = /^([^\s:：][^:：]{0,23})[:：][ \t]*(.*)$/.exec(String(text || ''));
+    if (!m) return null;
+    var label = m[1].trim();
+    if (!label) return null;
+    if (label.length > SPEAKER_LABEL_LEN) return null;
+    if (/^\d{1,2}$/.test(label)) return null;                          // 10:30 のような時刻
+    if (/^(https?|ftp|mailto|tel|file|data)$/i.test(label)) return null; // URL
+    if (/[.!?。？！]$/.test(label)) return null;                        // 文中のコロン
+    return { label: label, rest: m[2].trim() };
+  }
+
+  function newTopicId() {
+    var d = new Date();
+    var ymd = '' + d.getFullYear() + pad3(d.getMonth() + 1).slice(-2) + pad3(d.getDate()).slice(-2);
+    var rnd = Math.random().toString(36).slice(2, 6);
+    return 'tpc_' + ymd + '_' + rnd;
+  }
+
+  /* ---- 台本テキストの正規化（§6.1 手順1） ---------------------------- */
+  function normalizeRaw(raw) {
+    var t = String(raw == null ? '' : raw);
+    t = t.replace(/\r\n?/g, '\n');
+    // 全角スペース(U+3000)・ノーブレークスペース(U+00A0)・ゼロ幅スペースを半角に寄せる
+    t = t.replace(/[\u3000\u00a0\u200b]/g, ' ');
+    t = t.split('\n').map(function (l) { return l.replace(/[ \t]+$/, ''); }).join('\n');
+    // 「連続空行2つ以上」は英文ブロックと和文ブロックの区切りの合図なので、
+    // 空行を畳み込む前にマーカーへ退避しておく（畳み込むと合図が消えてしまう）
+    t = t.replace(/\n[ \t]*\n[ \t]*\n[\s]*/g, '\n' + SEP_MARK + '\n');
+    t = t.replace(/^[ \t]*[-=]{3,}[ \t]*$/gm, SEP_MARK);
+    return t;
+  }
+
+  function toLines(t) {
+    return t.split('\n').map(function (l) { return l.trim(); })
+            .filter(function (l) { return l.length > 0; });
+  }
+
+  /* ---- 台本パーサ（§6.1） -------------------------------------------- */
+  // 戻り値: { speakers, lines, warnings, mode }
+  function parseScript(raw) {
+    var warnings = [];
+    var lines = toLines(normalizeRaw(raw));
+    if (!lines.length) return { speakers: [], lines: [], warnings: ['台本が空です'], mode: 'empty' };
+
+    var entries = null, mode = '';
+
+    // (a) 英文ブロックのあとに和文ブロックが続く形
+    var pair = tryPairMode(lines);
+    if (pair) { entries = pair; mode = 'pair'; }
+
+    if (!entries) {
+      lines = lines.filter(function (l) { return l !== SEP_MARK; });
+      // (b) 区切り文字による列分割（§6.1 手順4）
+      var col = tryColumnMode(lines);
+      if (col) { entries = col; mode = 'column'; }
+    }
+
+    // (c) 英日交互（既定）
+    if (!entries) { entries = buildInterleaved(lines, true); mode = 'interleave'; }
+
+    // 話者ラベルの採否（§6.1 手順3）
+    var labels = [];
+    entries.forEach(function (e) {
+      if (e.label && labels.indexOf(e.label) < 0) labels.push(e.label);
+    });
+
+    var adopt = labels.length >= 1 && labels.length <= SPEAKER_LABEL_MAX;
+    if (labels.length > SPEAKER_LABEL_MAX) {
+      // ラベルが多すぎるときは「コロンが多いだけ」とみなし、切り出さずにやり直す
+      warnings.push('行頭のコロンが' + labels.length + '種類あったので、話者ラベルとして扱いませんでした');
+      if (mode === 'interleave') entries = buildInterleaved(lines, false);
+      else entries.forEach(function (e) {
+        if (e.label) { e.en = e.label + ': ' + e.en; e.label = null; }
+      });
+      adopt = false;
+    }
+
+    var speakers = resolveSpeakers(entries, adopt);
+    if (!adopt) warnings.push('話者が判別できなかったので、A と B に交互に割り当てました');
+
+    var out = entries.filter(function (e) { return e.en && e.en.trim(); })
+      .map(function (e, i) {
+        return {
+          id: 'ln_' + pad3(i + 1),
+          speakerId: e.speakerId,
+          en: e.en.trim(),
+          ja: (e.ja || '').trim(),
+          note: '',
+          alt: [],
+          chunks: splitChunks(e.en),
+          skip: false
+        };
+      });
+
+    var noJa = out.filter(function (l) { return !l.ja; }).length;
+    if (noJa) warnings.push('和訳が付いていない行が ' + noJa + ' 件あります（S5 和訳から出す が使えません）');
+    if (out.length >= BLOCK_AUTO_MIN) {
+      warnings.push(out.length + '行あるので ' + BLOCK_AUTO_SIZE + '行ずつ機械的にブロック分割しました。境界はドラッグで動かせます');
+    }
+
+    return { speakers: speakers, lines: out, warnings: warnings, mode: mode };
+  }
+
+  // (a) 英文ブロック --- 和文ブロック
+  function tryPairMode(lines) {
+    var at = lines.indexOf(SEP_MARK);
+    if (at <= 0) return null;
+    if (lines.lastIndexOf(SEP_MARK) !== at) return null;  // 区切りが複数あるなら別の形式
+    var a = lines.slice(0, at).filter(function (l) { return l !== SEP_MARK; });
+    var b = lines.slice(at + 1).filter(function (l) { return l !== SEP_MARK; });
+    if (!a.length || a.length !== b.length) return null;  // 行数一致が条件（§6.1）
+
+    function purity(arr, kind) {
+      var n = 0;
+      arr.forEach(function (l) {
+        var body = splitLabel(l);
+        if (classifyLine(body && body.rest ? body.rest : l) === kind) n++;
+      });
+      return n / arr.length;
+    }
+    if (purity(a, 'EN') < PAIR_PURITY_MIN) return null;
+    if (purity(b, 'JA') < PAIR_PURITY_MIN) return null;
+
+    return a.map(function (enLine, i) {
+      var sp = splitLabel(enLine);
+      var label = null, en = enLine;
+      if (sp && sp.rest) { label = sp.label; en = sp.rest; }
+      var jb = splitLabel(b[i]);
+      var ja = (jb && jb.rest) ? jb.rest : b[i];
+      return { label: label, en: en, ja: ja };
+    });
+  }
+
+  // (b) タブ / | / ｜ / / による列分割
+  function tryColumnMode(lines) {
+    var re = /\t|\||｜/;
+    var hit = lines.filter(function (l) { return re.test(l); }).length;
+    var useSlash = false;
+    if (hit / lines.length < DELIM_RATIO_MIN) {
+      // 「/」は英文中にも出るので、タブや縦棒が無いときだけ候補にする
+      hit = lines.filter(function (l) { return / \/ |\//.test(l) && jaRatio(l) > 0; }).length;
+      if (hit / lines.length < DELIM_RATIO_MIN) return null;
+      useSlash = true;
+    }
+    var splitter = useSlash ? /\s*\/\s*/ : /\s*[\t|｜]\s*/;
+
+    return lines.map(function (l) {
+      var parts = l.split(splitter).map(function (p) { return p.trim(); })
+                   .filter(function (p) { return p.length > 0; });
+      var label = null, en = '', ja = '';
+      if (parts.length >= 3 && parts[0].length <= SPEAKER_LABEL_LEN &&
+          jaRatio(parts[0]) < JA_RATIO_MIN && !/[.!?]$/.test(parts[0])) {
+        label = parts[0]; en = parts[1]; ja = parts.slice(2).join(' ');
+      } else if (parts.length >= 2) {
+        en = parts[0]; ja = parts.slice(1).join(' ');
+      } else {
+        en = parts[0] || '';
+      }
+      var sp = splitLabel(en);
+      if (!label && sp && sp.rest) { label = sp.label; en = sp.rest; }
+      // 列の並びが逆（和文が先）のときは入れ替える
+      if (jaRatio(en) >= JA_RATIO_MIN && jaRatio(ja) < JA_RATIO_MIN) { var t = en; en = ja; ja = t; }
+      return { label: label, en: en, ja: ja };
+    }).filter(function (e) { return e.en; });
+  }
+
+  // (c) 英日交互（§6.1 手順5）
+  function buildInterleaved(lines, useLabels) {
+    var entries = [];
+    var pendingJa = [];   // 英文より先に和文が来た場合の受け皿
+    lines.forEach(function (line) {
+      if (line === SEP_MARK) return;
+      var label = null, text = line;
+      if (useLabels) {
+        var sp = splitLabel(line);
+        if (sp && sp.rest) { label = sp.label; text = sp.rest; }
+      }
+      var cls = classifyLine(text);
+      if (cls === 'JA') {
+        if (entries.length) {
+          var last = entries[entries.length - 1];
+          // JA行が2行続いたら結合する（§6.1 手順5）
+          last.ja = last.ja ? (last.ja + text) : text;
+        } else {
+          pendingJa.push(text);
+        }
+      } else if (cls === 'EN') {
+        // EN行が2行続いたら、前の行は訳なしで確定（新しい entry を積むだけでよい）
+        entries.push({ label: label, en: text, ja: pendingJa.join('') });
+        pendingJa = [];
+      }
+    });
+    return entries;
+  }
+
+  function resolveSpeakers(entries, adopt) {
+    var speakers = [], map = {};
+    if (adopt) {
+      entries.forEach(function (e) {
+        if (e.label && !map[e.label]) {
+          var id = 'S' + (speakers.length + 1);
+          map[e.label] = id;
+          speakers.push({ id: id, label: e.label, gender: '' });
+        }
+      });
+      var last = speakers.length ? speakers[0].id : 'S1';
+      entries.forEach(function (e) {
+        e.speakerId = e.label ? map[e.label] : last;   // ラベルのない行は直前の話者を引き継ぐ
+        last = e.speakerId;
+      });
+    } else {
+      speakers = [{ id: 'S1', label: 'A', gender: '' }, { id: 'S2', label: 'B', gender: '' }];
+      entries.forEach(function (e, i) { e.speakerId = (i % 2 === 0) ? 'S1' : 'S2'; });
+    }
+    if (!speakers.length) speakers = [{ id: 'S1', label: 'A', gender: '' }];
+    return speakers;
+  }
+
+  /* ---- チャンク自動分割（§1.8） -------------------------------------- */
+  function bareWord(w) {
+    return String(w).replace(/^[^A-Za-z0-9']+/, '').replace(/[^A-Za-z0-9']+$/, '').toLowerCase();
+  }
+
+  // tokens[i] の直前で切るべきかの点数。0 なら切らない。
+  function breakScore(tokens, i) {
+    if (i <= 0 || i >= tokens.length) return 0;
+    var prev = tokens[i - 1];
+    var cur = bareWord(tokens[i]);
+    var s = 0;
+    if (/[,;:]$/.test(prev)) s = Math.max(s, 5);                 // カンマの直後がいちばん強い
+    if (CONJ[cur] || REL[cur]) s = Math.max(s, 4);               // 接続詞・関係詞の直前
+    if (cur === 'to' && i + 1 < tokens.length) s = Math.max(s, 3); // to不定詞の直前
+    if (PREP[cur]) s = Math.max(s, 3);                           // 前置詞の直前
+    return s;
+  }
+
+  function splitChunks(en) {
+    var tokens = String(en == null ? '' : en).trim().split(/\s+/).filter(Boolean);
+    if (tokens.length <= 1) return tokens.length ? [tokens.join(' ')] : [];
+
+    var cuts = [];
+    for (var i = 1; i < tokens.length; i++) {
+      if (breakScore(tokens, i) >= CHUNK_BREAK_MIN) cuts.push(i);
+    }
+    var groups = cutsToGroups(tokens.length, cuts);
+    groups = splitLongGroups(tokens, groups);
+    groups = absorbSingles(groups);
+
+    return groups.map(function (g) { return tokens.slice(g[0], g[1]).join(' '); });
+  }
+
+  function cutsToGroups(len, cuts) {
+    var groups = [], start = 0;
+    cuts.forEach(function (c) { if (c > start) { groups.push([start, c]); start = c; } });
+    groups.push([start, len]);
+    return groups;
+  }
+
+  // 5語を超えたら、その中の最も強い切れ目でもう一度割る（§1.8）
+  function splitLongGroups(tokens, groups) {
+    var out = [], guard = 0;
+    var queue = groups.slice();
+    while (queue.length && guard++ < 200) {
+      var g = queue.shift();
+      var len = g[1] - g[0];
+      if (len <= CHUNK_MAX_WORDS) { out.push(g); continue; }
+      var bestAt = -1, bestScore = -1;
+      for (var i = g[0] + 1; i < g[1]; i++) {
+        var sc = breakScore(tokens, i);
+        // 中央に近いほうを優先すると、極端に偏った分割になりにくい
+        var center = 1 - Math.abs((i - g[0]) / len - 0.5);
+        var total = sc * 10 + center;
+        if (sc > 0 && total > bestScore) { bestScore = total; bestAt = i; }
+      }
+      if (bestAt < 0) bestAt = g[0] + Math.ceil(len / 2);   // 切れ目が無ければ中央で割る
+      queue.unshift([bestAt, g[1]]);
+      queue.unshift([g[0], bestAt]);
+    }
+    return out.sort(function (a, b) { return a[0] - b[0]; });
+  }
+
+  // 1語だけになったら前のチャンクに吸収する（§1.8）
+  function absorbSingles(groups) {
+    var out = [];
+    groups.forEach(function (g) {
+      var len = g[1] - g[0];
+      if (len === 1 && out.length) { out[out.length - 1][1] = g[1]; return; }
+      out.push([g[0], g[1]]);
+    });
+    // 先頭が1語のまま残ったら次に吸収させる
+    if (out.length >= 2 && out[0][1] - out[0][0] === 1) {
+      out[1][0] = out[0][0];
+      out.shift();
+    }
+    return out;
+  }
+
+  /* ---- ブロック（§1.5） ---------------------------------------------- */
+  // ブロックは「何行目から始まるか」の配列（starts）として扱うほうが編集しやすい。
+  function autoBlockStarts(lineCount) {
+    if (lineCount < BLOCK_AUTO_MIN) return [];       // 12行以下はブロックを作らない
+    var starts = [];
+    for (var i = 0; i < lineCount; i += BLOCK_AUTO_SIZE) starts.push(i);
+    return starts;
+  }
+
+  function blocksToStarts(blocks, lines) {
+    if (!blocks || !blocks.length) return [];
+    var index = {};
+    lines.forEach(function (l, i) { index[l.id] = i; });
+    var starts = [];
+    blocks.forEach(function (b) {
+      var i = index[b && b.from];
+      if (typeof i === 'number' && starts.indexOf(i) < 0) starts.push(i);
+    });
+    starts.sort(function (a, b) { return a - b; });
+    if (!starts.length) return [];
+    if (starts[0] !== 0) starts.unshift(0);
+    return starts;
+  }
+
+  function startsToBlocks(starts, lines, labels) {
+    if (!starts || starts.length <= 1) return [];
+    var out = [];
+    starts.forEach(function (s, i) {
+      var end = (i + 1 < starts.length ? starts[i + 1] : lines.length) - 1;
+      if (s > end) return;
+      out.push({
+        id: 'b' + (out.length + 1),
+        label: (labels && labels[i]) || ('パート' + (out.length + 1)),
+        from: lines[s].id,
+        to: lines[end].id
+      });
+    });
+    return out;
+  }
+
+  /* ---- 検証（§6.3） --------------------------------------------------- */
+  // エラーは1個ずつ返さず、全部まとめて返す（直す側が何往復もしないで済むように）
+  function validateTopic(t, opts) {
+    opts = opts || {};
+    var errors = [], warnings = [];
+    if (!t || typeof t !== 'object') return { errors: ['台本オブジェクトとして読めません'], warnings: [] };
+
+    if (!String(t.title || '').trim()) errors.push('タイトルを入れてください');
+
+    if (!Array.isArray(t.lines) || !t.lines.length) {
+      errors.push('行が1件もありません');
+    } else {
+      t.lines.forEach(function (l, i) {
+        var no = '（' + (i + 1) + '行目）';
+        if (!l || !String(l.en || '').trim()) errors.push(no + '英文が空です');
+        else if (!/[A-Za-z]/.test(l.en)) errors.push(no + '英文に英字が含まれていません');
+        if (l && !String(l.ja || '').trim()) warnings.push(no + '和訳がありません');
+      });
+      var ids = {};
+      t.lines.forEach(function (l, i) {
+        if (!l || !l.id) return;
+        if (ids[l.id]) errors.push('行IDが重複しています: ' + l.id);
+        ids[l.id] = true;
+      });
+    }
+
+    var sids = {};
+    (t.speakers || []).forEach(function (s) {
+      if (!s || !s.id) { errors.push('話者IDのない話者があります'); return; }
+      if (sids[s.id]) errors.push('話者IDが重複しています: ' + s.id);
+      sids[s.id] = true;
+    });
+    if (!(t.speakers || []).length) errors.push('話者が1人もいません');
+
+    (t.lines || []).forEach(function (l, i) {
+      if (l && l.speakerId && !sids[l.speakerId]) {
+        errors.push('（' + (i + 1) + '行目）存在しない話者が指定されています: ' + l.speakerId);
+      }
+    });
+
+    if (!t.myRole) {
+      // S5/S6 に必須なので、保存時は通さない（§6.3 手順5）
+      (opts.requireMyRole === false ? warnings : errors).push('自分の役（myRole）を選んでください');
+    } else if (!sids[t.myRole]) {
+      errors.push('自分の役に存在しない話者が指定されています: ' + t.myRole);
+    }
+
+    (t.words || []).forEach(function (w, i) {
+      if (!w || !String(w.en || '').trim()) errors.push('語彙 ' + (i + 1) + ' 件目の英語が空です');
+    });
+
+    return { errors: errors, warnings: warnings };
+  }
+
+  /* ---- 正規化（§6.3 手順4・6・7） ------------------------------------- */
+  function normalizeTopic(input, opts) {
+    opts = opts || {};
+    var src = input || {};
+    var now = Date.now();
+
+    var speakers = (Array.isArray(src.speakers) ? src.speakers : [])
+      .filter(function (s) { return s && s.id; })
+      .map(function (s) {
+        return { id: String(s.id), label: String(s.label || s.id), gender: s.gender || '' };
+      });
+    if (!speakers.length) speakers = [{ id: 'S1', label: 'A', gender: '' }];
+
+    var speakerIds = speakers.map(function (s) { return s.id; });
+
+    var lines = (Array.isArray(src.lines) ? src.lines : []).map(function (l, i) {
+      l = l || {};
+      var en = String(l.en == null ? '' : l.en).trim();
+      var chunks = Array.isArray(l.chunks) && l.chunks.length ? l.chunks.map(String) : splitChunks(en);
+      return {
+        id: l.id ? String(l.id) : 'ln_' + pad3(i + 1),         // 手順4: 無ければ自動採番
+        speakerId: (l.speakerId && speakerIds.indexOf(String(l.speakerId)) >= 0)
+                     ? String(l.speakerId) : speakerIds[i % speakerIds.length],
+        en: en,
+        ja: String(l.ja == null ? '' : l.ja).trim(),
+        note: String(l.note == null ? '' : l.note),
+        alt: Array.isArray(l.alt) ? l.alt.map(String) : [],
+        chunks: chunks,
+        skip: !!l.skip
+      };
+    });
+
+    // 手順6: blocks 未指定かつ13行以上なら5行ずつ自動分割
+    var starts = blocksToStarts(src.blocks, lines);
+    var labels = (Array.isArray(src.blocks) ? src.blocks : []).map(function (b) { return b && b.label; });
+    if (!starts.length) { starts = autoBlockStarts(lines.length); labels = []; }
+    var blocks = startsToBlocks(starts, lines, labels);
+
+    // 手順7: words の自動抽出は F6 の担当。F1 では与えられたものを保持するだけ。
+    var lineIdSet = {};
+    lines.forEach(function (l) { lineIdSet[l.id] = true; });
+    var words = (Array.isArray(src.words) ? src.words : []).map(function (w, i) {
+      w = w || {};
+      return {
+        id: w.id ? String(w.id) : 'w_' + pad3(i + 1),
+        en: String(w.en == null ? '' : w.en).trim(),
+        ja: String(w.ja == null ? '' : w.ja).trim(),
+        type: (w.type === 'word' || w.type === 'phrase') ? w.type
+              : (countWords(w.en) > 1 ? 'phrase' : 'word'),
+        lineIds: (Array.isArray(w.lineIds) ? w.lineIds : [])
+                   .map(String).filter(function (id) { return lineIdSet[id]; }),
+        note: String(w.note == null ? '' : w.note)
+      };
+    });
+
+    var myRole = src.myRole && speakerIds.indexOf(String(src.myRole)) >= 0 ? String(src.myRole) : '';
+
+    return {
+      id: src.id ? String(src.id) : (opts.id || newTopicId()),
+      title: String(src.title == null ? '' : src.title).trim(),
+      titleEn: String(src.titleEn == null ? '' : src.titleEn).trim(),
+      level: String(src.level == null ? '' : src.level).trim(),
+      tags: (Array.isArray(src.tags) ? src.tags : []).map(String).filter(Boolean),
+      myRole: myRole,
+      speakers: speakers,
+      blocks: blocks,
+      lines: lines,
+      words: words,
+      createdAt: Number(src.createdAt) || now,
+      updatedAt: now,
+      schemaVersion: SCHEMA_VERSION
+    };
+  }
+
+  /* ---- 見積り（§6.2 の「1周 約◯秒」） -------------------------------- */
+  function lapSeconds(lines, rate) {
+    rate = Number(rate) || DEFAULT_RATE;
+    var ms = 0;
+    (lines || []).forEach(function (l) {
+      if (!l || l.skip) return;
+      ms += countWords(l.en) * WORD_MS / rate + LINE_GAP_MS;
+    });
+    return Math.round(ms / 1000);
+  }
+
+  /* ---- JSON のエラー位置（§6.3 手順1「不正なJSON」だけ出さない） ------ */
+  function parseJsonWithPosition(text) {
+    try {
+      return { ok: true, value: JSON.parse(text) };
+    } catch (e) {
+      var msg = String(e && e.message || e);
+      var m = /position\s+(\d+)/i.exec(msg);
+      var where = '';
+      if (m) {
+        var pos = Number(m[1]);
+        var before = text.slice(0, pos);
+        var line = before.split('\n').length;
+        var col = pos - before.lastIndexOf('\n');
+        where = line + '行目 ' + col + '文字目';
+      } else {
+        var lm = /line\s+(\d+)\s+column\s+(\d+)/i.exec(msg);
+        if (lm) where = lm[1] + '行目 ' + lm[2] + '文字目';
+      }
+      return { ok: false, error: msg, where: where };
+    }
+  }
+
+  EST.schema = {
+    SCHEMA_VERSION: SCHEMA_VERSION,
+    BLOCK_AUTO_MIN: BLOCK_AUTO_MIN,
+    BLOCK_AUTO_SIZE: BLOCK_AUTO_SIZE,
+    DEFAULT_RATE: DEFAULT_RATE,
+
+    countWords: countWords,
+    jaRatio: jaRatio,
+    classifyLine: classifyLine,
+    normalizeRaw: normalizeRaw,
+    parseScript: parseScript,
+
+    splitChunks: splitChunks,
+    autoBlockStarts: autoBlockStarts,
+    blocksToStarts: blocksToStarts,
+    startsToBlocks: startsToBlocks,
+
+    validateTopic: validateTopic,
+    normalizeTopic: normalizeTopic,
+    lapSeconds: lapSeconds,
+    newTopicId: newTopicId,
+    pad3: pad3,
+    parseJsonWithPosition: parseJsonWithPosition
+  };
+})(window.EST = window.EST || {});
+
+</script>
+<script>
+/* ---- 06-profile.js ---- */
+/* =====================================================================
+   06-profile.js — プロフィール（部屋）: SPEC §5.9
+   2人で同じアプリを使う。台本は共有、進捗は完全に分ける。
+   ここは「今どちらの部屋か」を持つだけの小さなモジュールにする。
+   キーの組み立ては 00-store.js 側で行う。
+   ===================================================================== */
+;(function (EST) {
+  'use strict';
+
+  var LS_KEY = 'est-profile';
+
+  // 権限は §5.9 の表のとおり。mari は練習専用で、編集系の導線は出さない。
+  var PROFILES = [
+    { id: 'tamo', label: 'タモやん', sub: '台本を作る人', canEdit: true },
+    { id: 'mari', label: 'まり',     sub: '練習する人',   canEdit: false }
+  ];
+
+  var current = null;   // 未選択のあいだは null
+
+  function all() { return PROFILES.slice(); }
+
+  function find(id) {
+    var hit = null;
+    PROFILES.forEach(function (p) { if (p.id === id) hit = p; });
+    return hit;
+  }
+
+  // 起動時に localStorage から復元する。IndexedDB に置かないのは、
+  // 「どの部屋か」がDBを開くより前に決まっていないとキーを作れないため。
+  function restore() {
+    try {
+      var id = localStorage.getItem(LS_KEY);
+      if (find(id)) { current = id; return id; }
+    } catch (e) { /* プライベートモード等 */ }
+    return null;
+  }
+
+  function set(id) {
+    if (!find(id)) throw new Error('不明なプロフィールです: ' + id);
+    current = id;
+    try { localStorage.setItem(LS_KEY, id); } catch (e) {}
+    return id;
+  }
+
+  function get() { return current; }
+  function isChosen() { return !!current; }
+
+  function info() { return find(current) || PROFILES[0]; }
+  function label() { return info().label; }
+
+  // 編集系（台本の作成・編集・削除・配信用書き出し）を出してよいか
+  function canEdit() { return !!(find(current) && find(current).canEdit); }
+
+  function clear() {
+    current = null;
+    try { localStorage.removeItem(LS_KEY); } catch (e) {}
+  }
+
+  EST.profile = {
+    LS_KEY: LS_KEY,
+    all: all,
+    restore: restore,
+    set: set,
+    get: get,
+    isChosen: isChosen,
+    info: info,
+    label: label,
+    canEdit: canEdit,
+    clear: clear
+  };
+})(window.EST = window.EST || {});
+
+</script>
+<script>
+/* ---- 07-backup.js ---- */
+/* =====================================================================
+   07-backup.js — 全体バックアップと復元（SPEC §6.4 / §5.9）
+   個人アプリはデータが飛ぶと二度と使われなくなるので、ここは必ず作る。
+   音声キャッシュ（audio）は再生成できるのでバックアップに含めない。
+
+   §5.9 の権限:
+     タモやん … 全体（台本＋全員の進捗＋設定）
+     まり     … 自分の進捗のみ（台本は含めない）
+   ===================================================================== */
+;(function (EST) {
+  'use strict';
+
+  var BACKUP_KIND = 'est-backup';
+  var AUTO_KEEP = 3;   // §6.4 直近3世代
+
+  // audio 以外のストア。topics だけは共有なので扱いを分ける。
+  var PROGRESS_STORES = ['progress', 'wordProgress', 'topicProgress'];
+
+  function keyPathOf(name) { return name === 'topicProgress' ? 'topicId' : 'key'; }
+
+  function isFull() { return EST.profile.canEdit(); }
+
+  /* ---- 書き出し -------------------------------------------------------- */
+  function exportAll() {
+    var full = isFull();
+    var me = EST.profile.get();
+
+    var jobs = PROGRESS_STORES.map(function (n) { return EST.store.getAll(n); });
+    jobs.push(full ? EST.store.getAll('topics') : Promise.resolve(null));
+    jobs.push(EST.store.loadSettings());
+    jobs.push(full ? EST.store.loadShared() : Promise.resolve(null));
+
+    return Promise.all(jobs).then(function (res) {
+      var data = {
+        kind: BACKUP_KIND,
+        schemaVersion: EST.schema.SCHEMA_VERSION,
+        exportedAt: Date.now(),
+        profileId: me,
+        scope: full ? 'full' : 'progress'   // 復元側が中身を判断できるように
+      };
+
+      PROGRESS_STORES.forEach(function (name, i) {
+        var rows = res[i] || [];
+        // まりのバックアップには自分の行だけ入れる（相手の進捗は持ち出さない）
+        data[name] = full ? rows : rows.filter(function (r) {
+          return EST.store.belongsToProfile(r[keyPathOf(name)], me);
+        });
+      });
+
+      if (full) data.topics = res[PROGRESS_STORES.length] || [];
+
+      var s = JSON.parse(JSON.stringify(res[PROGRESS_STORES.length + 1]));
+      delete s.autoBackups;   // 自動バックアップを入れ子にすると際限なく膨らむ
+      data.settings = s;
+
+      if (full) data.shared = res[PROGRESS_STORES.length + 2];
+      return data;
+    });
+  }
+
+  function exportAllText() {
+    return exportAll().then(function (d) { return JSON.stringify(d, null, 2); });
+  }
+
+  /* ---- 復元 ------------------------------------------------------------
+     mode: 'overwrite'（消してから入れる） / 'merge'（同キーは updatedAt が新しい方）
+  --------------------------------------------------------------------- */
+  function importAll(data, mode) {
+    if (!data || typeof data !== 'object') return Promise.reject(new Error('バックアップとして読めません'));
+
+    var full = isFull();
+    var me = EST.profile.get();
+    var chain = Promise.resolve();
+
+    // 台本を書き戻せるのは編集できる部屋だけ（§5.9）
+    if (full && Array.isArray(data.topics)) {
+      chain = chain.then(function () { return writeStore('topics', data.topics, mode); });
+    }
+
+    PROGRESS_STORES.forEach(function (name) {
+      var rows = Array.isArray(data[name]) ? data[name] : [];
+      if (!full) {
+        // 自分の部屋の行だけを書き戻す。相手の進捗には触らない。
+        rows = rows.filter(function (r) { return EST.store.belongsToProfile(r[keyPathOf(name)], me); });
+      }
+      chain = chain.then(function () { return writeStore(name, rows, mode, full ? null : me); });
+    });
+
+    if (data.settings) {
+      chain = chain.then(function () {
+        return EST.store.loadSettings().then(function (cur) {
+          var next = JSON.parse(JSON.stringify(data.settings));
+          next.autoBackups = cur.autoBackups || [];   // 自動バックアップは今の端末のものを残す
+          return EST.store.saveSettings(next);
+        });
+      });
+    }
+    if (full && data.shared) {
+      chain = chain.then(function () { return EST.store.saveShared(data.shared); });
+    }
+    return chain;
+  }
+
+  // onlyProfile を渡すと、上書きでもその部屋の行だけを消す
+  function writeStore(name, rows, mode, onlyProfile) {
+    var kp = name === 'topics' ? 'id' : keyPathOf(name);
+
+    if (mode === 'overwrite') {
+      if (!onlyProfile) {
+        return EST.store.clear(name).then(function () { return EST.store.bulkPut(name, rows); });
+      }
+      return EST.store.getAll(name).then(function (cur) {
+        var chain = Promise.resolve();
+        cur.filter(function (r) { return EST.store.belongsToProfile(r[kp], onlyProfile); })
+           .forEach(function (r) { chain = chain.then(function () { return EST.store.del(name, r[kp]); }); });
+        return chain.then(function () { return EST.store.bulkPut(name, rows); });
+      });
+    }
+
+    // マージ: 同じキーが両方にあるときは updatedAt が新しい方を採用する
+    return EST.store.getAll(name).then(function (cur) {
+      var byKey = {};
+      cur.forEach(function (r) { byKey[r[kp]] = r; });
+      var merged = rows.filter(function (r) {
+        var old = byKey[r[kp]];
+        return !old || (Number(r.updatedAt) || 0) >= (Number(old.updatedAt) || 0);
+      });
+      return EST.store.bulkPut(name, merged);
+    });
+  }
+
+  /* ---- 自動バックアップ（トピック保存のたびに1世代） ------------------- */
+  function snapshot(label) {
+    return exportAllText().then(function (text) {
+      return EST.store.loadSettings().then(function (s) {
+        var list = Array.isArray(s.autoBackups) ? s.autoBackups.slice() : [];
+        list.unshift({ at: Date.now(), label: label || '', size: text.length, json: text });
+        s.autoBackups = list.slice(0, AUTO_KEEP);
+        return EST.store.saveSettings(s);
+      });
+    }).catch(function (e) {
+      // バックアップの失敗で保存そのものを止めない
+      console.warn('[backup] 自動バックアップに失敗しました', e);
+    });
+  }
+
+  function listAuto() {
+    return EST.store.loadSettings().then(function (s) {
+      return (s.autoBackups || []).map(function (b, i) {
+        return { index: i, at: b.at, label: b.label, size: b.size };
+      });
+    });
+  }
+
+  function restoreAuto(index, mode) {
+    return EST.store.loadSettings().then(function (s) {
+      var b = (s.autoBackups || [])[index];
+      if (!b) throw new Error('その世代のバックアップがありません');
+      return importAll(JSON.parse(b.json), mode || 'overwrite');
+    });
+  }
+
+  function wipeAll() {
+    var chain = Promise.resolve();
+    EST.store.STORES.forEach(function (name) {
+      chain = chain.then(function () { return EST.store.clear(name); });
+    });
+    return chain;
+  }
+
+  // 自分の部屋の記録だけを消す。台本（共有）には触らない。
+  function wipeProfile() {
+    var me = EST.profile.get();
+    var chain = Promise.resolve();
+    PROGRESS_STORES.forEach(function (name) {
+      chain = chain.then(function () {
+        return EST.store.getAll(name).then(function (rows) {
+          var sub = Promise.resolve();
+          rows.filter(function (r) { return EST.store.belongsToProfile(r[keyPathOf(name)], me); })
+              .forEach(function (r) {
+                sub = sub.then(function () { return EST.store.del(name, r[keyPathOf(name)]); });
+              });
+          return sub;
+        });
+      });
+    });
+    return chain.then(function () { return EST.store.del('settings', EST.store.settingsKey(me)); });
+  }
+
+  EST.backup = {
+    BACKUP_KIND: BACKUP_KIND,
+    AUTO_KEEP: AUTO_KEEP,
+    exportAll: exportAll,
+    exportAllText: exportAllText,
+    importAll: importAll,
+    snapshot: snapshot,
+    listAuto: listAuto,
+    restoreAuto: restoreAuto,
+    wipeAll: wipeAll,
+    wipeProfile: wipeProfile
+  };
+})(window.EST = window.EST || {});
+
+</script>
+<script>
+/* ---- 08-ui-kit.js ---- */
+/* =====================================================================
+   07-ui-kit.js — 画面を組み立てるための最小限の道具
+   DOM を組み立てる h()、トースト、ダイアログ、ファイル入出力だけ。
+   ここに画面固有のロジックは入れない。
+   ===================================================================== */
+;(function (EST) {
+  'use strict';
+
+  var TOAST_MS = 2200;
+
+  function append(el, children) {
+    if (children === null || children === undefined || children === false) return;
+    if (Array.isArray(children)) { children.forEach(function (c) { append(el, c); }); return; }
+    if (children instanceof Node) { el.appendChild(children); return; }
+    el.appendChild(document.createTextNode(String(children)));
+  }
+
+  // h('div', {class:'x', onClick:fn}, ['中身'])
+  function h(tag, props, children) {
+    var el = document.createElement(tag);
+    if (props) Object.keys(props).forEach(function (k) {
+      var v = props[k];
+      if (v === null || v === undefined || v === false) return;
+      if (k === 'class' || k === 'className') el.className = v;
+      else if (k === 'text') el.textContent = v;
+      else if (k === 'style' && typeof v === 'object') Object.keys(v).forEach(function (s) { el.style[s] = v[s]; });
+      else if (k.slice(0, 2) === 'on' && typeof v === 'function') el.addEventListener(k.slice(2).toLowerCase(), v);
+      else if (k === 'value') el.value = v;
+      else if (k === 'checked' || k === 'disabled' || k === 'selected' || k === 'multiple') el[k] = !!v;
+      else el.setAttribute(k, v);
+    });
+    append(el, children);
+    return el;
+  }
+
+  function clear(node) { while (node && node.firstChild) node.removeChild(node.firstChild); }
+
+  function mount(node, children) { clear(node); append(node, children); return node; }
+
+  function toast(msg) {
+    var root = document.getElementById('toast-root');
+    if (!root) return;
+    var el = h('div', { class: 'toast', text: msg });
+    root.appendChild(el);
+    setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, TOAST_MS);
+  }
+
+  /* ---- ダイアログ -----------------------------------------------------
+     buttons: [{label, value, kind:'primary'|'danger'|undefined}]
+     戻り値は選ばれた value（背景クリックや Esc は null）
+  --------------------------------------------------------------------- */
+  function dialog(opts) {
+    opts = opts || {};
+    return new Promise(function (resolve) {
+      var root = document.getElementById('modal-root');
+      var back = h('div', { class: 'modal-back' });
+      var done = false;
+
+      function close(v) {
+        if (done) return;
+        done = true;
+        document.removeEventListener('keydown', onKey);
+        if (back.parentNode) back.parentNode.removeChild(back);
+        resolve(v);
+      }
+      function onKey(e) { if (e.key === 'Escape') close(null); }
+
+      var buttons = (opts.buttons || [{ label: 'OK', value: true, kind: 'primary' }]).map(function (b) {
+        return h('button', {
+          class: 'btn' + (b.kind === 'primary' ? ' btn--primary' : b.kind === 'danger' ? ' btn--danger' : ''),
+          text: b.label,
+          onClick: function () { close(b.value); }
+        });
+      });
+
+      var modal = h('div', { class: 'modal' }, [
+        opts.title ? h('h2', { class: 'modal__title', text: opts.title }) : null,
+        h('div', { class: 'modal__body' }, opts.body || null),
+        h('div', { class: 'modal__actions' }, buttons)
+      ]);
+      modal.addEventListener('click', function (e) { e.stopPropagation(); });
+      back.addEventListener('click', function () { if (opts.dismissable !== false) close(null); });
+      append(back, modal);
+      root.appendChild(back);
+      document.addEventListener('keydown', onKey);
+      var first = modal.querySelector('input, textarea, select, button');
+      if (first) try { first.focus(); } catch (e) {}
+    });
+  }
+
+  function confirm(title, message, okLabel, kind) {
+    return dialog({
+      title: title,
+      body: h('p', { text: message || '' }),
+      buttons: [
+        { label: 'やめる', value: false },
+        { label: okLabel || 'OK', value: true, kind: kind || 'primary' }
+      ]
+    }).then(function (v) { return v === true; });
+  }
+
+  function alertBox(title, message) {
+    var body = Array.isArray(message)
+      ? h('ul', {}, message.map(function (m) { return h('li', { text: m }); }))
+      : h('p', { text: message || '' });
+    return dialog({ title: title, body: body, buttons: [{ label: '閉じる', value: true, kind: 'primary' }] });
+  }
+
+  // 3択以上を選ばせる（id重複時の「上書き/別として追加/中止」など）
+  function choose(title, message, options) {
+    return dialog({
+      title: title,
+      body: h('p', { text: message || '' }),
+      buttons: options
+    });
+  }
+
+  /* ---- ファイル -------------------------------------------------------- */
+  function download(filename, text, mime) {
+    var blob = new Blob([text], { type: (mime || 'application/json') + ';charset=utf-8' });
+    var url = URL.createObjectURL(blob);
+    var a = h('a', { href: url, download: filename });
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function () {
+      if (a.parentNode) a.parentNode.removeChild(a);
+      URL.revokeObjectURL(url);
+    }, 500);
+  }
+
+  function pickFile(accept) {
+    return new Promise(function (resolve) {
+      var input = h('input', { type: 'file', accept: accept || '.json,application/json', class: 'hidden' });
+      document.body.appendChild(input);
+      input.addEventListener('change', function () {
+        var f = input.files && input.files[0];
+        if (!f) { cleanup(); resolve(null); return; }
+        var fr = new FileReader();
+        fr.onload = function () { cleanup(); resolve({ name: f.name, text: String(fr.result || '') }); };
+        fr.onerror = function () { cleanup(); resolve(null); };
+        fr.readAsText(f, 'utf-8');
+      });
+      function cleanup() { if (input.parentNode) input.parentNode.removeChild(input); }
+      input.click();
+    });
+  }
+
+  /* ---- 表示用の小道具 --------------------------------------------------- */
+  function fmtDate(ms) {
+    if (!ms) return '—';
+    var d = new Date(ms);
+    var p = function (n) { return ('0' + n).slice(-2); };
+    return d.getFullYear() + '/' + p(d.getMonth() + 1) + '/' + p(d.getDate()) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+  }
+
+  function fmtSeconds(sec) {
+    sec = Math.max(0, Math.round(sec || 0));
+    if (sec < 60) return sec + '秒';
+    return Math.floor(sec / 60) + '分' + ('0' + (sec % 60)).slice(-2) + '秒';
+  }
+
+  function fmtBytes(n) {
+    if (n < 1024) return n + ' B';
+    if (n < 1024 * 1024) return (n / 1024).toFixed(1) + ' KB';
+    return (n / 1024 / 1024).toFixed(1) + ' MB';
+  }
+
+  EST.ui = {
+    h: h,
+    clear: clear,
+    mount: mount,
+    append: append,
+    toast: toast,
+    dialog: dialog,
+    confirm: confirm,
+    alert: alertBox,
+    choose: choose,
+    download: download,
+    pickFile: pickFile,
+    fmtDate: fmtDate,
+    fmtSeconds: fmtSeconds,
+    fmtBytes: fmtBytes
+  };
+})(window.EST = window.EST || {});
+
+</script>
+<script>
+/* ---- 09-publish.js ---- */
+/* =====================================================================
+   09-publish.js — 台本の配信と同期（SPEC §6.5）
+   タモやんが作った台本を data/scripts.json に置き、
+   2人の端末が起動時に取りに行って自動で反映する。
+
+   取れなかったときは何もしない。前回取り込んだ台本が IndexedDB に残って
+   いるので練習は続けられる（オフラインでも file:// でも止まらない）。
+   ===================================================================== */
+;(function (EST) {
+  'use strict';
+
+  /* ---- 調整用の定数 ---------------------------------------------------- */
+  var FEED_PATH   = 'data/scripts.json';
+  var FETCH_MS    = 8000;   // これを超えたら諦める（起動を待たせない）
+
+  // 直近の同期結果。ホームが一度だけ知らせに使う。
+  var lastResult = null;
+
+  /* ---- 取得 ------------------------------------------------------------ */
+  function fetchFeed() {
+    if (typeof fetch !== 'function') return Promise.resolve(null);
+
+    // ?t= を付けるのは GitHub Pages のキャッシュを避けるため（§6.5）
+    var url = FEED_PATH + '?t=' + Date.now();
+    var opts = { cache: 'no-store' };
+    var timer = null;
+
+    if (typeof AbortController === 'function') {
+      var ctrl = new AbortController();
+      opts.signal = ctrl.signal;
+      timer = setTimeout(function () { ctrl.abort(); }, FETCH_MS);
+    }
+
+    return fetch(url, opts)
+      .then(function (res) {
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return res.json();
+      })
+      .then(function (json) { return json; })
+      .catch(function (e) {
+        // 失敗はユーザーに見せない。file:// や圏外では当たり前に起きるため。
+        console.info('[publish] 配信を取得できませんでした（前回の台本のまま動きます）:',
+                     (e && e.message) || e);
+        return null;
+      })
+      .then(function (v) { if (timer) clearTimeout(timer); return v; });
+  }
+
+  /* ---- 同期 ------------------------------------------------------------
+     戻り値: null（更新なし）または {added, updated, removed, publishedAt}
+  --------------------------------------------------------------------- */
+  function sync() {
+    return fetchFeed().then(function (feed) {
+      if (!feed || !Array.isArray(feed.topics)) return null;
+      var publishedAt = Number(feed.publishedAt) || 0;
+
+      return EST.store.loadShared().then(function (shared) {
+        // publishedAt が進んでいなければ何もしない
+        if (publishedAt && publishedAt <= (Number(shared.publishedAt) || 0)) return null;
+        return apply(feed, shared, publishedAt);
+      });
+    }).then(function (r) {
+      lastResult = r;
+      return r;
+    }).catch(function (e) {
+      console.warn('[publish] 同期に失敗しました', e);
+      return null;
+    });
+  }
+
+  function apply(feed, shared, publishedAt) {
+    var incoming = feed.topics
+      .map(function (t) { return EST.schema.normalizeTopic(t); })
+      .filter(function (t) { return t.lines.length > 0; });
+
+    return EST.store.getAll('topics').then(function (cur) {
+      var curIds = {};
+      cur.forEach(function (t) { curIds[t.id] = true; });
+
+      var incomingIds = {};
+      incoming.forEach(function (t) { incomingIds[t.id] = true; });
+
+      var added = 0, updated = 0;
+      incoming.forEach(function (t) { if (curIds[t.id]) updated++; else added++; });
+
+      // 配信から消えたトピックは一覧からも消す（§6.5）。ただし
+      // 手元で作っただけでまだ配信していない台本を巻き込まないよう、
+      // 前回の配信に入っていたものだけを対象にする。
+      var wasFed = Array.isArray(shared.feedTopicIds) ? shared.feedTopicIds : [];
+      var removeIds = wasFed.filter(function (id) { return !incomingIds[id] && curIds[id]; });
+
+      var chain = EST.store.bulkPut('topics', incoming);
+      removeIds.forEach(function (id) {
+        // 進捗レコードは消さない。再配信で復活したときに引き継げるようにする（§6.5）
+        chain = chain.then(function () { return EST.store.del('topics', id); });
+      });
+
+      return chain.then(function () {
+        shared.publishedAt = publishedAt || Date.now();
+        shared.feedTopicIds = Object.keys(incomingIds);
+        return EST.store.saveShared(shared);
+      }).then(function () {
+        return { added: added, updated: updated, removed: removeIds.length, publishedAt: publishedAt };
+      });
+    });
+  }
+
+  /* ---- 書き出し（タモやんのみ。§6.5 の更新手順2） ----------------------- */
+  function buildFeed() {
+    return EST.store.getAll('topics').then(function (topics) {
+      topics.sort(function (a, b) { return (a.createdAt || 0) - (b.createdAt || 0); });
+      return { publishedAt: Date.now(), topics: topics };
+    });
+  }
+
+  function exportFeedFile() {
+    return buildFeed().then(function (feed) {
+      EST.ui.download('scripts.json', JSON.stringify(feed, null, 2));
+      return feed;
+    });
+  }
+
+  /* ---- ホームへの通知 ---------------------------------------------------- */
+  function takeResult() {
+    var r = lastResult;
+    lastResult = null;     // 一度だけ出す（毎回出ると邪魔になる）
+    return r;
+  }
+
+  EST.publish = {
+    FEED_PATH: FEED_PATH,
+    fetchFeed: fetchFeed,
+    sync: sync,
+    buildFeed: buildFeed,
+    exportFeedFile: exportFeedFile,
+    takeResult: takeResult
+  };
+})(window.EST = window.EST || {});
+
+</script>
+<script>
+/* ---- 10-ui-home.js ---- */
+/* =====================================================================
+   10-ui-home.js — ホームとトピック一覧・トピック詳細（SPEC §8）
+   F1 の時点では練習・検索・語彙の中身がまだ無いので、
+   該当する導線は枠だけ置いて押せない状態にしてある。
+   ===================================================================== */
+;(function (EST) {
+  'use strict';
+
+  var h = null;   // 起動時に EST.ui.h を受け取る（読み込み順に依存しないため）
+
+  function ui() { h = EST.ui.h; return EST.ui; }
+
+  /* ---- ホーム ---------------------------------------------------------- */
+  function renderHome(view) {
+    var U = ui();
+    EST.app.setBar('英会話台本トレーナー', [
+      h('span', { class: 'chip', text: EST.profile.label() }),
+      h('button', { class: 'btn btn--sm', text: '設定', onClick: function () { location.hash = '#/settings'; } })
+    ]);
+
+    var wrap = h('div', {});
+
+    // §6.5 台本が更新されたことを一度だけ知らせる
+    var fed = EST.publish.takeResult();
+    if (fed && (fed.added || fed.updated || fed.removed)) {
+      var parts = [];
+      if (fed.added) parts.push('追加' + fed.added + '件');
+      if (fed.updated) parts.push('更新' + fed.updated + '件');
+      if (fed.removed) parts.push('削除' + fed.removed + '件');
+      U.append(wrap, h('div', { class: 'note-box note-box--warn', style: { marginBottom: '.7rem' },
+        text: '台本を更新しました（' + parts.join(' / ') + '）' }));
+    }
+
+    // まだ使えない導線。押せてしまうと壊れているように見えるので disabled にする。
+    function pending(icon, label, phase) {
+      return h('button', { class: 'home-item', disabled: true }, [
+        h('span', { class: 'home-item__icon', text: icon }),
+        h('span', { class: 'home-item__body' }, [
+          h('div', { text: label }),
+          h('div', { class: 'home-item__sub', text: 'まだ使えません（' + phase + 'で追加）' })
+        ])
+      ]);
+    }
+
+    U.append(wrap, [
+      pending('🔍', '検索（全トピック横断）', 'F2'),
+      pending('📅', '今日の練習', 'F5'),
+      pending('🔁', '再確認', 'F7'),
+      pending('📇', '語彙をまわす', 'F6')
+    ]);
+
+    U.append(wrap, h('div', { class: 'section-title', text: 'トピック' }));
+
+    var listBox = h('div', {});
+    U.append(wrap, listBox);
+
+    // §5.9 まりの部屋では編集系の導線をグレーアウトではなく「出さない」
+    if (EST.profile.canEdit()) {
+      U.append(wrap, [
+        h('button', {
+          class: 'btn btn--primary btn--block', text: '＋ 新規トピック',
+          onClick: function () { location.hash = '#/import'; }
+        })
+      ]);
+    }
+
+    U.mount(view, wrap);
+
+    EST.store.getAll('topics').then(function (topics) {
+      topics.sort(function (a, b) { return (b.updatedAt || 0) - (a.updatedAt || 0); });
+      if (!topics.length) {
+        U.mount(listBox, h('div', { class: 'empty', text: EST.profile.canEdit()
+          ? 'まだトピックがありません。「＋ 新規トピック」から台本を入れてください。'
+          : 'まだ台本が届いていません。しばらくしてから開き直してください。' }));
+        return;
+      }
+      U.mount(listBox, topics.map(topicCard));
+    }).catch(function (e) {
+      U.mount(listBox, h('div', { class: 'note-box note-box--err', text: '読み込みに失敗しました: ' + e.message }));
+    });
+  }
+
+  function topicCard(t) {
+    var U = ui();
+    var sec = EST.schema.lapSeconds(t.lines);
+    var meta = [
+      t.lines.length + '行',
+      (t.blocks && t.blocks.length ? t.blocks.length + 'ブロック' : 'ブロックなし'),
+      '語彙' + (t.words ? t.words.length : 0) + '個',
+      '1周 約' + U.fmtSeconds(sec)
+    ].join(' ・ ');
+
+    return h('button', {
+      class: 'topic-card',
+      onClick: function () { location.hash = '#/topic/' + encodeURIComponent(t.id); }
+    }, [
+      h('div', { class: 'topic-card__title', text: t.title || '(無題)' }),
+      t.titleEn ? h('div', { class: 'topic-card__meta en', text: t.titleEn }) : null,
+      h('div', { class: 'topic-card__meta', text: meta }),
+      h('div', { class: 'topic-card__meta', text: '更新 ' + U.fmtDate(t.updatedAt) })
+    ]);
+  }
+
+  /* ---- トピック詳細 ----------------------------------------------------- */
+  function renderTopic(view, id) {
+    var U = ui();
+    EST.store.get('topics', id).then(function (t) {
+      if (!t) {
+        EST.app.setBar('トピック', []);
+        U.mount(view, h('div', { class: 'empty', text: 'このトピックは見つかりませんでした。' }));
+        return;
+      }
+      EST.app.setBar(t.title || '(無題)', EST.profile.canEdit() ? [
+        h('button', { class: 'btn btn--sm', text: '編集', onClick: function () { location.hash = '#/edit/' + encodeURIComponent(t.id); } })
+      ] : []);
+      U.mount(view, buildTopicDetail(t));
+    });
+  }
+
+  function buildTopicDetail(t) {
+    var U = ui();
+    var sec = EST.schema.lapSeconds(t.lines);
+    var myLabel = '';
+    (t.speakers || []).forEach(function (s) { if (s.id === t.myRole) myLabel = s.label; });
+
+    var head = h('div', { class: 'card' }, [
+      t.titleEn ? h('div', { class: 'en', text: t.titleEn }) : null,
+      h('div', { class: 'small muted' }, [
+        [t.level, (t.tags || []).join(' / ')].filter(Boolean).join(' ・ ')
+      ]),
+      h('div', { class: 'stat-bar', style: { position: 'static', marginTop: '.5rem', marginBottom: '0' } }, [
+        h('span', {}, ['1周 約', h('b', { text: U.fmtSeconds(sec) })]),
+        h('span', {}, [h('b', { text: String(t.lines.length) }), '行']),
+        h('span', {}, [h('b', { text: String((t.blocks || []).length || 1) }), 'ブロック']),
+        h('span', {}, ['語彙 ', h('b', { text: String((t.words || []).length) }), '個']),
+        h('span', {}, ['自分の役 ', h('b', { text: myLabel || '未設定' })])
+      ])
+    ]);
+
+    // §5.9 まりの部屋には書き出し・削除を出さない
+    var canEdit = EST.profile.canEdit();
+    var actions = h('div', { class: 'card' }, [
+      h('div', { class: 'row row--tight' }, [
+        h('button', { class: 'btn btn--primary', text: '続きから', disabled: true }),
+        h('button', { class: 'btn', text: '一覧を見る', disabled: true }),
+        canEdit ? h('button', {
+          class: 'btn', text: 'JSON書き出し',
+          onClick: function () { exportTopic(t); }
+        }) : null,
+        canEdit ? h('button', {
+          class: 'btn btn--danger', text: '削除',
+          onClick: function () { removeTopic(t); }
+        }) : null
+      ]),
+      h('div', { class: 'tiny muted', style: { marginTop: '.35rem' },
+        text: '「続きから」は F5、「一覧を見る」は F2 で使えるようになります。' })
+    ]);
+
+    var body = h('div', { class: 'card' }, buildLineList(t));
+
+    var words = null;
+    if ((t.words || []).length) {
+      words = h('div', { class: 'card' }, [
+        h('h2', { class: 'card__title', text: '語彙 ' + t.words.length + '個' }),
+        h('div', {}, t.words.map(function (w) {
+          return h('div', { class: 'line-view' }, [
+            h('div', { class: 'grow' }, [
+              h('div', { class: 'en', text: w.en }),
+              h('div', { class: 'line-view__ja', text: w.ja })
+            ]),
+            h('span', { class: 'chip', text: w.type === 'phrase' ? '句' : '語' })
+          ]);
+        }))
+      ]);
+    }
+
+    return [head, actions, body, words];
+  }
+
+  function buildLineList(t) {
+    var out = [];
+    var startAt = {};
+    (t.blocks || []).forEach(function (b, i) { startAt[b.from] = { no: i + 1, label: b.label }; });
+    var spLabel = {};
+    (t.speakers || []).forEach(function (s) { spLabel[s.id] = s.label; });
+
+    t.lines.forEach(function (l, i) {
+      var st = startAt[l.id];
+      if (st) out.push(h('div', { class: 'block-head', text: 'ブロック' + st.no + '　' + (st.label || '') }));
+      out.push(h('div', { class: 'line-view' }, [
+        h('div', { class: 'line-view__no' }, [
+          h('div', { text: String(i + 1) }),
+          h('div', { class: t.myRole === l.speakerId ? 'line-view__mine' : '', text: spLabel[l.speakerId] || l.speakerId })
+        ]),
+        h('div', { class: 'grow' }, [
+          h('div', { class: 'line-view__en en', text: l.en }),
+          l.ja ? h('div', { class: 'line-view__ja', text: l.ja }) : null,
+          l.note ? h('div', { class: 'tiny muted', text: l.note }) : null
+        ])
+      ]));
+    });
+    return out;
+  }
+
+  function exportTopic(t) {
+    var copy = JSON.parse(JSON.stringify(t));
+    var name = (t.title || 'topic').replace(/[\\/:*?"<>|]/g, '_');
+    EST.ui.download(name + '.json', JSON.stringify(copy, null, 2));
+    EST.ui.toast('JSONを書き出しました');
+  }
+
+  function removeTopic(t) {
+    EST.ui.confirm('トピックを削除', '「' + (t.title || '無題') + '」を削除します。元に戻せません。', '削除する', 'danger')
+      .then(function (ok) {
+        if (!ok) return;
+        return EST.store.del('topics', t.id)
+          .then(function () { return EST.store.del('topicProgress', t.id); })
+          .then(function () { return EST.backup.snapshot('削除: ' + (t.title || '')); })
+          .then(function () {
+            EST.ui.toast('削除しました');
+            location.hash = '#/';
+          });
+      });
+  }
+
+  EST.uiHome = { renderHome: renderHome, renderTopic: renderTopic };
+})(window.EST = window.EST || {});
+
+</script>
+<script>
+/* ---- 12-ui-import.js ---- */
+/* =====================================================================
+   12-ui-import.js — 台本の取り込み3経路と編集プレビュー
+   SPEC §6.1（経路1 貼り付け / 経路2 JSON / 経路3 空から作る）
+        §6.2（全経路の合流点である編集プレビュー）
+        §6.3（取り込み処理）
+   ===================================================================== */
+;(function (EST) {
+  'use strict';
+
+  var h = null;
+  function ui() { h = EST.ui.h; return EST.ui; }
+
+  // 編集中の下書き。画面を離れても保持し、#/edit/new で戻ってこられるようにする。
+  var state = null;
+
+  // 再描画で作り直す要素の参照
+  var elStats = null, elLines = null, elWords = null, elSpeakers = null;
+  var rowEls = [];
+
+  var PASTE_SAMPLE =
+    'Staff: How long are you staying?\n' +
+    'ご滞在はどのくらいですか？\n' +
+    'You: About ten days.\n' +
+    '10日ほどです。';
+
+  /* =====================================================================
+     取り込み画面
+     ===================================================================== */
+  function renderImport(view) {
+    var U = ui();
+    // §5.9 編集できない部屋からURL直打ちで入ってきた場合はホームへ戻す
+    if (!EST.profile.canEdit()) { location.hash = '#/'; return; }
+    EST.app.setBar('新規トピック', [
+      h('button', { class: 'btn btn--sm', text: 'ホーム', onClick: function () { location.hash = '#/'; } })
+    ]);
+
+    var ta = h('textarea', {
+      class: 'paste-area',
+      placeholder: '台本をそのまま貼り付けてください。JSONを貼っても構いません。'
+    });
+
+    var card = h('div', { class: 'card' }, [
+      h('h2', { class: 'card__title', text: '台本を貼り付ける' }),
+      ta,
+      h('div', { class: 'row', style: { marginTop: '.5rem' } }, [
+        h('button', { class: 'btn btn--primary', text: '解析する', onClick: function () { onAnalyze(ta.value); } }),
+        h('button', { class: 'btn', text: 'JSONファイルを選ぶ', onClick: onPickFile }),
+        h('button', { class: 'btn', text: '空から作る', onClick: onBlank })
+      ])
+    ]);
+
+    var hint = h('div', { class: 'card card--flat' }, [
+      h('h2', { class: 'card__title', text: '読み取れる形式' }),
+      h('div', { class: 'small muted' }, [
+        '話者ラベルあり／なし、英日交互、タブや「|」での列分け、',
+        '英文をまとめて書いたあとに和文をまとめて書く形（間に空行2つか --- を入れる）、英文だけ。',
+        'どの形でも解析後に編集画面で直せます。'
+      ]),
+      h('div', { class: 'sample-hint en', style: { marginTop: '.5rem' }, text: PASTE_SAMPLE })
+    ]);
+
+    U.mount(view, [card, hint]);
+    try { ta.focus(); } catch (e) {}
+  }
+
+  function onAnalyze(text) {
+    var U = ui();
+    var trimmed = String(text || '').trim();
+    if (!trimmed) { U.toast('台本を貼り付けてください'); return; }
+
+    // JSONらしければ経路2、そうでなければ経路1に自動で振り分ける（§6.1）
+    if (/^[\[{]/.test(trimmed)) {
+      var r = EST.schema.parseJsonWithPosition(trimmed);
+      if (r.ok) { fromJson(r.value); return; }
+      U.alert('JSONとして読めませんでした', [
+        r.error, r.where ? ('位置: ' + r.where) : '（位置を特定できませんでした）'
+      ]);
+      return;
+    }
+    fromText(trimmed);
+  }
+
+  function onPickFile() {
+    var U = ui();
+    U.pickFile('.json,application/json').then(function (f) {
+      if (!f) return;
+      var r = EST.schema.parseJsonWithPosition(f.text);
+      if (!r.ok) {
+        U.alert('JSONとして読めませんでした', [r.error, r.where ? ('位置: ' + r.where) : '']);
+        return;
+      }
+      fromJson(r.value);
+    });
+  }
+
+  function onBlank() {
+    var t = EST.schema.normalizeTopic({
+      title: '',
+      speakers: [{ id: 'S1', label: 'A' }, { id: 'S2', label: 'B' }],
+      lines: [
+        { speakerId: 'S1', en: '', ja: '' },
+        { speakerId: 'S2', en: '', ja: '' }
+      ]
+    });
+    openEditor(t, true, ['空のトピックです。英文と和訳を入れてください。']);
+  }
+
+  function fromText(text) {
+    var U = ui();
+    var parsed = EST.schema.parseScript(text);
+    if (!parsed.lines.length) {
+      U.alert('解析できませんでした', ['英文として読める行が見つかりませんでした。']);
+      return;
+    }
+    var t = EST.schema.normalizeTopic({
+      title: '',
+      speakers: parsed.speakers,
+      lines: parsed.lines
+    });
+    openEditor(t, true, parsed.warnings);
+  }
+
+  function fromJson(value) {
+    var U = ui();
+    if (value && value.kind === EST.backup.BACKUP_KIND) {
+      U.alert('これはバックアップです', ['全体バックアップのJSONは「設定 → バックアップ」から復元してください。']);
+      return;
+    }
+    var warnings = [];
+    if (Array.isArray(value)) {
+      if (!value.length) { U.alert('取り込めません', ['配列が空です。']); return; }
+      warnings.push('配列が渡されたので先頭の1件だけを取り込みました');
+      value = value[0];
+    }
+    var check = EST.schema.validateTopic(value, { requireMyRole: false });
+    var t = EST.schema.normalizeTopic(value);
+    if (check.errors.length) {
+      // エラーがあっても編集画面までは通す。直す場所が見えないと直せないため。
+      warnings = warnings.concat(check.errors);
+    }
+    if (!t.myRole) warnings.push('自分の役が指定されていません。保存前に選んでください');
+    openEditor(t, true, warnings);
+  }
+
+  /* =====================================================================
+     編集プレビュー（§6.2）
+     ===================================================================== */
+  function openEditor(topic, isNew, warnings) {
+    state = makeState(topic, isNew, warnings);
+    location.hash = '#/edit/new';
+  }
+
+  function makeState(topic, isNew, warnings) {
+    var t = EST.schema.normalizeTopic(topic);
+    var starts = EST.schema.blocksToStarts(t.blocks, t.lines);
+    return {
+      topic: t,
+      starts: starts,
+      blockLabels: (t.blocks || []).map(function (b) { return b.label; }),
+      isNew: !!isNew,
+      warnings: warnings || [],
+      open: {}     // 行ID -> 詳細（メモ・チャンク）を開いているか
+    };
+  }
+
+  function renderEditor(view, id) {
+    var U = ui();
+    if (!EST.profile.canEdit()) { location.hash = '#/'; return; }
+    if (id === 'new') {
+      if (!state) { location.hash = '#/import'; return; }
+      build(view);
+      return;
+    }
+    if (state && !state.isNew && state.topic.id === id) { build(view); return; }
+    EST.store.get('topics', id).then(function (t) {
+      if (!t) {
+        EST.app.setBar('編集', []);
+        U.mount(view, h('div', { class: 'empty', text: 'このトピックは見つかりませんでした。' }));
+        return;
+      }
+      state = makeState(t, false, []);
+      build(view);
+    });
+  }
+
+  function build(view) {
+    var U = ui();
+    EST.app.setBar(state.isNew ? '編集プレビュー' : '編集', [
+      h('button', { class: 'btn btn--sm', text: '破棄', onClick: discard }),
+      h('button', { class: 'btn btn--sm btn--primary', text: '保存', onClick: save })
+    ]);
+
+    elStats = h('div', { class: 'stat-bar' });
+    elSpeakers = h('div', {});
+    elLines = h('div', {});
+    elWords = h('div', {});
+
+    var warnBox = state.warnings && state.warnings.length
+      ? h('div', { class: 'note-box note-box--warn', style: { marginBottom: '.7rem' } }, [
+          h('div', { text: '解析結果の確認' }),
+          h('ul', {}, state.warnings.map(function (w) { return h('li', { text: w }); }))
+        ])
+      : null;
+
+    U.mount(view, [
+      elStats,
+      warnBox,
+      metaCard(),
+      h('div', { class: 'card' }, [
+        h('div', { class: 'card__head' }, [
+          h('h2', { class: 'card__title', text: '話者' }),
+          h('button', { class: 'btn btn--sm', text: '＋ 話者', onClick: addSpeaker })
+        ]),
+        h('div', { class: 'tiny muted', style: { marginBottom: '.4rem' },
+          text: 'ここで名前を変えると、全部の行の話者名がまとめて変わります。' }),
+        elSpeakers
+      ]),
+      h('div', { class: 'card' }, [
+        h('div', { class: 'card__head' }, [
+          h('h2', { class: 'card__title', text: '行' }),
+          h('button', { class: 'btn btn--sm', text: '＋ ブロック境界', onClick: addBoundary })
+        ]),
+        elLines,
+        h('button', {
+          class: 'btn btn--block', text: '＋ 行を追加', style: { marginTop: '.4rem' },
+          onClick: function () { addLine(state.topic.lines.length - 1); }
+        })
+      ]),
+      h('div', { class: 'card' }, [
+        h('div', { class: 'card__head' }, [
+          h('h2', { class: 'card__title', text: '語彙' }),
+          h('button', { class: 'btn btn--sm', text: '＋ 語彙', onClick: addWord })
+        ]),
+        h('div', { class: 'tiny muted', style: { marginBottom: '.4rem' },
+          text: '語彙の自動抽出は F6 で入ります。ここでは手で足し引きできます。' }),
+        elWords
+      ]),
+      h('div', { class: 'row', style: { marginTop: '.8rem' } }, [
+        h('button', { class: 'btn btn--primary grow', text: '保存する', onClick: save }),
+        h('button', { class: 'btn', text: '破棄', onClick: discard })
+      ])
+    ]);
+
+    renderSpeakers();
+    renderLines();
+    renderWords();
+    updateStats();
+  }
+
+  /* ---- 上部の見出し（タイトル・自分の役） ------------------------------ */
+  function metaCard() {
+    var t = state.topic;
+    return h('div', { class: 'card' }, [
+      h('label', { class: 'field' }, [
+        h('span', { class: 'field__label', text: 'タイトル（日本語）' }),
+        h('input', { type: 'text', value: t.title, placeholder: '例: 空港のチェックインカウンター',
+          onInput: function (e) { t.title = e.target.value; } })
+      ]),
+      h('label', { class: 'field', style: { marginTop: '.4rem' } }, [
+        h('span', { class: 'field__label', text: 'タイトル（英語・任意）' }),
+        h('input', { type: 'text', class: 'en', value: t.titleEn,
+          onInput: function (e) { t.titleEn = e.target.value; } })
+      ]),
+      h('div', { class: 'row', style: { marginTop: '.4rem' } }, [
+        h('label', { class: 'field grow' }, [
+          h('span', { class: 'field__label', text: 'レベル' }),
+          h('input', { type: 'text', value: t.level, placeholder: 'B1',
+            onInput: function (e) { t.level = e.target.value; } })
+        ]),
+        h('label', { class: 'field grow' }, [
+          h('span', { class: 'field__label', text: 'タグ（カンマ区切り）' }),
+          h('input', { type: 'text', value: (t.tags || []).join(', '),
+            onInput: function (e) {
+              t.tags = e.target.value.split(/[,、]/).map(function (s) { return s.trim(); }).filter(Boolean);
+            } })
+        ])
+      ]),
+      h('div', { style: { marginTop: '.5rem' } }, [
+        h('span', { class: 'field__label', text: '自分の役（S5・S6で使うので必須）' }),
+        h('div', { class: 'row row--tight', id: 'myrole-box' }, myRoleButtons())
+      ])
+    ]);
+  }
+
+  function myRoleButtons() {
+    var t = state.topic;
+    return t.speakers.map(function (s) {
+      return h('button', {
+        class: 'btn btn--sm' + (t.myRole === s.id ? ' btn--primary' : ''),
+        text: s.label || s.id,
+        onClick: function () {
+          t.myRole = s.id;
+          var box = document.getElementById('myrole-box');
+          if (box) ui().mount(box, myRoleButtons());
+        }
+      });
+    });
+  }
+
+  function refreshMyRole() {
+    var box = document.getElementById('myrole-box');
+    if (box) ui().mount(box, myRoleButtons());
+  }
+
+  /* ---- 話者（ラベルの一括リネーム） ------------------------------------ */
+  function renderSpeakers() {
+    var U = ui();
+    var t = state.topic;
+    var used = {};
+    t.lines.forEach(function (l) { used[l.speakerId] = (used[l.speakerId] || 0) + 1; });
+
+    U.mount(elSpeakers, t.speakers.map(function (s, i) {
+      return h('div', { class: 'row row--tight', style: { marginBottom: '.3rem' } }, [
+        h('input', {
+          type: 'text', value: s.label, class: 'grow', style: { maxWidth: '10rem' },
+          onInput: function (e) {
+            s.label = e.target.value;          // 参照は id なので、ここを変えれば全行に効く
+            refreshSpeakerOptions();
+            refreshMyRole();
+          }
+        }),
+        h('select', {
+          style: { width: 'auto' },
+          onChange: function (e) { s.gender = e.target.value; }
+        }, [
+          h('option', { value: '', selected: !s.gender }, '性別なし'),
+          h('option', { value: 'female', selected: s.gender === 'female' }, '女性'),
+          h('option', { value: 'male', selected: s.gender === 'male' }, '男性')
+        ]),
+        h('span', { class: 'chip', text: (used[s.id] || 0) + '行' }),
+        h('button', {
+          class: 'btn btn--sm btn--danger', text: '削除',
+          disabled: (used[s.id] || 0) > 0 || t.speakers.length <= 1,
+          onClick: function () {
+            t.speakers.splice(i, 1);
+            if (t.myRole === s.id) t.myRole = '';
+            renderSpeakers(); refreshMyRole(); renderLines();
+          }
+        })
+      ]);
+    }));
+  }
+
+  function addSpeaker() {
+    var t = state.topic;
+    var n = 1;
+    var ids = {};
+    t.speakers.forEach(function (s) { ids[s.id] = true; });
+    while (ids['S' + n]) n++;
+    t.speakers.push({ id: 'S' + n, label: 'S' + n, gender: '' });
+    renderSpeakers(); refreshMyRole(); renderLines();
+  }
+
+  function refreshSpeakerOptions() {
+    var t = state.topic;
+    rowEls.forEach(function (row) {
+      if (!row || !row.__spSel) return;
+      Array.prototype.forEach.call(row.__spSel.options, function (op) {
+        t.speakers.forEach(function (s) { if (s.id === op.value) op.textContent = s.label || s.id; });
+      });
+    });
+  }
+
+  /* ---- 行 -------------------------------------------------------------- */
+  function renderLines() {
+    var U = ui();
+    var t = state.topic;
+    var y = window.scrollY;
+    rowEls = [];
+
+    var startIndexOf = {};
+    state.starts.forEach(function (x, i) { startIndexOf[x] = i; });
+
+    var frag = [];
+    t.lines.forEach(function (l, i) {
+      var bi = startIndexOf[i];
+      if (bi !== undefined) frag.push(bi === 0 ? blockHead(0) : blockDivider(bi));
+      var row = lineRow(l, i);
+      rowEls[i] = row;
+      frag.push(row);
+    });
+
+    U.mount(elLines, frag);
+    window.scrollTo(0, y);
+  }
+
+  function blockLabelInput(bi) {
+    return h('input', {
+      type: 'text', class: 'blk-div__label',
+      value: state.blockLabels[bi] || '',
+      placeholder: 'パート' + (bi + 1),
+      onInput: function (e) { state.blockLabels[bi] = e.target.value; }
+    });
+  }
+
+  function blockHead(bi) {
+    return h('div', { class: 'blk-div', style: { borderStyle: 'solid' } }, [
+      h('span', { class: 'blk-div__no', text: 'ブロック1' }),
+      blockLabelInput(bi),
+      h('span', { class: 'tiny muted right', text: '先頭の境界は動かせません' })
+    ]);
+  }
+
+  function blockDivider(bi) {
+    var el = h('div', { class: 'blk-div' }, [
+      h('span', {
+        class: 'blk-div__grip', text: '⣿ ドラッグ',
+        onPointerdown: function (e) { startDrag(bi, e, el); }
+      }),
+      h('span', { class: 'blk-div__no', text: 'ブロック' + (bi + 1) }),
+      blockLabelInput(bi),
+      h('div', { class: 'row row--tight right' }, [
+        h('button', { class: 'btn btn--icon', text: '▲', onClick: function () { moveBoundary(bi, state.starts[bi] - 1); } }),
+        h('button', { class: 'btn btn--icon', text: '▼', onClick: function () { moveBoundary(bi, state.starts[bi] + 1); } }),
+        h('button', {
+          class: 'btn btn--icon btn--danger', text: '×',
+          disabled: state.starts.length <= 2 && state.topic.lines.length >= EST.schema.BLOCK_AUTO_MIN,
+          onClick: function () { removeBoundary(bi); }
+        })
+      ])
+    ]);
+    return el;
+  }
+
+  function lineRow(l, i) {
+    var t = state.topic;
+    var spSel = h('select', {
+      class: 'ed-line__sp',
+      onChange: function (e) { l.speakerId = e.target.value; }
+    }, t.speakers.map(function (s) {
+      return h('option', { value: s.id, selected: s.id === l.speakerId }, s.label || s.id);
+    }));
+
+    var enTa = h('textarea', {
+      class: 'en', rows: 2, value: l.en, placeholder: '英文',
+      onInput: function (e) {
+        l.en = e.target.value;
+        l.chunks = EST.schema.splitChunks(l.en);   // 英文が変わればチャンクは作り直す
+        updateStats();
+      }
+    });
+    var jaTa = h('textarea', {
+      class: 'ja-in', rows: 1, value: l.ja, placeholder: '和訳',
+      onInput: function (e) { l.ja = e.target.value; }
+    });
+
+    var extra = h('div', { class: 'ed-line__extra' + (state.open[l.id] ? '' : ' hidden') });
+    buildExtra(extra, l);
+
+    var row = h('div', { class: 'ed-line' }, [
+      h('div', { class: 'ed-line__top' }, [
+        h('span', { class: 'ed-line__no', text: String(i + 1) }),
+        spSel,
+        h('div', { class: 'ed-line__tools' }, [
+          h('button', { class: 'btn btn--icon', text: '↑', disabled: i === 0, onClick: function () { moveLine(i, -1); } }),
+          h('button', { class: 'btn btn--icon', text: '↓', disabled: i === t.lines.length - 1, onClick: function () { moveLine(i, 1); } }),
+          h('button', { class: 'btn btn--sm', text: '分割', onClick: function () { splitLine(i); } }),
+          h('button', { class: 'btn btn--sm', text: '結合', disabled: i === t.lines.length - 1, onClick: function () { mergeLine(i); } }),
+          h('button', {
+            class: 'btn btn--sm', text: '詳細',
+            onClick: function () {
+              state.open[l.id] = !state.open[l.id];
+              extra.className = 'ed-line__extra' + (state.open[l.id] ? '' : ' hidden');
+              if (state.open[l.id]) buildExtra(extra, l);
+            }
+          }),
+          h('button', { class: 'btn btn--icon btn--danger', text: '✕', disabled: t.lines.length <= 1, onClick: function () { removeLine(i); } })
+        ])
+      ]),
+      enTa, jaTa, extra
+    ]);
+    row.__enTa = enTa;
+    row.__spSel = spSel;
+    return row;
+  }
+
+  function buildExtra(box, l) {
+    var U = ui();
+    U.mount(box, [
+      h('label', { class: 'field' }, [
+        h('span', { class: 'field__label', text: 'メモ（任意）' }),
+        h('input', { type: 'text', value: l.note, onInput: function (e) { l.note = e.target.value; } })
+      ]),
+      h('div', { style: { marginTop: '.4rem' } }, [
+        h('span', { class: 'field__label', text: 'チャンク（区切りをタップで動かせます）' }),
+        chunkEditor(l)
+      ])
+    ]);
+  }
+
+  /* チャンク境界エディタ（§1.8 自動分割は必ず外すのでタップで直せるようにする） */
+  function chunkEditor(l) {
+    var box = h('div', { class: 'chunks' });
+    draw();
+    return box;
+
+    function draw() {
+      var chunks = (l.chunks && l.chunks.length) ? l.chunks : EST.schema.splitChunks(l.en);
+      var tokens = [], bounds = {};
+      chunks.forEach(function (c) {
+        var ws = String(c).trim().split(/\s+/).filter(Boolean);
+        if (!ws.length) return;
+        if (tokens.length) bounds[tokens.length] = true;
+        ws.forEach(function (w) { tokens.push(w); });
+      });
+
+      var parts = [];
+      tokens.forEach(function (w, i) {
+        if (i > 0) {
+          if (bounds[i]) {
+            parts.push(h('span', {
+              class: 'chunks__bar', text: '|', title: 'ここの区切りをやめる',
+              onClick: function () { delete bounds[i]; commit(tokens, bounds); }
+            }));
+          } else {
+            parts.push(h('span', {
+              class: 'chunks__gap', text: '·', title: 'ここで区切る',
+              onClick: function () { bounds[i] = true; commit(tokens, bounds); }
+            }));
+          }
+        }
+        parts.push(h('span', { class: 'chunks__w', text: w }));
+      });
+      if (!tokens.length) parts.push(h('span', { class: 'tiny muted', text: '（英文が空です）' }));
+      ui().mount(box, parts);
+    }
+
+    function commit(tokens, bounds) {
+      var out = [], cur = [];
+      tokens.forEach(function (w, i) {
+        if (i > 0 && bounds[i]) { out.push(cur.join(' ')); cur = []; }
+        cur.push(w);
+      });
+      if (cur.length) out.push(cur.join(' '));
+      l.chunks = out;
+      draw();
+    }
+  }
+
+  /* ---- 行の構造操作 ----------------------------------------------------- */
+  function nextLineId() {
+    var max = 0;
+    state.topic.lines.forEach(function (l) {
+      var m = /^ln_(\d+)$/.exec(l.id || '');
+      if (m) max = Math.max(max, Number(m[1]));
+    });
+    return 'ln_' + EST.schema.pad3(max + 1);
+  }
+
+  function shiftStarts(fn) {
+    state.starts = state.starts.map(fn);
+    fixStarts();
+  }
+
+  function fixStarts() {
+    var n = state.topic.lines.length;
+    var s = state.starts.filter(function (x) { return x >= 0 && x < n; });
+    s = s.filter(function (x, i, a) { return a.indexOf(x) === i; });
+    s.sort(function (a, b) { return a - b; });
+    if (s.length && s[0] !== 0) s.unshift(0);
+    if (s.length === 1) s = [];        // 境界が先頭だけなら「ブロックなし」と同じ
+    state.starts = s;
+    state.blockLabels.length = s.length;
+  }
+
+  function addLine(afterIndex) {
+    var t = state.topic;
+    var at = Math.min(Math.max(afterIndex + 1, 0), t.lines.length);
+    var prev = t.lines[afterIndex];
+    var nextSp = t.speakers.length > 1 && prev
+      ? (t.speakers[(indexOfSpeaker(prev.speakerId) + 1) % t.speakers.length].id)
+      : (t.speakers[0] && t.speakers[0].id);
+    t.lines.splice(at, 0, {
+      id: nextLineId(), speakerId: nextSp, en: '', ja: '', note: '', alt: [], chunks: [], skip: false
+    });
+    shiftStarts(function (x) { return x >= at ? x + 1 : x; });
+    renderLines(); renderWords(); renderSpeakers(); updateStats();
+  }
+
+  function indexOfSpeaker(id) {
+    var idx = 0;
+    state.topic.speakers.forEach(function (s, i) { if (s.id === id) idx = i; });
+    return idx;
+  }
+
+  function removeLine(i) {
+    var t = state.topic;
+    if (t.lines.length <= 1) return;
+    t.lines.splice(i, 1);
+    shiftStarts(function (x) { return x > i ? x - 1 : x; });
+    renderLines(); renderWords(); renderSpeakers(); updateStats();
+  }
+
+  function moveLine(i, dir) {
+    var t = state.topic;
+    var j = i + dir;
+    if (j < 0 || j >= t.lines.length) return;
+    var tmp = t.lines[i]; t.lines[i] = t.lines[j]; t.lines[j] = tmp;
+    renderLines(); updateStats();
+  }
+
+  // カーソル位置で割る。カーソルが無ければ文の切れ目、それも無ければ中央。
+  function splitPoint(en, pos) {
+    if (pos > 0 && pos < en.length) {
+      var p = pos;
+      while (p > 0 && !/\s/.test(en.charAt(p - 1))) p--;
+      if (p > 0 && p < en.length) return p;
+    }
+    var m = /[.!?]["')\]]?\s+/.exec(en);
+    if (m) {
+      var at = m.index + m[0].length;
+      if (at > 0 && at < en.length) return at;
+    }
+    var words = en.split(/\s+/);
+    if (words.length < 2) return -1;
+    return words.slice(0, Math.ceil(words.length / 2)).join(' ').length + 1;
+  }
+
+  function splitLine(i) {
+    var U = ui();
+    var t = state.topic;
+    var l = t.lines[i];
+    var ta = rowEls[i] && rowEls[i].__enTa;
+    var pos = ta ? ta.selectionStart : 0;
+    var p = splitPoint(l.en, pos);
+    if (p < 0) { U.toast('この行は分割できません'); return; }
+
+    var a = l.en.slice(0, p).trim();
+    var b = l.en.slice(p).trim();
+    if (!a || !b) { U.toast('この行は分割できません'); return; }
+
+    l.en = a;
+    l.chunks = EST.schema.splitChunks(a);
+    t.lines.splice(i + 1, 0, {
+      id: nextLineId(), speakerId: l.speakerId, en: b, ja: '', note: '',
+      alt: [], chunks: EST.schema.splitChunks(b), skip: false
+    });
+    shiftStarts(function (x) { return x > i ? x + 1 : x; });
+    renderLines(); renderWords(); updateStats();
+    U.toast('和訳は前の行に残しました');
+  }
+
+  function mergeLine(i) {
+    var t = state.topic;
+    if (i >= t.lines.length - 1) return;
+    var a = t.lines[i], b = t.lines[i + 1];
+    a.en = (a.en + ' ' + b.en).trim();
+    a.ja = [a.ja, b.ja].filter(Boolean).join('');
+    a.note = [a.note, b.note].filter(Boolean).join(' / ');
+    a.chunks = EST.schema.splitChunks(a.en);
+    t.lines.splice(i + 1, 1);
+    shiftStarts(function (x) { return x > i + 1 ? x - 1 : x; });
+    renderLines(); renderWords(); updateStats();
+  }
+
+  /* ---- ブロック境界 ------------------------------------------------------ */
+  function addBoundary() {
+    var U = ui();
+    var t = state.topic;
+    if (t.lines.length < 2) { U.toast('行が足りません'); return; }
+    var s = state.starts.slice();
+    if (!s.length) s = [0];
+    // いちばん長いブロックの真ん中に足す
+    var bestAt = -1, bestLen = 1;
+    s.forEach(function (start, i) {
+      var end = (i + 1 < s.length ? s[i + 1] : t.lines.length);
+      var len = end - start;
+      if (len > bestLen) { bestLen = len; bestAt = start + Math.floor(len / 2); }
+    });
+    if (bestAt < 1) { U.toast('これ以上分けられません'); return; }
+    s.push(bestAt);
+    state.starts = s;
+    fixStarts();
+    renderLines(); updateStats();
+  }
+
+  function removeBoundary(bi) {
+    if (bi < 1) return;
+    state.starts.splice(bi, 1);
+    state.blockLabels.splice(bi, 1);
+    fixStarts();
+    renderLines(); updateStats();
+  }
+
+  function moveBoundary(bi, to) {
+    var U = ui();
+    var n = state.topic.lines.length;
+    to = Math.min(Math.max(to, 1), n - 1);
+    if (bi < 1 || bi >= state.starts.length) return;
+    if (state.starts[bi] === to) return;
+    if (state.starts.indexOf(to) >= 0) { U.toast('そこには既に境界があります'); return; }
+    var label = state.blockLabels[bi];
+    state.starts[bi] = to;
+    // 並べ替えたあともラベルが同じブロックに付いてくるように入れ直す
+    var pairs = state.starts.map(function (x, i) { return { s: x, l: i === bi ? label : state.blockLabels[i] }; });
+    pairs.sort(function (a, b) { return a.s - b.s; });
+    state.starts = pairs.map(function (p) { return p.s; });
+    state.blockLabels = pairs.map(function (p) { return p.l; });
+    fixStarts();
+    renderLines(); updateStats();
+  }
+
+  function startDrag(bi, ev, divEl) {
+    ev.preventDefault();
+    var target = state.starts[bi];
+    divEl.classList.add('is-dragging');
+
+    function onMove(e) {
+      var g = gapFromY(e.clientY);
+      if (g === null) return;
+      target = g;
+      highlight(g);
+    }
+    function onUp() {
+      document.removeEventListener('pointermove', onMove);
+      document.removeEventListener('pointerup', onUp);
+      document.removeEventListener('pointercancel', onUp);
+      divEl.classList.remove('is-dragging');
+      clearHighlight();
+      moveBoundary(bi, target);
+    }
+    document.addEventListener('pointermove', onMove);
+    document.addEventListener('pointerup', onUp);
+    document.addEventListener('pointercancel', onUp);
+  }
+
+  // 指の位置にいちばん近い「行の上端」を境界候補にする
+  function gapFromY(y) {
+    var best = null, bestD = Infinity;
+    for (var i = 1; i < rowEls.length; i++) {
+      if (!rowEls[i]) continue;
+      var d = Math.abs(rowEls[i].getBoundingClientRect().top - y);
+      if (d < bestD) { bestD = d; best = i; }
+    }
+    return best;
+  }
+
+  function highlight(i) {
+    clearHighlight();
+    if (rowEls[i]) rowEls[i].classList.add('is-drop');
+  }
+  function clearHighlight() {
+    rowEls.forEach(function (r) { if (r) r.classList.remove('is-drop'); });
+  }
+
+  /* ---- 語彙 -------------------------------------------------------------- */
+  function renderWords() {
+    var U = ui();
+    var t = state.topic;
+    if (!t.words.length) {
+      U.mount(elWords, h('div', { class: 'tiny muted', text: 'まだ語彙がありません。' }));
+      return;
+    }
+    U.mount(elWords, t.words.map(function (w, i) { return wordRow(w, i); }));
+  }
+
+  function wordRow(w, i) {
+    var t = state.topic;
+
+    var idsBox = h('div', { class: 'word-row__ids' });
+    drawIds();
+
+    var lineSel = h('select', { style: { maxWidth: '11rem' } },
+      t.lines.map(function (l, li) {
+        var label = (li + 1) + ': ' + (l.en || '(空)').slice(0, 24);
+        return h('option', { value: l.id }, label);
+      })
+    );
+
+    return h('div', { class: 'word-row' }, [
+      h('div', { class: 'word-row__grid' }, [
+        h('input', { type: 'text', class: 'en', value: w.en, placeholder: '英語',
+          onInput: function (e) { w.en = e.target.value; } }),
+        h('input', { type: 'text', value: w.ja, placeholder: '意味',
+          onInput: function (e) { w.ja = e.target.value; } }),
+        h('div', { class: 'row row--tight' }, [
+          h('select', { style: { width: 'auto' }, onChange: function (e) { w.type = e.target.value; } }, [
+            h('option', { value: 'word', selected: w.type === 'word' }, '語'),
+            h('option', { value: 'phrase', selected: w.type === 'phrase' }, '句')
+          ]),
+          h('button', {
+            class: 'btn btn--icon btn--danger', text: '✕',
+            onClick: function () { t.words.splice(i, 1); renderWords(); updateStats(); }
+          })
+        ])
+      ]),
+      h('div', { class: 'row row--tight', style: { marginTop: '.3rem' } }, [
+        h('span', { class: 'tiny muted', text: '出てくる行' }),
+        lineSel,
+        h('button', {
+          class: 'btn btn--sm', text: '＋',
+          onClick: function () {
+            var id = lineSel.value;
+            if (id && w.lineIds.indexOf(id) < 0) { w.lineIds.push(id); drawIds(); }
+          }
+        })
+      ]),
+      idsBox
+    ]);
+
+    function drawIds() {
+      var chips = w.lineIds.map(function (id) {
+        var no = 0;
+        t.lines.forEach(function (l, li) { if (l.id === id) no = li + 1; });
+        return h('button', {
+          class: 'chip chip--btn', title: 'この行との紐づけを外す',
+          onClick: function () {
+            w.lineIds = w.lineIds.filter(function (x) { return x !== id; });
+            drawIds();
+          }
+        }, [no ? (no + '行目') : id, ' ×']);
+      });
+      if (!chips.length) chips = [h('span', { class: 'tiny muted', text: '（紐づけなし）' })];
+      ui().mount(idsBox, chips);
+    }
+  }
+
+  function addWord() {
+    state.topic.words.push({ id: nextWordId(), en: '', ja: '', type: 'word', lineIds: [], note: '' });
+    renderWords();
+    updateStats();
+  }
+
+  function nextWordId() {
+    var max = 0;
+    state.topic.words.forEach(function (w) {
+      var m = /^w_(\d+)$/.exec(w.id || '');
+      if (m) max = Math.max(max, Number(m[1]));
+    });
+    return 'w_' + EST.schema.pad3(max + 1);
+  }
+
+  /* ---- 統計行（§6.2 上部に常時表示） ------------------------------------ */
+  function updateStats() {
+    var U = ui();
+    var t = state.topic;
+    var sec = EST.schema.lapSeconds(t.lines);
+    var blocks = state.starts.length || 1;
+    U.mount(elStats, [
+      h('span', {}, ['1周 約', h('b', { text: U.fmtSeconds(sec) })]),
+      h('span', {}, [h('b', { text: String(t.lines.length) }), '行']),
+      h('span', {}, [h('b', { text: String(blocks) }), 'ブロック']),
+      h('span', {}, ['語彙 ', h('b', { text: String(t.words.length) }), '個'])
+    ]);
+  }
+
+  /* ---- 保存・破棄 -------------------------------------------------------- */
+  function save() {
+    var U = ui();
+    var t = state.topic;
+    t.blocks = EST.schema.startsToBlocks(state.starts, t.lines, state.blockLabels);
+
+    var v = EST.schema.validateTopic(t, { requireMyRole: true });
+    if (v.errors.length) { U.alert('保存できません', v.errors); return; }
+
+    var ask = Promise.resolve('save');
+    if (state.isNew) {
+      ask = EST.store.get('topics', t.id).then(function (exist) {
+        if (!exist) return 'save';
+        // §6.3 手順3: id重複は「上書き / 別トピックとして追加 / 中止」を選ばせる
+        return U.choose('同じIDのトピックがあります',
+          '既に「' + (exist.title || '無題') + '」が同じIDで保存されています。',
+          [
+            { label: '中止', value: 'cancel' },
+            { label: '別トピックとして追加', value: 'dup' },
+            { label: '上書き', value: 'save', kind: 'danger' }
+          ]);
+      });
+    }
+
+    ask.then(function (mode) {
+      if (!mode || mode === 'cancel') return;
+      if (mode === 'dup') t.id = EST.schema.newTopicId();
+      var norm = EST.schema.normalizeTopic(t);
+      return EST.store.put('topics', norm)
+        .then(function () { return EST.backup.snapshot('保存: ' + norm.title); })
+        .then(function () {
+          state = null;
+          U.toast(v.warnings.length ? '保存しました（注意 ' + v.warnings.length + '件）' : '保存しました');
+          location.hash = '#/topic/' + encodeURIComponent(norm.id);
+        });
+    }).catch(function (e) {
+      U.alert('保存に失敗しました', [String(e && e.message || e)]);
+    });
+  }
+
+  function discard() {
+    ui().confirm('編集を破棄', '編集中の内容は保存されません。', '破棄する', 'danger').then(function (ok) {
+      if (!ok) return;
+      var wasNew = state.isNew, id = state.topic.id;
+      state = null;
+      location.hash = wasNew ? '#/' : ('#/topic/' + encodeURIComponent(id));
+    });
+  }
+
+  EST.uiImport = {
+    renderImport: renderImport,
+    renderEditor: renderEditor,
+    openEditor: openEditor,
+    hasDraft: function () { return !!state; }
+  };
+})(window.EST = window.EST || {});
+
+</script>
+<script>
+/* ---- 13-ui-settings.js ---- */
+/* =====================================================================
+   13-ui-settings.js — 設定とバックアップ（SPEC §5.7 / §6.4）
+   F1 の時点で意味を持つ設定（テーマ・文字サイズ）と、
+   データを守るためのバックアップ操作だけを出す。
+   音声・マイクの設定は該当フェーズ（F3・F4）で足す。
+   ===================================================================== */
+;(function (EST) {
+  'use strict';
+
+  var h = null;
+  function ui() { h = EST.ui.h; return EST.ui; }
+
+  function render(view) {
+    var U = ui();
+    EST.app.setBar('設定', []);
+
+    var box = h('div', {});
+    U.mount(view, box);
+
+    EST.store.loadSettings().then(function (s) {
+      U.mount(box, [
+        profileCard(),
+        displayCard(s),
+        EST.profile.canEdit() ? publishCard() : null,
+        backupCard(),
+        autoBackupCard(),
+        EST.profile.canEdit() ? sampleCard() : null,
+        infoCard(s),
+        dangerCard()
+      ]);
+    });
+  }
+
+  /* ---- プロフィール（部屋）§5.9 ------------------------------------------ */
+  function profileCard() {
+    var U = ui();
+    var cur = EST.profile.get();
+    return h('div', { class: 'card' }, [
+      h('h2', { class: 'card__title', text: '部屋' }),
+      h('div', { class: 'small muted', text: '台本は2人で共有し、練習の記録は部屋ごとに完全に分かれます。相手の記録は見えません。' }),
+      h('div', { class: 'row', style: { marginTop: '.5rem' } }, EST.profile.all().map(function (p) {
+        return h('button', {
+          class: 'btn' + (p.id === cur ? ' btn--primary' : ''),
+          text: p.label + '（' + p.sub + '）',
+          onClick: function () {
+            if (p.id === cur) return;
+            U.confirm('部屋を切り替える', p.label + 'の部屋に切り替えます。練習の記録は部屋ごとに別々です。', '切り替える')
+              .then(function (ok) {
+                if (!ok) return;
+                EST.profile.set(p.id);
+                location.hash = '#/';
+                location.reload();   // 設定も進捗も読み直しになるので、まるごと再起動する
+              });
+          }
+        });
+      }))
+    ]);
+  }
+
+  /* ---- 配信（タモやんのみ）§6.5 ------------------------------------------ */
+  function publishCard() {
+    var U = ui();
+    return h('div', { class: 'card' }, [
+      h('h2', { class: 'card__title', text: '台本の配信' }),
+      h('div', { class: 'small muted', text:
+        'いまアプリに入っている台本を scripts.json として書き出します。これを data/scripts.json に置いて push すると、次にまりが開いたときに反映されます。' }),
+      h('div', { class: 'row', style: { marginTop: '.5rem' } }, [
+        h('button', {
+          class: 'btn btn--primary', text: '配信用に書き出す',
+          onClick: function () {
+            EST.publish.exportFeedFile().then(function (feed) {
+              U.toast(feed.topics.length + '本を書き出しました');
+            });
+          }
+        }),
+        h('button', {
+          class: 'btn', text: 'いま配信を取りに行く',
+          onClick: function () {
+            EST.publish.sync().then(function (r) {
+              if (!r) { U.toast('更新はありませんでした'); return; }
+              U.toast('台本を更新しました');
+              location.hash = '#/';
+              EST.app.route();
+            });
+          }
+        })
+      ])
+    ]);
+  }
+
+  /* ---- 表示 -------------------------------------------------------------- */
+  function displayCard(s) {
+    return h('div', { class: 'card' }, [
+      h('h2', { class: 'card__title', text: '表示' }),
+      h('div', { class: 'setting-row' }, [
+        h('div', { class: 'setting-row__label' }, [
+          'テーマ',
+          h('div', { class: 'setting-row__sub', text: '「端末に合わせる」なら夜は自動で暗くなります' })
+        ]),
+        h('select', {
+          onChange: function (e) {
+            s.theme = e.target.value;
+            EST.store.saveSettings(s).then(function () { EST.app.applyTheme(s); });
+          }
+        }, [
+          h('option', { value: 'auto', selected: s.theme === 'auto' }, '端末に合わせる'),
+          h('option', { value: 'light', selected: s.theme === 'light' }, '明るい'),
+          h('option', { value: 'dark', selected: s.theme === 'dark' }, '暗い')
+        ])
+      ]),
+      h('div', { class: 'setting-row' }, [
+        h('div', { class: 'setting-row__label' }, [
+          '文字サイズ',
+          h('div', { class: 'setting-row__sub', text: '音読中に見やすい大きさに合わせてください' })
+        ]),
+        h('select', {
+          onChange: function (e) {
+            s.fontScale = Number(e.target.value);
+            EST.store.saveSettings(s).then(function () { EST.app.applyTheme(s); });
+          }
+        }, [0.9, 1.0, 1.1, 1.25, 1.4].map(function (v) {
+          return h('option', { value: String(v), selected: Number(s.fontScale) === v }, Math.round(v * 100) + '%');
+        }))
+      ])
+    ]);
+  }
+
+  /* ---- バックアップ ------------------------------------------------------- */
+  function backupCard() {
+    return h('div', { class: 'card' }, [
+      h('h2', { class: 'card__title', text: 'バックアップ' }),
+      // §5.9 まりは自分の進捗だけ。台本は配信で届くのでバックアップに含めない。
+      h('div', { class: 'small muted', text: EST.profile.canEdit()
+        ? '全トピックと進捗と設定を1つのJSONにまとめます。音声キャッシュは再生成できるので含めません。'
+        : 'あなたの練習の記録と設定をJSONにまとめます。台本は配信で届くので含めません。' }),
+      h('div', { class: 'row', style: { marginTop: '.5rem' } }, [
+        h('button', { class: 'btn btn--primary', text: '書き出す', onClick: doExport }),
+        h('button', { class: 'btn', text: 'ファイルから復元', onClick: doImport })
+      ])
+    ]);
+  }
+
+  function doExport() {
+    var U = ui();
+    EST.backup.exportAllText().then(function (text) {
+      var d = new Date();
+      var p = function (n) { return ('0' + n).slice(-2); };
+      var name = 'est-backup-' + d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) + '-' + p(d.getHours()) + p(d.getMinutes()) + '.json';
+      U.download(name, text);
+      U.toast('書き出しました');
+    });
+  }
+
+  function doImport() {
+    var U = ui();
+    U.pickFile('.json,application/json').then(function (f) {
+      if (!f) return;
+      var r = EST.schema.parseJsonWithPosition(f.text);
+      if (!r.ok) {
+        U.alert('JSONとして読めませんでした', [r.error, r.where ? ('位置: ' + r.where) : '']);
+        return;
+      }
+      var data = r.value;
+      if (!data || data.kind !== EST.backup.BACKUP_KIND) {
+        U.alert('復元できません', ['このファイルはこのアプリのバックアップではないようです。']);
+        return;
+      }
+      // まりのバックアップには topics が入っていない（§5.9）
+      var summary = Array.isArray(data.topics)
+        ? ('トピック ' + data.topics.length + '件')
+        : ('練習の記録 ' + ((data.progress || []).length + (data.topicProgress || []).length) + '件');
+      U.choose('復元のしかた',
+        summary + '。上書きすると今のデータは消えます。',
+        [
+          { label: '中止', value: null },
+          { label: 'マージ（同じidは新しい方）', value: 'merge' },
+          { label: '上書き', value: 'overwrite', kind: 'danger' }
+        ]
+      ).then(function (mode) {
+        if (!mode) return;
+        return EST.backup.importAll(data, mode).then(function () {
+          U.toast('復元しました');
+          location.hash = '#/';
+          location.reload();
+        });
+      }).catch(function (e) {
+        U.alert('復元に失敗しました', [String(e && e.message || e)]);
+      });
+    });
+  }
+
+  function autoBackupCard() {
+    var U = ui();
+    var box = h('div', { class: 'small muted', text: '読み込み中…' });
+    EST.backup.listAuto().then(function (list) {
+      if (!list.length) {
+        U.mount(box, h('div', { class: 'small muted', text: 'まだありません。トピックを保存すると自動で作られます。' }));
+        return;
+      }
+      U.mount(box, list.map(function (b) {
+        return h('div', { class: 'setting-row' }, [
+          h('div', { class: 'setting-row__label' }, [
+            U.fmtDate(b.at),
+            h('div', { class: 'setting-row__sub', text: (b.label || '') + '　' + U.fmtBytes(b.size || 0) })
+          ]),
+          h('button', {
+            class: 'btn btn--sm', text: 'ここへ戻す',
+            onClick: function () {
+              U.confirm('自動バックアップから戻す', U.fmtDate(b.at) + ' の状態に戻します。今のデータは上書きされます。', '戻す', 'danger')
+                .then(function (ok) {
+                  if (!ok) return;
+                  return EST.backup.restoreAuto(b.index, 'overwrite').then(function () {
+                    U.toast('戻しました');
+                    location.reload();
+                  });
+                });
+            }
+          })
+        ]);
+      }));
+    });
+
+    return h('div', { class: 'card' }, [
+      h('h2', { class: 'card__title', text: '自動バックアップ（直近' + EST.backup.AUTO_KEEP + '世代）' }),
+      box
+    ]);
+  }
+
+  /* ---- サンプル ----------------------------------------------------------- */
+  function sampleCard() {
+    var U = ui();
+    var n = (EST.SAMPLES || []).length;
+    return h('div', { class: 'card' }, [
+      h('h2', { class: 'card__title', text: 'サンプル台本' }),
+      h('div', { class: 'small muted', text: n
+        ? ('短い台本と長い台本の ' + n + '本を入れ直します。同じIDのものは上書きされます。')
+        : 'このビルドにはサンプルが含まれていません。' }),
+      h('button', {
+        class: 'btn', style: { marginTop: '.5rem' }, text: 'サンプルを入れ直す', disabled: !n,
+        onClick: function () {
+          EST.app.seedSamples(true).then(function (cnt) {
+            U.toast(cnt + '本を入れ直しました');
+          });
+        }
+      })
+    ]);
+  }
+
+  /* ---- 情報 --------------------------------------------------------------- */
+  function infoCard(s) {
+    var U = ui();
+    var box = h('div', { class: 'small muted', text: '集計中…' });
+    Promise.all([
+      EST.store.getAll('topics'),
+      EST.store.getAll('progress'),
+      EST.store.getAll('topicProgress')
+    ]).then(function (r) {
+      var rows = [
+        '部屋 ' + EST.profile.label() + '（' + EST.profile.get() + '）',
+        'トピック ' + r[0].length + '件',
+        '行の進捗 ' + r[1].length + '件',
+        'トピックの進捗 ' + r[2].length + '件',
+        'データベース ' + EST.store.DB_NAME + ' v' + EST.store.DB_VERSION
+      ];
+      // §10.1 file:// ではマイクとService Workerが使えない。F4以降で効いてくるので今から出しておく。
+      if (location.protocol === 'file:') {
+        rows.push('※ file:// で開いています。マイク自動カウントを使うにはWeb配信（HTTPS）が必要です。');
+      }
+      U.mount(box, rows.map(function (t) { return h('div', { text: t }); }));
+    });
+
+    return h('div', { class: 'card' }, [
+      h('h2', { class: 'card__title', text: '情報' }),
+      box,
+      h('div', { class: 'tiny muted', style: { marginTop: '.4rem' },
+        text: '音声・マイク・練習の設定は F3〜F5 で追加されます。' })
+    ]);
+  }
+
+  /* ---- 危険な操作 ---------------------------------------------------------- */
+  function dangerCard() {
+    var U = ui();
+    // §5.9 まりは共有の台本を消せない。自分の記録だけを消す。
+    var full = EST.profile.canEdit();
+    var label = full ? '全データを削除' : 'わたしの記録を削除';
+    var detail = full
+      ? 'トピック・進捗・設定・自動バックアップをすべて消します。'
+      : 'あなたの練習の記録と設定だけを消します。台本は残ります。';
+    return h('div', { class: 'card' }, [
+      h('h2', { class: 'card__title', text: 'データを消す' }),
+      h('div', { class: 'small muted', text: '先にバックアップを書き出しておいてください。元に戻せません。' }),
+      h('button', {
+        class: 'btn btn--danger', style: { marginTop: '.5rem' }, text: label,
+        onClick: function () {
+          U.confirm(label, detail, '削除する', 'danger')
+            .then(function (ok) {
+              if (!ok) return;
+              return (full ? EST.backup.wipeAll() : EST.backup.wipeProfile()).then(function () {
+                U.toast('削除しました');
+                location.hash = '#/';
+                location.reload();
+              });
+            });
+        }
+      })
+    ]);
+  }
+
+  EST.uiSettings = { render: render };
+})(window.EST = window.EST || {});
+
+</script>
+<script>
+/* ---- 99-main.js ---- */
+/* =====================================================================
+   99-main.js — 起動とハッシュルーティング
+   ルートは location.hash だけで表す。サーバ設定が要らず、
+   単一HTMLをどこに置いても壊れないため。
+   ===================================================================== */
+;(function (EST) {
+  'use strict';
+
+  var viewEl = null, barEl = null;
+
+  /* ---- テーマと文字サイズ ------------------------------------------------ */
+  function applyTheme(s) {
+    var root = document.documentElement;
+    root.setAttribute('data-theme', s && s.theme ? s.theme : 'auto');
+    root.style.setProperty('--fs', String((s && Number(s.fontScale)) || 1));
+  }
+
+  // DBを開く前に localStorage のミラーから当てる（起動時に一瞬白くならないように）
+  function applyThemeEarly() {
+    var m = EST.store.readMirror();
+    applyTheme(m || { theme: 'auto', fontScale: 1 });
+  }
+
+  /* ---- アプリバー -------------------------------------------------------- */
+  function setBar(title, actions) {
+    var h = EST.ui.h;
+    var isHome = (currentRoute().name === 'home');
+    EST.ui.mount(barEl, [
+      isHome ? null : h('button', {
+        class: 'btn btn--ghost btn--sm', text: '←', title: '戻る',
+        onClick: function () { history.length > 1 ? history.back() : (location.hash = '#/'); }
+      }),
+      h('div', { class: 'appbar__title', text: title || '' }),
+      h('div', { class: 'appbar__actions' }, actions || [])
+    ]);
+  }
+
+  /* ---- ルーティング ------------------------------------------------------ */
+  function currentRoute() {
+    var raw = String(location.hash || '').replace(/^#/, '');
+    var parts = raw.split('/').filter(Boolean);
+    if (!parts.length) return { name: 'home' };
+    if (parts[0] === 'import') return { name: 'import' };
+    if (parts[0] === 'settings') return { name: 'settings' };
+    if (parts[0] === 'topic') return { name: 'topic', id: decodeURIComponent(parts[1] || '') };
+    if (parts[0] === 'edit') return { name: 'edit', id: decodeURIComponent(parts[1] || '') };
+    return { name: 'home' };
+  }
+
+  function route() {
+    var r = currentRoute();
+    window.scrollTo(0, 0);
+    try {
+      if (r.name === 'home') EST.uiHome.renderHome(viewEl);
+      else if (r.name === 'import') EST.uiImport.renderImport(viewEl);
+      else if (r.name === 'edit') EST.uiImport.renderEditor(viewEl, r.id);
+      else if (r.name === 'topic') EST.uiHome.renderTopic(viewEl, r.id);
+      else if (r.name === 'settings') EST.uiSettings.render(viewEl);
+    } catch (e) {
+      console.error('[route]', e);
+      EST.ui.mount(viewEl, EST.ui.h('div', { class: 'note-box note-box--err',
+        text: '画面の表示に失敗しました: ' + (e && e.message || e) }));
+    }
+  }
+
+  /* ---- サンプル台本の投入（付録B） --------------------------------------- */
+  // 短い台本（12行）と長い台本（22行・4ブロック）の両方で確認できるようにする。
+  // 台本は2人で共有するので、投入済みフラグも共有側（settings の "shared"）に置く。
+  function seedSamples(force) {
+    var list = EST.SAMPLES || [];
+    if (!list.length) return Promise.resolve(0);
+    return EST.store.loadShared().then(function (sh) {
+      if (sh.samplesSeeded && !force) return 0;
+      var topics = list.map(function (raw) { return EST.schema.normalizeTopic(raw); });
+      return EST.store.bulkPut('topics', topics).then(function () {
+        sh.samplesSeeded = true;
+        return EST.store.saveShared(sh);
+      }).then(function () { return topics.length; });
+    });
+  }
+
+  /* ---- プロフィール選択（§5.9） ------------------------------------------
+     起動時に一度だけ聞く。どちらの部屋かが決まらないと進捗のキーが作れないので、
+     この画面を通すまで他の画面は出さない。
+  --------------------------------------------------------------------- */
+  function renderProfilePicker(onPick) {
+    var h = EST.ui.h;
+    EST.ui.mount(barEl, [h('div', { class: 'appbar__title', text: '英会話台本トレーナー' })]);
+    EST.ui.mount(viewEl, h('div', { class: 'card' }, [
+      h('h2', { class: 'card__title', text: 'どちらの部屋で使いますか' }),
+      h('div', { class: 'small muted', style: { marginBottom: '.6rem' },
+        text: '台本は2人で同じものを使い、練習の記録だけを分けます。あとから設定で変えられます。' }),
+      h('div', {}, EST.profile.all().map(function (p) {
+        return h('button', {
+          class: 'home-item',
+          onClick: function () { EST.profile.set(p.id); onPick(p.id); }
+        }, [
+          h('span', { class: 'home-item__icon', text: p.canEdit ? '🛠' : '🎧' }),
+          h('span', { class: 'home-item__body' }, [
+            h('div', { text: p.label }),
+            h('div', { class: 'home-item__sub', text: p.sub })
+          ])
+        ]);
+      }))
+    ]));
+  }
+
+  /* ---- 起動 --------------------------------------------------------------- */
+  function boot() {
+    viewEl = document.getElementById('view');
+    barEl = document.getElementById('appbar');
+    applyThemeEarly();
+
+    if (!EST.profile.restore()) {
+      renderProfilePicker(function () { start(); });
+      return;
+    }
+    start();
+  }
+
+  function start() {
+    EST.store.loadSettings()
+      .then(function (s) {
+        applyTheme(s);
+        return seedSamples(false);
+      })
+      .then(function () {
+        // §6.5 配信の取得。失敗しても何もしないので待っても害はないが、
+        // 起動を止めないよう画面を出してから結果を反映する。
+        return EST.publish.sync().catch(function () { return null; });
+      })
+      .then(function () {
+        window.addEventListener('hashchange', route);
+        route();
+      })
+      .catch(function (e) {
+        console.error('[boot]', e);
+        EST.ui.mount(viewEl, EST.ui.h('div', { class: 'note-box note-box--err' }, [
+          '起動に失敗しました: ' + (e && e.message || e),
+          EST.ui.h('div', { class: 'tiny', style: { marginTop: '.3rem' },
+            text: 'プライベートブラウジングだとIndexedDBが使えないことがあります。' })
+        ]));
+      });
+  }
+
+  EST.app = {
+    setBar: setBar,
+    applyTheme: applyTheme,
+    seedSamples: seedSamples,
+    route: route,
+    currentRoute: currentRoute,
+    renderProfilePicker: renderProfilePicker
+  };
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+  else boot();
+})(window.EST = window.EST || {});
+
+</script>
+</body>
+</html>

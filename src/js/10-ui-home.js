@@ -14,10 +14,22 @@
   function renderHome(view) {
     var U = ui();
     EST.app.setBar('英会話台本トレーナー', [
+      h('span', { class: 'chip', text: EST.profile.label() }),
       h('button', { class: 'btn btn--sm', text: '設定', onClick: function () { location.hash = '#/settings'; } })
     ]);
 
     var wrap = h('div', {});
+
+    // §6.5 台本が更新されたことを一度だけ知らせる
+    var fed = EST.publish.takeResult();
+    if (fed && (fed.added || fed.updated || fed.removed)) {
+      var parts = [];
+      if (fed.added) parts.push('追加' + fed.added + '件');
+      if (fed.updated) parts.push('更新' + fed.updated + '件');
+      if (fed.removed) parts.push('削除' + fed.removed + '件');
+      U.append(wrap, h('div', { class: 'note-box note-box--warn', style: { marginBottom: '.7rem' },
+        text: '台本を更新しました（' + parts.join(' / ') + '）' }));
+    }
 
     // まだ使えない導線。押せてしまうと壊れているように見えるので disabled にする。
     function pending(icon, label, phase) {
@@ -42,19 +54,24 @@
     var listBox = h('div', {});
     U.append(wrap, listBox);
 
-    U.append(wrap, [
-      h('button', {
-        class: 'btn btn--primary btn--block', text: '＋ 新規トピック',
-        onClick: function () { location.hash = '#/import'; }
-      })
-    ]);
+    // §5.9 まりの部屋では編集系の導線をグレーアウトではなく「出さない」
+    if (EST.profile.canEdit()) {
+      U.append(wrap, [
+        h('button', {
+          class: 'btn btn--primary btn--block', text: '＋ 新規トピック',
+          onClick: function () { location.hash = '#/import'; }
+        })
+      ]);
+    }
 
     U.mount(view, wrap);
 
     EST.store.getAll('topics').then(function (topics) {
       topics.sort(function (a, b) { return (b.updatedAt || 0) - (a.updatedAt || 0); });
       if (!topics.length) {
-        U.mount(listBox, h('div', { class: 'empty', text: 'まだトピックがありません。「＋ 新規トピック」から台本を入れてください。' }));
+        U.mount(listBox, h('div', { class: 'empty', text: EST.profile.canEdit()
+          ? 'まだトピックがありません。「＋ 新規トピック」から台本を入れてください。'
+          : 'まだ台本が届いていません。しばらくしてから開き直してください。' }));
         return;
       }
       U.mount(listBox, topics.map(topicCard));
@@ -93,9 +110,9 @@
         U.mount(view, h('div', { class: 'empty', text: 'このトピックは見つかりませんでした。' }));
         return;
       }
-      EST.app.setBar(t.title || '(無題)', [
+      EST.app.setBar(t.title || '(無題)', EST.profile.canEdit() ? [
         h('button', { class: 'btn btn--sm', text: '編集', onClick: function () { location.hash = '#/edit/' + encodeURIComponent(t.id); } })
-      ]);
+      ] : []);
       U.mount(view, buildTopicDetail(t));
     });
   }
@@ -120,18 +137,20 @@
       ])
     ]);
 
+    // §5.9 まりの部屋には書き出し・削除を出さない
+    var canEdit = EST.profile.canEdit();
     var actions = h('div', { class: 'card' }, [
       h('div', { class: 'row row--tight' }, [
         h('button', { class: 'btn btn--primary', text: '続きから', disabled: true }),
         h('button', { class: 'btn', text: '一覧を見る', disabled: true }),
-        h('button', {
+        canEdit ? h('button', {
           class: 'btn', text: 'JSON書き出し',
           onClick: function () { exportTopic(t); }
-        }),
-        h('button', {
+        }) : null,
+        canEdit ? h('button', {
           class: 'btn btn--danger', text: '削除',
           onClick: function () { removeTopic(t); }
-        })
+        }) : null
       ]),
       h('div', { class: 'tiny muted', style: { marginTop: '.35rem' },
         text: '「続きから」は F5、「一覧を見る」は F2 で使えるようになります。' })

@@ -65,17 +65,44 @@
 
   /* ---- サンプル台本の投入（付録B） --------------------------------------- */
   // 短い台本（12行）と長い台本（22行・4ブロック）の両方で確認できるようにする。
+  // 台本は2人で共有するので、投入済みフラグも共有側（settings の "shared"）に置く。
   function seedSamples(force) {
     var list = EST.SAMPLES || [];
     if (!list.length) return Promise.resolve(0);
-    return EST.store.loadSettings().then(function (s) {
-      if (s.samplesSeeded && !force) return 0;
+    return EST.store.loadShared().then(function (sh) {
+      if (sh.samplesSeeded && !force) return 0;
       var topics = list.map(function (raw) { return EST.schema.normalizeTopic(raw); });
       return EST.store.bulkPut('topics', topics).then(function () {
-        s.samplesSeeded = true;
-        return EST.store.saveSettings(s);
+        sh.samplesSeeded = true;
+        return EST.store.saveShared(sh);
       }).then(function () { return topics.length; });
     });
+  }
+
+  /* ---- プロフィール選択（§5.9） ------------------------------------------
+     起動時に一度だけ聞く。どちらの部屋かが決まらないと進捗のキーが作れないので、
+     この画面を通すまで他の画面は出さない。
+  --------------------------------------------------------------------- */
+  function renderProfilePicker(onPick) {
+    var h = EST.ui.h;
+    EST.ui.mount(barEl, [h('div', { class: 'appbar__title', text: '英会話台本トレーナー' })]);
+    EST.ui.mount(viewEl, h('div', { class: 'card' }, [
+      h('h2', { class: 'card__title', text: 'どちらの部屋で使いますか' }),
+      h('div', { class: 'small muted', style: { marginBottom: '.6rem' },
+        text: '台本は2人で同じものを使い、練習の記録だけを分けます。あとから設定で変えられます。' }),
+      h('div', {}, EST.profile.all().map(function (p) {
+        return h('button', {
+          class: 'home-item',
+          onClick: function () { EST.profile.set(p.id); onPick(p.id); }
+        }, [
+          h('span', { class: 'home-item__icon', text: p.canEdit ? '🛠' : '🎧' }),
+          h('span', { class: 'home-item__body' }, [
+            h('div', { text: p.label }),
+            h('div', { class: 'home-item__sub', text: p.sub })
+          ])
+        ]);
+      }))
+    ]));
   }
 
   /* ---- 起動 --------------------------------------------------------------- */
@@ -84,10 +111,23 @@
     barEl = document.getElementById('appbar');
     applyThemeEarly();
 
+    if (!EST.profile.restore()) {
+      renderProfilePicker(function () { start(); });
+      return;
+    }
+    start();
+  }
+
+  function start() {
     EST.store.loadSettings()
       .then(function (s) {
         applyTheme(s);
         return seedSamples(false);
+      })
+      .then(function () {
+        // §6.5 配信の取得。失敗しても何もしないので待っても害はないが、
+        // 起動を止めないよう画面を出してから結果を反映する。
+        return EST.publish.sync().catch(function () { return null; });
       })
       .then(function () {
         window.addEventListener('hashchange', route);
@@ -108,7 +148,8 @@
     applyTheme: applyTheme,
     seedSamples: seedSamples,
     route: route,
-    currentRoute: currentRoute
+    currentRoute: currentRoute,
+    renderProfilePicker: renderProfilePicker
   };
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
