@@ -96,6 +96,7 @@
   function onBlank() {
     var t = EST.schema.normalizeTopic({
       title: '',
+      audience: EST.profile.get(),   // §5.9 新規作成時の既定は「自分用」
       speakers: [{ id: 'S1', label: 'A' }, { id: 'S2', label: 'B' }],
       lines: [
         { speakerId: 'S1', en: '', ja: '' },
@@ -114,6 +115,7 @@
     }
     var t = EST.schema.normalizeTopic({
       title: '',
+      audience: EST.profile.get(),   // §5.9 新規作成時の既定は「自分用」
       speakers: parsed.speakers,
       lines: parsed.lines
     });
@@ -133,7 +135,14 @@
       value = value[0];
     }
     var check = EST.schema.validateTopic(value, { requireMyRole: false });
+    var hadAudience = value && EST.schema.AUDIENCES.indexOf(String(value.audience)) >= 0;
     var t = EST.schema.normalizeTopic(value);
+    if (!hadAudience) {
+      // §5.9 これから作る台本なので、既定は「自分用」にする。
+      // （§5.1 の "both" 既定は、配信や同梱サンプルなど既存データ向け）
+      t.audience = EST.profile.get();
+      warnings.push('誰の台本かが指定されていないので「自分用」にしました');
+    }
     if (check.errors.length) {
       // エラーがあっても編集画面までは通す。直す場所が見えないと直せないため。
       warnings = warnings.concat(check.errors);
@@ -278,8 +287,31 @@
       h('div', { style: { marginTop: '.5rem' } }, [
         h('span', { class: 'field__label', text: '自分の役（S5・S6で使うので必須）' }),
         h('div', { class: 'row row--tight', id: 'myrole-box' }, myRoleButtons())
+      ]),
+      h('div', { style: { marginTop: '.5rem' } }, [
+        h('span', { class: 'field__label', text: '誰の台本か（§5.9）' }),
+        h('div', { class: 'row row--tight', id: 'audience-box' }, audienceButtons()),
+        h('div', { class: 'tiny muted', text: '相手用にすると、この台本は自分のトピック一覧から外れます。' })
       ])
     ]);
+  }
+
+  // §5.9 タモやんの編集画面には audience の選択を必ず置く
+  function audienceButtons() {
+    var t = state.topic;
+    var me = EST.profile.get();
+    var other = EST.profile.other().id;
+    return [me, other, 'both'].map(function (a) {
+      return h('button', {
+        class: 'btn btn--sm' + (t.audience === a ? ' btn--primary' : ''),
+        text: EST.profile.audienceLabel(a),
+        onClick: function () {
+          t.audience = a;
+          var box = document.getElementById('audience-box');
+          if (box) ui().mount(box, audienceButtons());
+        }
+      });
+    });
   }
 
   function myRoleButtons() {
@@ -876,7 +908,14 @@
         .then(function () { return EST.backup.snapshot('保存: ' + norm.title); })
         .then(function () {
           state = null;
-          U.toast(v.warnings.length ? '保存しました（注意 ' + v.warnings.length + '件）' : '保存しました');
+          var msg = v.warnings.length ? '保存しました（注意 ' + v.warnings.length + '件）' : '保存しました';
+          // 相手用にした台本は自分の一覧に出ないので、詳細へ飛ばさずホームへ戻す
+          if (!EST.profile.canSee(norm)) {
+            U.toast(msg + '。' + EST.profile.audienceLabel(norm.audience) + 'なので自分の一覧には出ません');
+            location.hash = '#/';
+            return;
+          }
+          U.toast(msg);
           location.hash = '#/topic/' + encodeURIComponent(norm.id);
         });
     }).catch(function (e) {
@@ -887,9 +926,9 @@
   function discard() {
     ui().confirm('編集を破棄', '編集中の内容は保存されません。', '破棄する', 'danger').then(function (ok) {
       if (!ok) return;
-      var wasNew = state.isNew, id = state.topic.id;
+      var wasNew = state.isNew, id = state.topic.id, seen = EST.profile.canSee(state.topic);
       state = null;
-      location.hash = wasNew ? '#/' : ('#/topic/' + encodeURIComponent(id));
+      location.hash = (wasNew || !seen) ? '#/' : ('#/topic/' + encodeURIComponent(id));
     });
   }
 

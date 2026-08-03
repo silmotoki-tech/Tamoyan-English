@@ -37,7 +37,7 @@
     var cur = EST.profile.get();
     return h('div', { class: 'card' }, [
       h('h2', { class: 'card__title', text: '部屋' }),
-      h('div', { class: 'small muted', text: '台本は2人で共有し、練習の記録は部屋ごとに完全に分かれます。相手の記録は見えません。' }),
+      h('div', { class: 'small muted', text: '台本は「誰の台本か」で振り分けられ、練習の記録は部屋ごとに完全に分かれます。相手の記録は見えません。' }),
       h('div', { class: 'row', style: { marginTop: '.5rem' } }, EST.profile.all().map(function (p) {
         return h('button', {
           class: 'btn' + (p.id === cur ? ' btn--primary' : ''),

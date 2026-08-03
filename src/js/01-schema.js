@@ -24,6 +24,10 @@
   var LINE_GAP_MS         = 350;   // 行と行のあいだの間
   var DEFAULT_RATE        = 0.95;  // §5.7 ttsRate の既定
 
+  // §5.1 誰の課題か。未指定は "both" として扱う（既存データを壊さないため）
+  var AUDIENCES = ['tamo', 'mari', 'both'];
+  var AUDIENCE_DEFAULT = 'both';
+
   /* ---- 語のテーブル（チャンク自動分割用。§1.8） ---------------------- */
   function set(list) { var o = {}; list.forEach(function (w) { o[w] = true; }); return o; }
 
@@ -448,6 +452,10 @@
       errors.push('自分の役に存在しない話者が指定されています: ' + t.myRole);
     }
 
+    if (t.audience && AUDIENCES.indexOf(String(t.audience)) < 0) {
+      errors.push('誰の台本か（audience）の値が不正です: ' + t.audience);
+    }
+
     (t.words || []).forEach(function (w, i) {
       if (!w || !String(w.en || '').trim()) errors.push('語彙 ' + (i + 1) + ' 件目の英語が空です');
     });
@@ -518,6 +526,9 @@
       titleEn: String(src.titleEn == null ? '' : src.titleEn).trim(),
       level: String(src.level == null ? '' : src.level).trim(),
       tags: (Array.isArray(src.tags) ? src.tags : []).map(String).filter(Boolean),
+      // §5.1 未指定なら "both"。同梱サンプルや古いJSONが片方の部屋から
+      // 消えてしまわないようにするための既定値。
+      audience: AUDIENCES.indexOf(String(src.audience)) >= 0 ? String(src.audience) : AUDIENCE_DEFAULT,
       myRole: myRole,
       speakers: speakers,
       blocks: blocks,
@@ -564,6 +575,8 @@
 
   EST.schema = {
     SCHEMA_VERSION: SCHEMA_VERSION,
+    AUDIENCES: AUDIENCES,
+    AUDIENCE_DEFAULT: AUDIENCE_DEFAULT,
     BLOCK_AUTO_MIN: BLOCK_AUTO_MIN,
     BLOCK_AUTO_SIZE: BLOCK_AUTO_SIZE,
     DEFAULT_RATE: DEFAULT_RATE,

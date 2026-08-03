@@ -51,8 +51,9 @@
 
     U.append(wrap, h('div', { class: 'section-title', text: 'トピック' }));
 
+    var chipBox = h('div', { class: 'row row--tight', style: { marginBottom: '.45rem' } });
     var listBox = h('div', {});
-    U.append(wrap, listBox);
+    U.append(wrap, [chipBox, listBox]);
 
     // §5.9 まりの部屋では編集系の導線をグレーアウトではなく「出さない」
     if (EST.profile.canEdit()) {
@@ -68,16 +69,65 @@
 
     EST.store.getAll('topics').then(function (topics) {
       topics.sort(function (a, b) { return (b.updatedAt || 0) - (a.updatedAt || 0); });
-      if (!topics.length) {
-        U.mount(listBox, h('div', { class: 'empty', text: EST.profile.canEdit()
-          ? 'まだトピックがありません。「＋ 新規トピック」から台本を入れてください。'
-          : 'まだ台本が届いていません。しばらくしてから開き直してください。' }));
-        return;
-      }
-      U.mount(listBox, topics.map(topicCard));
+      drawList(chipBox, listBox, topics);
     }).catch(function (e) {
       U.mount(listBox, h('div', { class: 'note-box note-box--err', text: '読み込みに失敗しました: ' + e.message }));
     });
+  }
+
+  /* ---- 一覧の絞り込み（§5.9） ------------------------------------------
+     一覧は自分の部屋の台本だけにする。ただしタモやんは相手用の台本も作るので、
+     保存した瞬間に一覧から消えて編集できなくなると困る。逃げ道としてチップを出す。
+  --------------------------------------------------------------------- */
+  var homeFilter = 'mine';   // 'mine' | 'other' | 'all'
+
+  function drawList(chipBox, listBox, topics) {
+    var U = ui();
+    var mine = topics.filter(function (t) { return EST.profile.canSee(t); });
+    var others = topics.filter(function (t) { return !EST.profile.canSee(t); });
+
+    // 相手用の台本が1件も無いうちはチップ自体を出さない。
+    // ホームは練習に入るための画面なので、管理UIを常設しない（§8）。
+    var showChips = EST.profile.canEdit() && others.length > 0;
+    if (!showChips) homeFilter = 'mine';
+
+    if (!showChips) {
+      U.mount(chipBox, []);
+    } else {
+      var otherLabel = EST.profile.other().label + '用';
+      U.mount(chipBox, [
+        chip('自分用', 'mine', mine.length, chipBox, listBox, topics),
+        chip(otherLabel, 'other', others.length, chipBox, listBox, topics),
+        chip('両方', 'all', topics.length, chipBox, listBox, topics)
+      ]);
+    }
+
+    var shown = homeFilter === 'mine' ? mine : (homeFilter === 'other' ? others : topics);
+
+    if (!shown.length) {
+      U.mount(listBox, h('div', { class: 'empty', text: emptyText(topics.length) }));
+      return;
+    }
+    U.mount(listBox, shown.map(topicCard));
+  }
+
+  function chip(label, value, count, chipBox, listBox, topics) {
+    return h('button', {
+      class: 'btn btn--sm' + (homeFilter === value ? ' btn--primary' : ''),
+      text: label + ' ' + count,
+      onClick: function () {
+        homeFilter = value;
+        drawList(chipBox, listBox, topics);
+      }
+    });
+  }
+
+  function emptyText(total) {
+    if (homeFilter === 'other') return '相手用の台本はありません。';
+    if (total) return 'この部屋の台本はまだありません。';
+    return EST.profile.canEdit()
+      ? 'まだトピックがありません。「＋ 新規トピック」から台本を入れてください。'
+      : 'まだ台本が届いていません。しばらくしてから開き直してください。';
   }
 
   function topicCard(t) {
@@ -90,14 +140,27 @@
       '1周 約' + U.fmtSeconds(sec)
     ].join(' ・ ');
 
+    // §5.9 自分の部屋に属さない台本をタップしたら、練習ではなく編集を開く。
+    // 練習画面に入ると相手用の台本に自分の進捗レコードが付いてしまうため。
+    var mine = EST.profile.canSee(t);
+    var to = mine ? ('#/topic/' + encodeURIComponent(t.id)) : ('#/edit/' + encodeURIComponent(t.id));
+
     return h('button', {
       class: 'topic-card',
-      onClick: function () { location.hash = '#/topic/' + encodeURIComponent(t.id); }
+      onClick: function () { location.hash = to; }
     }, [
-      h('div', { class: 'topic-card__title', text: t.title || '(無題)' }),
+      h('div', { class: 'topic-card__title' }, [
+        t.title || '(無題)',
+        // 誰の台本かは、両方を扱うタモやんの部屋でだけ出す
+        EST.profile.canEdit()
+          ? h('span', { class: 'chip', style: { marginLeft: '.4rem' }, text: EST.profile.audienceLabel(t.audience) })
+          : null
+      ]),
       t.titleEn ? h('div', { class: 'topic-card__meta en', text: t.titleEn }) : null,
       h('div', { class: 'topic-card__meta', text: meta }),
-      h('div', { class: 'topic-card__meta', text: '更新 ' + U.fmtDate(t.updatedAt) })
+      h('div', { class: 'topic-card__meta', text: mine
+        ? ('更新 ' + U.fmtDate(t.updatedAt))
+        : ('更新 ' + U.fmtDate(t.updatedAt) + ' ・ タップで編集') })
     ]);
   }
 
@@ -108,6 +171,12 @@
       if (!t) {
         EST.app.setBar('トピック', []);
         U.mount(view, h('div', { class: 'empty', text: 'このトピックは見つかりませんでした。' }));
+        return;
+      }
+      // §5.9 自分の部屋の台本でなければ練習画面には入らせない。
+      // 編集できる部屋なら編集へ、そうでなければホームへ戻す。
+      if (!EST.profile.canSee(t)) {
+        location.hash = EST.profile.canEdit() ? ('#/edit/' + encodeURIComponent(t.id)) : '#/';
         return;
       }
       EST.app.setBar(t.title || '(無題)', EST.profile.canEdit() ? [
@@ -133,7 +202,10 @@
         h('span', {}, [h('b', { text: String(t.lines.length) }), '行']),
         h('span', {}, [h('b', { text: String((t.blocks || []).length || 1) }), 'ブロック']),
         h('span', {}, ['語彙 ', h('b', { text: String((t.words || []).length) }), '個']),
-        h('span', {}, ['自分の役 ', h('b', { text: myLabel || '未設定' })])
+        h('span', {}, ['自分の役 ', h('b', { text: myLabel || '未設定' })]),
+        EST.profile.canEdit()
+          ? h('span', {}, ['台本 ', h('b', { text: EST.profile.audienceLabel(t.audience) })])
+          : null
       ])
     ]);
 

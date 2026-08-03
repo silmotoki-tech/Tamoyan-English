@@ -567,6 +567,10 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
   var LINE_GAP_MS         = 350;   // 行と行のあいだの間
   var DEFAULT_RATE        = 0.95;  // §5.7 ttsRate の既定
 
+  // §5.1 誰の課題か。未指定は "both" として扱う（既存データを壊さないため）
+  var AUDIENCES = ['tamo', 'mari', 'both'];
+  var AUDIENCE_DEFAULT = 'both';
+
   /* ---- 語のテーブル（チャンク自動分割用。§1.8） ---------------------- */
   function set(list) { var o = {}; list.forEach(function (w) { o[w] = true; }); return o; }
 
@@ -991,6 +995,10 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
       errors.push('自分の役に存在しない話者が指定されています: ' + t.myRole);
     }
 
+    if (t.audience && AUDIENCES.indexOf(String(t.audience)) < 0) {
+      errors.push('誰の台本か（audience）の値が不正です: ' + t.audience);
+    }
+
     (t.words || []).forEach(function (w, i) {
       if (!w || !String(w.en || '').trim()) errors.push('語彙 ' + (i + 1) + ' 件目の英語が空です');
     });
@@ -1061,6 +1069,9 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
       titleEn: String(src.titleEn == null ? '' : src.titleEn).trim(),
       level: String(src.level == null ? '' : src.level).trim(),
       tags: (Array.isArray(src.tags) ? src.tags : []).map(String).filter(Boolean),
+      // §5.1 未指定なら "both"。同梱サンプルや古いJSONが片方の部屋から
+      // 消えてしまわないようにするための既定値。
+      audience: AUDIENCES.indexOf(String(src.audience)) >= 0 ? String(src.audience) : AUDIENCE_DEFAULT,
       myRole: myRole,
       speakers: speakers,
       blocks: blocks,
@@ -1107,6 +1118,8 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
 
   EST.schema = {
     SCHEMA_VERSION: SCHEMA_VERSION,
+    AUDIENCES: AUDIENCES,
+    AUDIENCE_DEFAULT: AUDIENCE_DEFAULT,
     BLOCK_AUTO_MIN: BLOCK_AUTO_MIN,
     BLOCK_AUTO_SIZE: BLOCK_AUTO_SIZE,
     DEFAULT_RATE: DEFAULT_RATE,
@@ -1145,10 +1158,11 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
 
   var LS_KEY = 'est-profile';
 
-  // 権限は §5.9 の表のとおり。mari は練習専用で、編集系の導線は出さない。
+  // 権限は §5.9 の表のとおり。2人とも学習者で、タモやんが台本づくりと配信も担う。
+  // まりに編集導線を出さないのは役割の上下ではなく、誤操作を防いで画面を単純に保つため。
   var PROFILES = [
-    { id: 'tamo', label: 'タモやん', sub: '台本を作る人', canEdit: true },
-    { id: 'mari', label: 'まり',     sub: '練習する人',   canEdit: false }
+    { id: 'tamo', label: 'タモやん', sub: '練習と台本づくり', canEdit: true },
+    { id: 'mari', label: 'まり',     sub: '練習',             canEdit: false }
   ];
 
   var current = null;   // 未選択のあいだは null
@@ -1192,6 +1206,36 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
     try { localStorage.removeItem(LS_KEY); } catch (e) {}
   }
 
+  /* ---- 台本の振り分け（§5.9） ------------------------------------------
+     一覧・検索・復習キューはすべてこの関数を通す。絞り込みのルールを
+     1か所に集めておかないと、F2 の検索や F7 の復習キューで食い違う。
+  --------------------------------------------------------------------- */
+  function canSee(topic) {
+    if (!topic) return false;
+    var a = topic.audience || 'both';
+    return a === 'both' || a === current;
+  }
+
+  function visible(topics) {
+    return (topics || []).filter(canSee);
+  }
+
+  // 相手の部屋（2人固定なので、自分でないほう）
+  function other() {
+    var me = current;
+    var hit = null;
+    PROFILES.forEach(function (p) { if (p.id !== me) hit = p; });
+    return hit || PROFILES[0];
+  }
+
+  // audience の値を、いま見ている人から見た日本語にする
+  function audienceLabel(a) {
+    if (a === 'both') return '両方';
+    if (a === current) return '自分用';
+    var o = find(a);
+    return (o ? o.label : a) + '用';
+  }
+
   EST.profile = {
     LS_KEY: LS_KEY,
     all: all,
@@ -1202,7 +1246,11 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
     info: info,
     label: label,
     canEdit: canEdit,
-    clear: clear
+    clear: clear,
+    canSee: canSee,
+    visible: visible,
+    other: other,
+    audienceLabel: audienceLabel
   };
 })(window.EST = window.EST || {});
 
@@ -1685,14 +1733,24 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
       var incomingIds = {};
       incoming.forEach(function (t) { incomingIds[t.id] = true; });
 
+      // 件数は自分の部屋に見えるものだけ数える。相手用の台本が増えたことを
+      // 知らされても、こちらの行動は何も変わらないため（§5.9）。
       var added = 0, updated = 0;
-      incoming.forEach(function (t) { if (curIds[t.id]) updated++; else added++; });
+      incoming.forEach(function (t) {
+        if (!EST.profile.canSee(t)) return;
+        if (curIds[t.id]) updated++; else added++;
+      });
 
       // 配信から消えたトピックは一覧からも消す（§6.5）。ただし
       // 手元で作っただけでまだ配信していない台本を巻き込まないよう、
       // 前回の配信に入っていたものだけを対象にする。
       var wasFed = Array.isArray(shared.feedTopicIds) ? shared.feedTopicIds : [];
       var removeIds = wasFed.filter(function (id) { return !incomingIds[id] && curIds[id]; });
+
+      // 削除の件数も、自分の部屋に見えていたものだけを数える
+      var curById = {};
+      cur.forEach(function (t) { curById[t.id] = t; });
+      var removedVisible = removeIds.filter(function (id) { return EST.profile.canSee(curById[id]); }).length;
 
       var chain = EST.store.bulkPut('topics', incoming);
       removeIds.forEach(function (id) {
@@ -1705,7 +1763,7 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
         shared.feedTopicIds = Object.keys(incomingIds);
         return EST.store.saveShared(shared);
       }).then(function () {
-        return { added: added, updated: updated, removed: removeIds.length, publishedAt: publishedAt };
+        return { added: added, updated: updated, removed: removedVisible, publishedAt: publishedAt };
       });
     });
   }
@@ -1798,8 +1856,9 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
 
     U.append(wrap, h('div', { class: 'section-title', text: 'トピック' }));
 
+    var chipBox = h('div', { class: 'row row--tight', style: { marginBottom: '.45rem' } });
     var listBox = h('div', {});
-    U.append(wrap, listBox);
+    U.append(wrap, [chipBox, listBox]);
 
     // §5.9 まりの部屋では編集系の導線をグレーアウトではなく「出さない」
     if (EST.profile.canEdit()) {
@@ -1815,16 +1874,65 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
 
     EST.store.getAll('topics').then(function (topics) {
       topics.sort(function (a, b) { return (b.updatedAt || 0) - (a.updatedAt || 0); });
-      if (!topics.length) {
-        U.mount(listBox, h('div', { class: 'empty', text: EST.profile.canEdit()
-          ? 'まだトピックがありません。「＋ 新規トピック」から台本を入れてください。'
-          : 'まだ台本が届いていません。しばらくしてから開き直してください。' }));
-        return;
-      }
-      U.mount(listBox, topics.map(topicCard));
+      drawList(chipBox, listBox, topics);
     }).catch(function (e) {
       U.mount(listBox, h('div', { class: 'note-box note-box--err', text: '読み込みに失敗しました: ' + e.message }));
     });
+  }
+
+  /* ---- 一覧の絞り込み（§5.9） ------------------------------------------
+     一覧は自分の部屋の台本だけにする。ただしタモやんは相手用の台本も作るので、
+     保存した瞬間に一覧から消えて編集できなくなると困る。逃げ道としてチップを出す。
+  --------------------------------------------------------------------- */
+  var homeFilter = 'mine';   // 'mine' | 'other' | 'all'
+
+  function drawList(chipBox, listBox, topics) {
+    var U = ui();
+    var mine = topics.filter(function (t) { return EST.profile.canSee(t); });
+    var others = topics.filter(function (t) { return !EST.profile.canSee(t); });
+
+    // 相手用の台本が1件も無いうちはチップ自体を出さない。
+    // ホームは練習に入るための画面なので、管理UIを常設しない（§8）。
+    var showChips = EST.profile.canEdit() && others.length > 0;
+    if (!showChips) homeFilter = 'mine';
+
+    if (!showChips) {
+      U.mount(chipBox, []);
+    } else {
+      var otherLabel = EST.profile.other().label + '用';
+      U.mount(chipBox, [
+        chip('自分用', 'mine', mine.length, chipBox, listBox, topics),
+        chip(otherLabel, 'other', others.length, chipBox, listBox, topics),
+        chip('両方', 'all', topics.length, chipBox, listBox, topics)
+      ]);
+    }
+
+    var shown = homeFilter === 'mine' ? mine : (homeFilter === 'other' ? others : topics);
+
+    if (!shown.length) {
+      U.mount(listBox, h('div', { class: 'empty', text: emptyText(topics.length) }));
+      return;
+    }
+    U.mount(listBox, shown.map(topicCard));
+  }
+
+  function chip(label, value, count, chipBox, listBox, topics) {
+    return h('button', {
+      class: 'btn btn--sm' + (homeFilter === value ? ' btn--primary' : ''),
+      text: label + ' ' + count,
+      onClick: function () {
+        homeFilter = value;
+        drawList(chipBox, listBox, topics);
+      }
+    });
+  }
+
+  function emptyText(total) {
+    if (homeFilter === 'other') return '相手用の台本はありません。';
+    if (total) return 'この部屋の台本はまだありません。';
+    return EST.profile.canEdit()
+      ? 'まだトピックがありません。「＋ 新規トピック」から台本を入れてください。'
+      : 'まだ台本が届いていません。しばらくしてから開き直してください。';
   }
 
   function topicCard(t) {
@@ -1837,14 +1945,27 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
       '1周 約' + U.fmtSeconds(sec)
     ].join(' ・ ');
 
+    // §5.9 自分の部屋に属さない台本をタップしたら、練習ではなく編集を開く。
+    // 練習画面に入ると相手用の台本に自分の進捗レコードが付いてしまうため。
+    var mine = EST.profile.canSee(t);
+    var to = mine ? ('#/topic/' + encodeURIComponent(t.id)) : ('#/edit/' + encodeURIComponent(t.id));
+
     return h('button', {
       class: 'topic-card',
-      onClick: function () { location.hash = '#/topic/' + encodeURIComponent(t.id); }
+      onClick: function () { location.hash = to; }
     }, [
-      h('div', { class: 'topic-card__title', text: t.title || '(無題)' }),
+      h('div', { class: 'topic-card__title' }, [
+        t.title || '(無題)',
+        // 誰の台本かは、両方を扱うタモやんの部屋でだけ出す
+        EST.profile.canEdit()
+          ? h('span', { class: 'chip', style: { marginLeft: '.4rem' }, text: EST.profile.audienceLabel(t.audience) })
+          : null
+      ]),
       t.titleEn ? h('div', { class: 'topic-card__meta en', text: t.titleEn }) : null,
       h('div', { class: 'topic-card__meta', text: meta }),
-      h('div', { class: 'topic-card__meta', text: '更新 ' + U.fmtDate(t.updatedAt) })
+      h('div', { class: 'topic-card__meta', text: mine
+        ? ('更新 ' + U.fmtDate(t.updatedAt))
+        : ('更新 ' + U.fmtDate(t.updatedAt) + ' ・ タップで編集') })
     ]);
   }
 
@@ -1855,6 +1976,12 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
       if (!t) {
         EST.app.setBar('トピック', []);
         U.mount(view, h('div', { class: 'empty', text: 'このトピックは見つかりませんでした。' }));
+        return;
+      }
+      // §5.9 自分の部屋の台本でなければ練習画面には入らせない。
+      // 編集できる部屋なら編集へ、そうでなければホームへ戻す。
+      if (!EST.profile.canSee(t)) {
+        location.hash = EST.profile.canEdit() ? ('#/edit/' + encodeURIComponent(t.id)) : '#/';
         return;
       }
       EST.app.setBar(t.title || '(無題)', EST.profile.canEdit() ? [
@@ -1880,7 +2007,10 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
         h('span', {}, [h('b', { text: String(t.lines.length) }), '行']),
         h('span', {}, [h('b', { text: String((t.blocks || []).length || 1) }), 'ブロック']),
         h('span', {}, ['語彙 ', h('b', { text: String((t.words || []).length) }), '個']),
-        h('span', {}, ['自分の役 ', h('b', { text: myLabel || '未設定' })])
+        h('span', {}, ['自分の役 ', h('b', { text: myLabel || '未設定' })]),
+        EST.profile.canEdit()
+          ? h('span', {}, ['台本 ', h('b', { text: EST.profile.audienceLabel(t.audience) })])
+          : null
       ])
     ]);
 
@@ -2074,6 +2204,7 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
   function onBlank() {
     var t = EST.schema.normalizeTopic({
       title: '',
+      audience: EST.profile.get(),   // §5.9 新規作成時の既定は「自分用」
       speakers: [{ id: 'S1', label: 'A' }, { id: 'S2', label: 'B' }],
       lines: [
         { speakerId: 'S1', en: '', ja: '' },
@@ -2092,6 +2223,7 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
     }
     var t = EST.schema.normalizeTopic({
       title: '',
+      audience: EST.profile.get(),   // §5.9 新規作成時の既定は「自分用」
       speakers: parsed.speakers,
       lines: parsed.lines
     });
@@ -2111,7 +2243,14 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
       value = value[0];
     }
     var check = EST.schema.validateTopic(value, { requireMyRole: false });
+    var hadAudience = value && EST.schema.AUDIENCES.indexOf(String(value.audience)) >= 0;
     var t = EST.schema.normalizeTopic(value);
+    if (!hadAudience) {
+      // §5.9 これから作る台本なので、既定は「自分用」にする。
+      // （§5.1 の "both" 既定は、配信や同梱サンプルなど既存データ向け）
+      t.audience = EST.profile.get();
+      warnings.push('誰の台本かが指定されていないので「自分用」にしました');
+    }
     if (check.errors.length) {
       // エラーがあっても編集画面までは通す。直す場所が見えないと直せないため。
       warnings = warnings.concat(check.errors);
@@ -2256,8 +2395,31 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
       h('div', { style: { marginTop: '.5rem' } }, [
         h('span', { class: 'field__label', text: '自分の役（S5・S6で使うので必須）' }),
         h('div', { class: 'row row--tight', id: 'myrole-box' }, myRoleButtons())
+      ]),
+      h('div', { style: { marginTop: '.5rem' } }, [
+        h('span', { class: 'field__label', text: '誰の台本か（§5.9）' }),
+        h('div', { class: 'row row--tight', id: 'audience-box' }, audienceButtons()),
+        h('div', { class: 'tiny muted', text: '相手用にすると、この台本は自分のトピック一覧から外れます。' })
       ])
     ]);
+  }
+
+  // §5.9 タモやんの編集画面には audience の選択を必ず置く
+  function audienceButtons() {
+    var t = state.topic;
+    var me = EST.profile.get();
+    var other = EST.profile.other().id;
+    return [me, other, 'both'].map(function (a) {
+      return h('button', {
+        class: 'btn btn--sm' + (t.audience === a ? ' btn--primary' : ''),
+        text: EST.profile.audienceLabel(a),
+        onClick: function () {
+          t.audience = a;
+          var box = document.getElementById('audience-box');
+          if (box) ui().mount(box, audienceButtons());
+        }
+      });
+    });
   }
 
   function myRoleButtons() {
@@ -2854,7 +3016,14 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
         .then(function () { return EST.backup.snapshot('保存: ' + norm.title); })
         .then(function () {
           state = null;
-          U.toast(v.warnings.length ? '保存しました（注意 ' + v.warnings.length + '件）' : '保存しました');
+          var msg = v.warnings.length ? '保存しました（注意 ' + v.warnings.length + '件）' : '保存しました';
+          // 相手用にした台本は自分の一覧に出ないので、詳細へ飛ばさずホームへ戻す
+          if (!EST.profile.canSee(norm)) {
+            U.toast(msg + '。' + EST.profile.audienceLabel(norm.audience) + 'なので自分の一覧には出ません');
+            location.hash = '#/';
+            return;
+          }
+          U.toast(msg);
           location.hash = '#/topic/' + encodeURIComponent(norm.id);
         });
     }).catch(function (e) {
@@ -2865,9 +3034,9 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
   function discard() {
     ui().confirm('編集を破棄', '編集中の内容は保存されません。', '破棄する', 'danger').then(function (ok) {
       if (!ok) return;
-      var wasNew = state.isNew, id = state.topic.id;
+      var wasNew = state.isNew, id = state.topic.id, seen = EST.profile.canSee(state.topic);
       state = null;
-      location.hash = wasNew ? '#/' : ('#/topic/' + encodeURIComponent(id));
+      location.hash = (wasNew || !seen) ? '#/' : ('#/topic/' + encodeURIComponent(id));
     });
   }
 
@@ -2921,7 +3090,7 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
     var cur = EST.profile.get();
     return h('div', { class: 'card' }, [
       h('h2', { class: 'card__title', text: '部屋' }),
-      h('div', { class: 'small muted', text: '台本は2人で共有し、練習の記録は部屋ごとに完全に分かれます。相手の記録は見えません。' }),
+      h('div', { class: 'small muted', text: '台本は「誰の台本か」で振り分けられ、練習の記録は部屋ごとに完全に分かれます。相手の記録は見えません。' }),
       h('div', { class: 'row', style: { marginTop: '.5rem' } }, EST.profile.all().map(function (p) {
         return h('button', {
           class: 'btn' + (p.id === cur ? ' btn--primary' : ''),
@@ -3287,7 +3456,7 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
     EST.ui.mount(viewEl, h('div', { class: 'card' }, [
       h('h2', { class: 'card__title', text: 'どちらの部屋で使いますか' }),
       h('div', { class: 'small muted', style: { marginBottom: '.6rem' },
-        text: '台本は2人で同じものを使い、練習の記録だけを分けます。あとから設定で変えられます。' }),
+        text: '台本も練習の記録も部屋ごとに分かれます。2人とも学習者で、課題は別です。あとから設定で変えられます。' }),
       h('div', {}, EST.profile.all().map(function (p) {
         return h('button', {
           class: 'home-item',

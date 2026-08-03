@@ -80,14 +80,24 @@
       var incomingIds = {};
       incoming.forEach(function (t) { incomingIds[t.id] = true; });
 
+      // 件数は自分の部屋に見えるものだけ数える。相手用の台本が増えたことを
+      // 知らされても、こちらの行動は何も変わらないため（§5.9）。
       var added = 0, updated = 0;
-      incoming.forEach(function (t) { if (curIds[t.id]) updated++; else added++; });
+      incoming.forEach(function (t) {
+        if (!EST.profile.canSee(t)) return;
+        if (curIds[t.id]) updated++; else added++;
+      });
 
       // 配信から消えたトピックは一覧からも消す（§6.5）。ただし
       // 手元で作っただけでまだ配信していない台本を巻き込まないよう、
       // 前回の配信に入っていたものだけを対象にする。
       var wasFed = Array.isArray(shared.feedTopicIds) ? shared.feedTopicIds : [];
       var removeIds = wasFed.filter(function (id) { return !incomingIds[id] && curIds[id]; });
+
+      // 削除の件数も、自分の部屋に見えていたものだけを数える
+      var curById = {};
+      cur.forEach(function (t) { curById[t.id] = t; });
+      var removedVisible = removeIds.filter(function (id) { return EST.profile.canSee(curById[id]); }).length;
 
       var chain = EST.store.bulkPut('topics', incoming);
       removeIds.forEach(function (id) {
@@ -100,7 +110,7 @@
         shared.feedTopicIds = Object.keys(incomingIds);
         return EST.store.saveShared(shared);
       }).then(function () {
-        return { added: added, updated: updated, removed: removeIds.length, publishedAt: publishedAt };
+        return { added: added, updated: updated, removed: removedVisible, publishedAt: publishedAt };
       });
     });
   }

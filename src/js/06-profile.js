@@ -9,10 +9,11 @@
 
   var LS_KEY = 'est-profile';
 
-  // 権限は §5.9 の表のとおり。mari は練習専用で、編集系の導線は出さない。
+  // 権限は §5.9 の表のとおり。2人とも学習者で、タモやんが台本づくりと配信も担う。
+  // まりに編集導線を出さないのは役割の上下ではなく、誤操作を防いで画面を単純に保つため。
   var PROFILES = [
-    { id: 'tamo', label: 'タモやん', sub: '台本を作る人', canEdit: true },
-    { id: 'mari', label: 'まり',     sub: '練習する人',   canEdit: false }
+    { id: 'tamo', label: 'タモやん', sub: '練習と台本づくり', canEdit: true },
+    { id: 'mari', label: 'まり',     sub: '練習',             canEdit: false }
   ];
 
   var current = null;   // 未選択のあいだは null
@@ -56,6 +57,36 @@
     try { localStorage.removeItem(LS_KEY); } catch (e) {}
   }
 
+  /* ---- 台本の振り分け（§5.9） ------------------------------------------
+     一覧・検索・復習キューはすべてこの関数を通す。絞り込みのルールを
+     1か所に集めておかないと、F2 の検索や F7 の復習キューで食い違う。
+  --------------------------------------------------------------------- */
+  function canSee(topic) {
+    if (!topic) return false;
+    var a = topic.audience || 'both';
+    return a === 'both' || a === current;
+  }
+
+  function visible(topics) {
+    return (topics || []).filter(canSee);
+  }
+
+  // 相手の部屋（2人固定なので、自分でないほう）
+  function other() {
+    var me = current;
+    var hit = null;
+    PROFILES.forEach(function (p) { if (p.id !== me) hit = p; });
+    return hit || PROFILES[0];
+  }
+
+  // audience の値を、いま見ている人から見た日本語にする
+  function audienceLabel(a) {
+    if (a === 'both') return '両方';
+    if (a === current) return '自分用';
+    var o = find(a);
+    return (o ? o.label : a) + '用';
+  }
+
   EST.profile = {
     LS_KEY: LS_KEY,
     all: all,
@@ -66,6 +97,10 @@
     info: info,
     label: label,
     canEdit: canEdit,
-    clear: clear
+    clear: clear,
+    canSee: canSee,
+    visible: visible,
+    other: other,
+    audienceLabel: audienceLabel
   };
 })(window.EST = window.EST || {});

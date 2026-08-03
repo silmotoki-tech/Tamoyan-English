@@ -89,7 +89,7 @@
     EST.ui.mount(viewEl, h('div', { class: 'card' }, [
       h('h2', { class: 'card__title', text: 'どちらの部屋で使いますか' }),
       h('div', { class: 'small muted', style: { marginBottom: '.6rem' },
-        text: '台本は2人で同じものを使い、練習の記録だけを分けます。あとから設定で変えられます。' }),
+        text: '台本も練習の記録も部屋ごとに分かれます。2人とも学習者で、課題は別です。あとから設定で変えられます。' }),
       h('div', {}, EST.profile.all().map(function (p) {
         return h('button', {
           class: 'home-item',
