@@ -1,0 +1,129 @@
+{
+  "id": "tpc_sample_checkin",
+  "title": "空港のチェックインカウンター",
+  "titleEn": "At the Check-in Counter",
+  "level": "B1",
+  "tags": ["旅行", "空港"],
+  "myRole": "S2",
+  "speakers": [
+    { "id": "S1", "label": "Agent", "gender": "female" },
+    { "id": "S2", "label": "You", "gender": "male" }
+  ],
+  "blocks": [],
+  "lines": [
+    {
+      "id": "ln_001",
+      "speakerId": "S1",
+      "en": "Good morning. May I see your passport, please?",
+      "ja": "おはようございます。パスポートを拝見してもよろしいですか？",
+      "note": "May I 〜 は Can I 〜 より丁寧。カウンター業務では定番。",
+      "skip": false
+    },
+    {
+      "id": "ln_002",
+      "speakerId": "S2",
+      "en": "Sure, here you go.",
+      "ja": "はい、どうぞ。",
+      "note": "Here you go. は物を手渡すときの定型。",
+      "skip": false
+    },
+    {
+      "id": "ln_003",
+      "speakerId": "S1",
+      "en": "Thank you. Are you checking any bags today?",
+      "ja": "ありがとうございます。本日、お預けの荷物はございますか？",
+      "note": "check a bag = 荷物を預ける。",
+      "skip": false
+    },
+    {
+      "id": "ln_004",
+      "speakerId": "S2",
+      "en": "Yes, just this one suitcase.",
+      "ja": "はい、このスーツケース一つだけです。",
+      "note": "just = only。会話では just のほうが自然で柔らかい。",
+      "skip": false
+    },
+    {
+      "id": "ln_005",
+      "speakerId": "S1",
+      "en": "Could you place it on the scale for me?",
+      "ja": "こちらの計りに載せていただけますか？",
+      "note": "place = put のフォーマル版。",
+      "skip": false
+    },
+    {
+      "id": "ln_006",
+      "speakerId": "S2",
+      "en": "There you go. Is it under the weight limit?",
+      "ja": "はい、載せました。重量制限は超えていませんか？",
+      "note": "There you go. は動作を完了したときの「はい、どうぞ」。",
+      "skip": false
+    },
+    {
+      "id": "ln_007",
+      "speakerId": "S1",
+      "en": "It's twenty-two kilos, so you're fine. The limit is twenty-three.",
+      "ja": "22キロですので大丈夫です。制限は23キロまでです。",
+      "note": "you're fine = 問題ありません。",
+      "skip": false
+    },
+    {
+      "id": "ln_008",
+      "speakerId": "S2",
+      "en": "Great. Could I get an aisle seat if possible?",
+      "ja": "よかった。できれば通路側の席をお願いできますか？",
+      "note": "aisle seat = 通路側。if possible を添えると角が立たない。",
+      "skip": false
+    },
+    {
+      "id": "ln_009",
+      "speakerId": "S1",
+      "en": "Let me check. I have one available near the front.",
+      "ja": "確認いたします。前方に一席空きがございます。",
+      "note": "Let me check. は「確認します」の最頻出フレーズ。",
+      "skip": false
+    },
+    {
+      "id": "ln_010",
+      "speakerId": "S2",
+      "en": "That would be perfect. Thank you so much.",
+      "ja": "それで完璧です。本当にありがとうございます。",
+      "note": "提案を受け入れるときの丁寧な言い方。",
+      "skip": false
+    },
+    {
+      "id": "ln_011",
+      "speakerId": "S1",
+      "en": "Here's your boarding pass. Your gate is B12 and boarding starts at ten forty.",
+      "ja": "こちらが搭乗券です。ゲートはB12、搭乗開始は10時40分です。",
+      "note": "時刻は ten forty のように読む。",
+      "skip": false
+    },
+    {
+      "id": "ln_012",
+      "speakerId": "S2",
+      "en": "Got it. Thanks for your help. Have a good one.",
+      "ja": "承知しました。ご対応ありがとうございます。良い一日を。",
+      "note": "Have a good one. は Have a nice day. のカジュアル版。",
+      "skip": false
+    }
+  ],
+  "words": [
+    { "id": "w_001", "en": "Here you go.", "ja": "はい、どうぞ", "type": "phrase", "lineIds": ["ln_002"], "note": "物を手渡すとき" },
+    { "id": "w_002", "en": "check a bag", "ja": "荷物を預ける", "type": "phrase", "lineIds": ["ln_003"], "note": "" },
+    { "id": "w_003", "en": "place it on the scale", "ja": "計りに載せる", "type": "phrase", "lineIds": ["ln_005"], "note": "" },
+    { "id": "w_004", "en": "There you go.", "ja": "はい、できました", "type": "phrase", "lineIds": ["ln_006"], "note": "動作を完了したとき" },
+    { "id": "w_005", "en": "weight limit", "ja": "重量制限", "type": "phrase", "lineIds": ["ln_006"], "note": "" },
+    { "id": "w_006", "en": "You're fine.", "ja": "問題ありません", "type": "phrase", "lineIds": ["ln_007"], "note": "" },
+    { "id": "w_007", "en": "aisle seat", "ja": "通路側の席", "type": "phrase", "lineIds": ["ln_008"], "note": "窓側は window seat" },
+    { "id": "w_008", "en": "if possible", "ja": "できれば", "type": "phrase", "lineIds": ["ln_008"], "note": "後ろに添えると柔らかくなる" },
+    { "id": "w_009", "en": "Let me check.", "ja": "確認しますね", "type": "phrase", "lineIds": ["ln_009"], "note": "" },
+    { "id": "w_010", "en": "available", "ja": "空いている、利用できる", "type": "word", "lineIds": ["ln_009"], "note": "" },
+    { "id": "w_011", "en": "That would be perfect.", "ja": "それで完璧です", "type": "phrase", "lineIds": ["ln_010"], "note": "提案を受け入れる丁寧な言い方" },
+    { "id": "w_012", "en": "boarding pass", "ja": "搭乗券", "type": "phrase", "lineIds": ["ln_011"], "note": "" },
+    { "id": "w_013", "en": "Have a good one.", "ja": "良い一日を", "type": "phrase", "lineIds": ["ln_012"], "note": "Have a nice day. のカジュアル版" }
+  ],
+  "createdAt": 1754179200000,
+  "updatedAt": 1754179200000,
+  "schemaVersion": 3
+}

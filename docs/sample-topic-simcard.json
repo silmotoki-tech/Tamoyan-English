@@ -1,0 +1,221 @@
+{
+  "id": "tpc_sample_simcard",
+  "title": "空港でSIMカードを購入する",
+  "titleEn": "Buying a SIM Card at the Airport",
+  "level": "B1",
+  "tags": ["旅行", "買い物", "空港"],
+  "myRole": "S2",
+  "speakers": [
+    { "id": "S1", "label": "Staff", "gender": "female" },
+    { "id": "S2", "label": "You", "gender": "male" }
+  ],
+  "blocks": [
+    { "id": "b1", "label": "用件を伝える", "from": "ln_001", "to": "ln_006" },
+    { "id": "b2", "label": "プランを確認する", "from": "ln_007", "to": "ln_012" },
+    { "id": "b3", "label": "開通してもらう", "from": "ln_013", "to": "ln_018" },
+    { "id": "b4", "label": "支払って締める", "from": "ln_019", "to": "ln_022" }
+  ],
+  "lines": [
+    {
+      "id": "ln_001",
+      "speakerId": "S2",
+      "en": "Hi, I'd like to get a SIM card for my phone.",
+      "ja": "こんにちは、スマホ用のSIMカードが欲しいのですが。",
+      "note": "I'd like to 〜 は I want to 〜 より丁寧で、店頭ではこちらが基本。",
+      "skip": false
+    },
+    {
+      "id": "ln_002",
+      "speakerId": "S1",
+      "en": "Sure. How long are you staying?",
+      "ja": "かしこまりました。ご滞在はどのくらいですか？",
+      "note": "How long are you staying? は滞在期間を聞く定番。現在進行形で未来を表す。",
+      "skip": false
+    },
+    {
+      "id": "ln_003",
+      "speakerId": "S2",
+      "en": "About ten days, and I'll be traveling around a lot.",
+      "ja": "10日ほどです。あちこち移動する予定です。",
+      "note": "travel around = あちこち回る。理由を一言添えると会話が続きやすい。",
+      "skip": false
+    },
+    {
+      "id": "ln_004",
+      "speakerId": "S1",
+      "en": "Got it. Do you need calls, or just data?",
+      "ja": "承知しました。通話も必要ですか、それともデータだけですか？",
+      "note": "Got it. は「承知しました」の口語。店員も客も使う。",
+      "skip": false
+    },
+    {
+      "id": "ln_005",
+      "speakerId": "S2",
+      "en": "Mostly data, but I might need to make a few local calls.",
+      "ja": "ほとんどデータですが、現地で何回か電話するかもしれません。",
+      "note": "might need to 〜 で「〜するかもしれない」と含みを残す言い方。",
+      "skip": false
+    },
+    {
+      "id": "ln_006",
+      "speakerId": "S1",
+      "en": "Then I'd recommend our ten-day plan. Twenty gigs for thirty dollars.",
+      "ja": "でしたら10日間プランがおすすめです。20ギガで30ドルです。",
+      "note": "gigs = gigabytes の口語。値段は for + 金額。",
+      "skip": false
+    },
+    {
+      "id": "ln_007",
+      "speakerId": "S2",
+      "en": "What happens if I run out of data before I leave?",
+      "ja": "帰国前にデータを使い切ったらどうなりますか？",
+      "note": "run out of 〜 = 〜を使い切る。旅行英語の最頻出表現のひとつ。",
+      "skip": false
+    },
+    {
+      "id": "ln_008",
+      "speakerId": "S1",
+      "en": "It slows down, but you can still use it. Or you can top up anytime.",
+      "ja": "速度が落ちますが、使い続けられます。いつでもチャージもできます。",
+      "note": "top up = チャージする、追加購入する。イギリス系英語圏で特によく使う。",
+      "skip": false
+    },
+    {
+      "id": "ln_009",
+      "speakerId": "S2",
+      "en": "That sounds fine. Does it come with a local number?",
+      "ja": "それで問題なさそうです。現地の電話番号は付いてきますか？",
+      "note": "come with 〜 = 〜が付いてくる。商品説明で頻出。",
+      "skip": false
+    },
+    {
+      "id": "ln_010",
+      "speakerId": "S1",
+      "en": "Yes, you'll get one as soon as we activate it.",
+      "ja": "はい、開通した時点ですぐ発番されます。",
+      "note": "activate = 開通する、有効化する。as soon as 〜 = 〜したらすぐ。",
+      "skip": false
+    },
+    {
+      "id": "ln_011",
+      "speakerId": "S2",
+      "en": "One more thing. Will it work with my phone?",
+      "ja": "もう一つだけ。私のスマホで使えますか？",
+      "note": "One more thing. は追加で質問するときの前置き。丸暗記推奨。",
+      "skip": false
+    },
+    {
+      "id": "ln_012",
+      "speakerId": "S1",
+      "en": "Let me check. Is your phone unlocked?",
+      "ja": "確認しますね。SIMロックは解除されていますか？",
+      "note": "unlocked = SIMロック解除済み。Let me check. は確認の定番。",
+      "skip": false
+    },
+    {
+      "id": "ln_013",
+      "speakerId": "S2",
+      "en": "I think so. I bought it directly from the manufacturer.",
+      "ja": "たぶん大丈夫です。メーカーから直接買ったので。",
+      "note": "I think so. で断定を避ける。directly from 〜 = 〜から直接。",
+      "skip": false
+    },
+    {
+      "id": "ln_014",
+      "speakerId": "S1",
+      "en": "Perfect. Could I borrow your phone for a second?",
+      "ja": "承知しました。少しスマホをお借りできますか？",
+      "note": "for a second = ちょっとの間。borrow は「借りる」で使用者が持ち帰らない場面。",
+      "skip": false
+    },
+    {
+      "id": "ln_015",
+      "speakerId": "S2",
+      "en": "Sure, here you go. Should I keep the old SIM?",
+      "ja": "はい、どうぞ。元のSIMは取っておいたほうがいいですか？",
+      "note": "Here you go. は物を手渡すときの定型。Should I 〜? で助言を求める。",
+      "skip": false
+    },
+    {
+      "id": "ln_016",
+      "speakerId": "S1",
+      "en": "Definitely. Put it somewhere safe so you don't lose it.",
+      "ja": "ぜひそうしてください。無くさないよう安全な場所に。",
+      "note": "Definitely. は強い肯定の相づち。so + 主語 + 動詞 で目的を表す。",
+      "skip": false
+    },
+    {
+      "id": "ln_017",
+      "speakerId": "S2",
+      "en": "Will do. Do I need to change any settings myself?",
+      "ja": "そうします。設定は自分で変える必要がありますか？",
+      "note": "Will do. = そうします。I will do it. の省略で、口語では非常によく使う。",
+      "skip": false
+    },
+    {
+      "id": "ln_018",
+      "speakerId": "S1",
+      "en": "No, it's automatic. Just restart your phone if it doesn't connect.",
+      "ja": "いいえ、自動です。繋がらなければ再起動だけしてください。",
+      "note": "Just 〜 で「〜するだけ」。トラブル対応の説明で頻出。",
+      "skip": false
+    },
+    {
+      "id": "ln_019",
+      "speakerId": "S2",
+      "en": "Got it. Can I pay by card?",
+      "ja": "わかりました。カードで払えますか？",
+      "note": "pay by card / pay in cash。前置詞が by と in で違う点に注意。",
+      "skip": false
+    },
+    {
+      "id": "ln_020",
+      "speakerId": "S1",
+      "en": "Of course. Just tap here whenever you're ready.",
+      "ja": "もちろんです。準備ができたらこちらにタッチしてください。",
+      "note": "whenever you're ready = ご準備ができ次第。急かさない丁寧な言い方。",
+      "skip": false
+    },
+    {
+      "id": "ln_021",
+      "speakerId": "S2",
+      "en": "Thanks a lot. You've been really helpful.",
+      "ja": "ありがとうございます。とても助かりました。",
+      "note": "You've been really helpful. は現在完了で「今までのやりとり全体」への感謝。",
+      "skip": false
+    },
+    {
+      "id": "ln_022",
+      "speakerId": "S1",
+      "en": "No problem at all. Enjoy your trip.",
+      "ja": "とんでもないです。良いご旅行を。",
+      "note": "No problem at all. は You're welcome. のカジュアルで温かい版。",
+      "skip": false
+    }
+  ],
+  "words": [
+    { "id": "w_001", "en": "travel around", "ja": "あちこち回る、移動して回る", "type": "phrase", "lineIds": ["ln_003"], "note": "" },
+    { "id": "w_002", "en": "Got it.", "ja": "わかりました、承知しました", "type": "phrase", "lineIds": ["ln_004", "ln_019"], "note": "客も店員も使える万能の相づち" },
+    { "id": "w_003", "en": "gigs", "ja": "ギガ（ギガバイト）", "type": "word", "lineIds": ["ln_006"], "note": "gigabytes の口語。複数形で使う" },
+    { "id": "w_004", "en": "run out of", "ja": "使い切る、切らす", "type": "phrase", "lineIds": ["ln_007"], "note": "旅行英語の最頻出表現のひとつ" },
+    { "id": "w_005", "en": "slow down", "ja": "速度が落ちる、遅くなる", "type": "phrase", "lineIds": ["ln_008"], "note": "" },
+    { "id": "w_006", "en": "top up", "ja": "チャージする、追加購入する", "type": "phrase", "lineIds": ["ln_008"], "note": "イギリス系英語圏で特によく使う" },
+    { "id": "w_007", "en": "come with", "ja": "〜が付いてくる、〜が含まれる", "type": "phrase", "lineIds": ["ln_009"], "note": "商品説明で頻出" },
+    { "id": "w_008", "en": "activate", "ja": "開通する、有効化する", "type": "word", "lineIds": ["ln_010"], "note": "" },
+    { "id": "w_009", "en": "as soon as", "ja": "〜したらすぐに", "type": "phrase", "lineIds": ["ln_010"], "note": "" },
+    { "id": "w_010", "en": "One more thing.", "ja": "もう一つだけ（質問が）", "type": "phrase", "lineIds": ["ln_011"], "note": "追加質問の前置き。丸暗記推奨" },
+    { "id": "w_011", "en": "Let me check.", "ja": "確認しますね", "type": "phrase", "lineIds": ["ln_012"], "note": "" },
+    { "id": "w_012", "en": "unlocked", "ja": "SIMロックが解除された", "type": "word", "lineIds": ["ln_012"], "note": "反対は locked" },
+    { "id": "w_013", "en": "manufacturer", "ja": "メーカー、製造元", "type": "word", "lineIds": ["ln_013"], "note": "" },
+    { "id": "w_014", "en": "for a second", "ja": "ちょっとの間", "type": "phrase", "lineIds": ["ln_014"], "note": "" },
+    { "id": "w_015", "en": "Here you go.", "ja": "はい、どうぞ", "type": "phrase", "lineIds": ["ln_015"], "note": "物を手渡すときの定型" },
+    { "id": "w_016", "en": "Definitely.", "ja": "ぜひ、もちろん", "type": "phrase", "lineIds": ["ln_016"], "note": "強い肯定の相づち" },
+    { "id": "w_017", "en": "Will do.", "ja": "そうします", "type": "phrase", "lineIds": ["ln_017"], "note": "I will do it. の省略。口語で頻出" },
+    { "id": "w_018", "en": "restart", "ja": "再起動する", "type": "word", "lineIds": ["ln_018"], "note": "" },
+    { "id": "w_019", "en": "pay by card", "ja": "カードで払う", "type": "phrase", "lineIds": ["ln_019"], "note": "現金なら pay in cash。前置詞が違う" },
+    { "id": "w_020", "en": "whenever you're ready", "ja": "ご準備ができ次第", "type": "phrase", "lineIds": ["ln_020"], "note": "急かさない丁寧な言い方" }
+  ],
+  "createdAt": 1754179200000,
+  "updatedAt": 1754179200000,
+  "schemaVersion": 3
+}
