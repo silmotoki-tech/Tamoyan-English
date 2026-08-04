@@ -1768,7 +1768,10 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
       });
 
       return chain.then(function () {
-        shared.publishedAt = publishedAt || Date.now();
+        // publishedAt が 0（未公開）のときは同期済み時刻を進めない。
+        // ここで Date.now() に繰り上げると、後から来る小さめの publishedAt を
+        // 「古い」と誤判定して無視してしまう（sync() の比較が壊れる）。
+        if (publishedAt) shared.publishedAt = publishedAt;
         shared.feedTopicIds = Object.keys(incomingIds);
         return EST.store.saveShared(shared);
       }).then(function () {
