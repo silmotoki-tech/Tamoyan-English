@@ -71,7 +71,8 @@
     if (!list.length) return Promise.resolve(0);
     return EST.store.loadShared().then(function (sh) {
       if (sh.samplesSeeded && !force) return 0;
-      var topics = list.map(function (raw) { return EST.schema.normalizeTopic(raw); });
+      // 同梱サンプルは audience を持たない外部JSONなので、§6.3 の救済を適用する
+      var topics = list.map(function (raw) { return EST.schema.normalizeTopic(raw, { rescueAudience: true }); });
       return EST.store.bulkPut('topics', topics).then(function () {
         sh.samplesSeeded = true;
         return EST.store.saveShared(sh);

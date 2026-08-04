@@ -134,20 +134,18 @@
       warnings.push('配列が渡されたので先頭の1件だけを取り込みました');
       value = value[0];
     }
-    var check = EST.schema.validateTopic(value, { requireMyRole: false });
-    var hadAudience = value && EST.schema.AUDIENCES.indexOf(String(value.audience)) >= 0;
+    // §6.3: audience の「未指定なら both」は外部JSON専用の救済だが、
+    // ここ（編集画面への入り口）では適用しない。黙って値が入ると、
+    // 選んだつもりのないまま相手の一覧に流れ込みかねないため、
+    // myRole と同じく「未指定のまま」で編集画面に通し、保存時に必須で止める。
+    var check = EST.schema.validateTopic(value, { requireMyRole: false, requireAudience: false });
     var t = EST.schema.normalizeTopic(value);
-    if (!hadAudience) {
-      // §5.9 これから作る台本なので、既定は「自分用」にする。
-      // （§5.1 の "both" 既定は、配信や同梱サンプルなど既存データ向け）
-      t.audience = EST.profile.get();
-      warnings.push('誰の台本かが指定されていないので「自分用」にしました');
-    }
     if (check.errors.length) {
       // エラーがあっても編集画面までは通す。直す場所が見えないと直せないため。
       warnings = warnings.concat(check.errors);
     }
     if (!t.myRole) warnings.push('自分の役が指定されていません。保存前に選んでください');
+    if (!t.audience) warnings.push('誰の台本か（自分用・相手用・両方）が指定されていません。保存前に選んでください');
     openEditor(t, true, warnings);
   }
 
@@ -882,7 +880,8 @@
     var t = state.topic;
     t.blocks = EST.schema.startsToBlocks(state.starts, t.lines, state.blockLabels);
 
-    var v = EST.schema.validateTopic(t, { requireMyRole: true });
+    // §6.3: audience も myRole と同じく編集画面からの保存では必須にする。
+    var v = EST.schema.validateTopic(t, { requireMyRole: true, requireAudience: true });
     if (v.errors.length) { U.alert('保存できません', v.errors); return; }
 
     var ask = Promise.resolve('save');

@@ -995,7 +995,11 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
       errors.push('自分の役に存在しない話者が指定されています: ' + t.myRole);
     }
 
-    if (t.audience && AUDIENCES.indexOf(String(t.audience)) < 0) {
+    if (!t.audience) {
+      // §6.3: 値が入っていなければ myRole と同じように保存を止める。
+      // 黙って both になると相手の一覧に流れ込むので、ここは既定値で救わない。
+      (opts.requireAudience === false ? warnings : errors).push('誰の台本か（自分用・相手用・両方）を選んでください');
+    } else if (AUDIENCES.indexOf(String(t.audience)) < 0) {
       errors.push('誰の台本か（audience）の値が不正です: ' + t.audience);
     }
 
@@ -1069,9 +1073,12 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
       titleEn: String(src.titleEn == null ? '' : src.titleEn).trim(),
       level: String(src.level == null ? '' : src.level).trim(),
       tags: (Array.isArray(src.tags) ? src.tags : []).map(String).filter(Boolean),
-      // §5.1 未指定なら "both"。同梱サンプルや古いJSONが片方の部屋から
-      // 消えてしまわないようにするための既定値。
-      audience: AUDIENCES.indexOf(String(src.audience)) >= 0 ? String(src.audience) : AUDIENCE_DEFAULT,
+      // §6.3: "both" への救済は外部JSON（配信・同梱サンプル）専用。
+      // opts.rescueAudience を渡した呼び出し元でだけ適用する。
+      // 編集画面はこれを渡さないので、未指定・不正な値はそのまま空にして
+      // 保存時に myRole と同じくエラーで止める（黙って both になるのを防ぐ）。
+      audience: AUDIENCES.indexOf(String(src.audience)) >= 0 ? String(src.audience)
+                : (opts.rescueAudience ? AUDIENCE_DEFAULT : ''),
       myRole: myRole,
       speakers: speakers,
       blocks: blocks,
@@ -1722,8 +1729,10 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
   }
 
   function apply(feed, shared, publishedAt) {
+    // §6.3: 配信JSONは外部データなので、audience 未指定は "both" で救済する。
+    // ここで止めてしまうと、値の抜けた1件のせいで配信全体が反映されなくなる。
     var incoming = feed.topics
-      .map(function (t) { return EST.schema.normalizeTopic(t); })
+      .map(function (t) { return EST.schema.normalizeTopic(t, { rescueAudience: true }); })
       .filter(function (t) { return t.lines.length > 0; });
 
     return EST.store.getAll('topics').then(function (cur) {
@@ -2242,20 +2251,18 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
       warnings.push('配列が渡されたので先頭の1件だけを取り込みました');
       value = value[0];
     }
-    var check = EST.schema.validateTopic(value, { requireMyRole: false });
-    var hadAudience = value && EST.schema.AUDIENCES.indexOf(String(value.audience)) >= 0;
+    // §6.3: audience の「未指定なら both」は外部JSON専用の救済だが、
+    // ここ（編集画面への入り口）では適用しない。黙って値が入ると、
+    // 選んだつもりのないまま相手の一覧に流れ込みかねないため、
+    // myRole と同じく「未指定のまま」で編集画面に通し、保存時に必須で止める。
+    var check = EST.schema.validateTopic(value, { requireMyRole: false, requireAudience: false });
     var t = EST.schema.normalizeTopic(value);
-    if (!hadAudience) {
-      // §5.9 これから作る台本なので、既定は「自分用」にする。
-      // （§5.1 の "both" 既定は、配信や同梱サンプルなど既存データ向け）
-      t.audience = EST.profile.get();
-      warnings.push('誰の台本かが指定されていないので「自分用」にしました');
-    }
     if (check.errors.length) {
       // エラーがあっても編集画面までは通す。直す場所が見えないと直せないため。
       warnings = warnings.concat(check.errors);
     }
     if (!t.myRole) warnings.push('自分の役が指定されていません。保存前に選んでください');
+    if (!t.audience) warnings.push('誰の台本か（自分用・相手用・両方）が指定されていません。保存前に選んでください');
     openEditor(t, true, warnings);
   }
 
@@ -2990,7 +2997,8 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
     var t = state.topic;
     t.blocks = EST.schema.startsToBlocks(state.starts, t.lines, state.blockLabels);
 
-    var v = EST.schema.validateTopic(t, { requireMyRole: true });
+    // §6.3: audience も myRole と同じく編集画面からの保存では必須にする。
+    var v = EST.schema.validateTopic(t, { requireMyRole: true, requireAudience: true });
     if (v.errors.length) { U.alert('保存できません', v.errors); return; }
 
     var ask = Promise.resolve('save');
@@ -3438,7 +3446,8 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
     if (!list.length) return Promise.resolve(0);
     return EST.store.loadShared().then(function (sh) {
       if (sh.samplesSeeded && !force) return 0;
-      var topics = list.map(function (raw) { return EST.schema.normalizeTopic(raw); });
+      // 同梱サンプルは audience を持たない外部JSONなので、§6.3 の救済を適用する
+      var topics = list.map(function (raw) { return EST.schema.normalizeTopic(raw, { rescueAudience: true }); });
       return EST.store.bulkPut('topics', topics).then(function () {
         sh.samplesSeeded = true;
         return EST.store.saveShared(sh);

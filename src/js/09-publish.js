@@ -69,8 +69,10 @@
   }
 
   function apply(feed, shared, publishedAt) {
+    // §6.3: 配信JSONは外部データなので、audience 未指定は "both" で救済する。
+    // ここで止めてしまうと、値の抜けた1件のせいで配信全体が反映されなくなる。
     var incoming = feed.topics
-      .map(function (t) { return EST.schema.normalizeTopic(t); })
+      .map(function (t) { return EST.schema.normalizeTopic(t, { rescueAudience: true }); })
       .filter(function (t) { return t.lines.length > 0; });
 
     return EST.store.getAll('topics').then(function (cur) {

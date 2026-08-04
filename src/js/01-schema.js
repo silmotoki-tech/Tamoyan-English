@@ -452,7 +452,11 @@
       errors.push('自分の役に存在しない話者が指定されています: ' + t.myRole);
     }
 
-    if (t.audience && AUDIENCES.indexOf(String(t.audience)) < 0) {
+    if (!t.audience) {
+      // §6.3: 値が入っていなければ myRole と同じように保存を止める。
+      // 黙って both になると相手の一覧に流れ込むので、ここは既定値で救わない。
+      (opts.requireAudience === false ? warnings : errors).push('誰の台本か（自分用・相手用・両方）を選んでください');
+    } else if (AUDIENCES.indexOf(String(t.audience)) < 0) {
       errors.push('誰の台本か（audience）の値が不正です: ' + t.audience);
     }
 
@@ -526,9 +530,12 @@
       titleEn: String(src.titleEn == null ? '' : src.titleEn).trim(),
       level: String(src.level == null ? '' : src.level).trim(),
       tags: (Array.isArray(src.tags) ? src.tags : []).map(String).filter(Boolean),
-      // §5.1 未指定なら "both"。同梱サンプルや古いJSONが片方の部屋から
-      // 消えてしまわないようにするための既定値。
-      audience: AUDIENCES.indexOf(String(src.audience)) >= 0 ? String(src.audience) : AUDIENCE_DEFAULT,
+      // §6.3: "both" への救済は外部JSON（配信・同梱サンプル）専用。
+      // opts.rescueAudience を渡した呼び出し元でだけ適用する。
+      // 編集画面はこれを渡さないので、未指定・不正な値はそのまま空にして
+      // 保存時に myRole と同じくエラーで止める（黙って both になるのを防ぐ）。
+      audience: AUDIENCES.indexOf(String(src.audience)) >= 0 ? String(src.audience)
+                : (opts.rescueAudience ? AUDIENCE_DEFAULT : ''),
       myRole: myRole,
       speakers: speakers,
       blocks: blocks,
