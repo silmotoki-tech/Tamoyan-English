@@ -1,0 +1,19 @@
+{
+  "publishedAt": 1754300000000,
+  "topics": [
+    {
+      "id": "tpc_pages_test_1",
+      "title": "本番配信テスト・1回目",
+      "audience": "both",
+      "myRole": "S2",
+      "speakers": [
+        { "id": "S1", "label": "Staff", "gender": "female" },
+        { "id": "S2", "label": "You", "gender": "male" }
+      ],
+      "lines": [
+        { "id": "ln_001", "speakerId": "S1", "en": "How can I help you today?", "ja": "本日はどのようなご用件でしょうか？" },
+        { "id": "ln_002", "speakerId": "S2", "en": "I have a reservation.", "ja": "予約をしています。" }
+      ]
+    }
+  ]
+}
