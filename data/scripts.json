@@ -1,9 +1,9 @@
 {
-  "publishedAt": 1754300000000,
+  "publishedAt": 1754300100000,
   "topics": [
     {
       "id": "tpc_pages_test_1",
-      "title": "本番配信テスト・1回目",
+      "title": "本番配信テスト・2回目（更新）",
       "audience": "both",
       "myRole": "S2",
       "speakers": [
@@ -13,6 +13,20 @@
       "lines": [
         { "id": "ln_001", "speakerId": "S1", "en": "How can I help you today?", "ja": "本日はどのようなご用件でしょうか？" },
         { "id": "ln_002", "speakerId": "S2", "en": "I have a reservation.", "ja": "予約をしています。" }
+      ]
+    },
+    {
+      "id": "tpc_pages_test_2",
+      "title": "本番配信テスト・追加分",
+      "audience": "mari",
+      "myRole": "S2",
+      "speakers": [
+        { "id": "S1", "label": "Clerk", "gender": "female" },
+        { "id": "S2", "label": "You", "gender": "male" }
+      ],
+      "lines": [
+        { "id": "ln_001", "speakerId": "S1", "en": "Anything else?", "ja": "他にございますか？" },
+        { "id": "ln_002", "speakerId": "S2", "en": "That's all, thanks.", "ja": "それだけです、ありがとう。" }
       ]
     }
   ]
