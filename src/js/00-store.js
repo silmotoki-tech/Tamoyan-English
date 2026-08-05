@@ -32,7 +32,8 @@
     engine: 'local',
     cloud: { endpoint: '', token: '', voiceMap: {}, model: 'tts-1-hd' },
     ttsRate: 0.95,
-    localVoiceEn: null,
+    localVoiceEn: null,                          // 性別指定のない話者に使う既定ボイス
+    localVoiceByGender: { female: null, male: null },  // §7.2 話者ごとに声を変える
     mic: { noiseFloor: null, onsetThreshold: null, calibratedAt: null },
     countRatio: 0.55,
     masteryBase: 1200,

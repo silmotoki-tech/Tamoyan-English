@@ -257,9 +257,19 @@
 
     // §5.9 まりの部屋には書き出し・削除を出さない
     var canEdit = EST.profile.canEdit();
+    // 音声が使えない環境ではボタンごと出さない
+    var playBtn = EST.speech.isAvailable() ? h('button', {
+      class: 'btn', text: '通して再生',
+      onClick: function () {
+        if (playback) stopPlayback();
+        else startPlayback(t, playBtn);
+      }
+    }) : null;
+
     var actions = h('div', { class: 'card' }, [
       h('div', { class: 'row row--tight' }, [
         h('button', { class: 'btn btn--primary', text: '続きから', disabled: true }),
+        playBtn,
         h('button', {
           class: 'btn', text: '一覧を見る',
           onClick: function () { location.hash = '#/list/' + encodeURIComponent(t.id); }
@@ -298,8 +308,12 @@
     return [head, actions, body, words];
   }
 
+  // 行の要素を id で引けるようにしておく（通して再生のハイライト用）
+  var lineEls = {};
+
   function buildLineList(t) {
     var out = [];
+    lineEls = {};
     var startAt = {};
     (t.blocks || []).forEach(function (b, i) { startAt[b.from] = { no: i + 1, label: b.label }; });
     var spLabel = {};
@@ -308,7 +322,7 @@
     t.lines.forEach(function (l, i) {
       var st = startAt[l.id];
       if (st) out.push(h('div', { class: 'block-head', text: 'ブロック' + st.no + '　' + (st.label || '') }));
-      out.push(h('div', { class: 'line-view' }, [
+      var row = h('div', { class: 'line-view' }, [
         h('div', { class: 'line-view__no' }, [
           h('div', { text: String(i + 1) }),
           h('div', { class: t.myRole === l.speakerId ? 'line-view__mine' : '', text: spLabel[l.speakerId] || l.speakerId })
@@ -317,10 +331,79 @@
           h('div', { class: 'line-view__en en', text: l.en }),
           l.ja ? h('div', { class: 'line-view__ja', text: l.ja }) : null,
           l.note ? h('div', { class: 'tiny muted', text: l.note }) : null
-        ])
-      ]));
+        ]),
+        speakLineButton(t, l)
+      ]);
+      lineEls[l.id] = row;
+      out.push(row);
     });
     return out;
+  }
+
+  function genderOf(t, speakerId) {
+    var g = '';
+    (t.speakers || []).forEach(function (s) { if (s.id === speakerId) g = s.gender || ''; });
+    return g;
+  }
+
+  function speakLineButton(t, l) {
+    if (!EST.speech.isAvailable() || !String(l.en || '').trim()) return null;
+    return h('button', {
+      class: 'speak-btn', title: '英文を聞く', 'aria-label': '英文を聞く',
+      onClick: function () {
+        stopPlayback();
+        EST.speech.speak(l.en, { gender: genderOf(t, l.speakerId), topicId: t.id, lineId: l.id });
+      }
+    }, '🔊');
+  }
+
+  /* ---- 通して再生（§11 F3「台本を入れて聞き流す」） ----------------------
+     全役を順に、英文だけ読む。skip の行は飛ばす。
+     練習画面（F5）とは別物で、ここは聞き流すためだけの導線。
+  --------------------------------------------------------------------- */
+  var playback = null;   // { topicId, cancelled }
+
+  function highlight(lineId) {
+    Object.keys(lineEls).forEach(function (id) {
+      if (lineEls[id]) lineEls[id].classList.toggle('is-playing', id === lineId);
+    });
+  }
+
+  function stopPlayback() {
+    if (playback) playback.cancelled = true;
+    playback = null;
+    EST.speech.cancel();
+    highlight(null);
+  }
+
+  function startPlayback(t, button) {
+    var lines = (t.lines || []).filter(function (l) { return !l.skip && String(l.en || '').trim(); });
+    if (!lines.length) return;
+
+    var session = { topicId: t.id, cancelled: false };
+    playback = session;
+    button.textContent = '停止';
+    button.classList.add('btn--danger');
+
+    function done() {
+      if (playback === session) playback = null;
+      highlight(null);
+      button.textContent = '通して再生';
+      button.classList.remove('btn--danger');
+    }
+
+    function next(i) {
+      if (session.cancelled || i >= lines.length) { done(); return; }
+      var l = lines[i];
+      highlight(l.id);
+      EST.speech.speak(l.en, { gender: genderOf(t, l.speakerId), topicId: t.id, lineId: l.id })
+        .then(function () {
+          if (session.cancelled) { done(); return; }
+          next(i + 1);
+        })
+        .catch(function () { done(); });
+    }
+    next(0);
   }
 
   function exportTopic(t) {
@@ -344,5 +427,5 @@
       });
   }
 
-  EST.uiHome = { renderHome: renderHome, renderTopic: renderTopic };
+  EST.uiHome = { renderHome: renderHome, renderTopic: renderTopic, stopPlayback: stopPlayback };
 })(window.EST = window.EST || {});

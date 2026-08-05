@@ -165,18 +165,43 @@
     var primary = primaryIsEn ? l.en : l.ja;
     var secondary = primaryIsEn ? l.ja : l.en;
 
-    return h('button', {
-      class: 'list-row',
-      onClick: function () { toggleLine(l); }
-    }, [
-      h('div', { class: 'row row--tight' }, [
-        h('span', { class: 'tiny muted', text: String(i + 1) }),
-        h('span', { class: primaryIsEn ? 'en' : '', text: primary || '（空）' })
+    // 行そのものはdivにして、中に「開くボタン」と「🔊」を並べる。
+    // button の入れ子はHTMLとして不正なので、行自体をbuttonにはできない。
+    return h('div', { class: 'list-row' }, [
+      h('button', {
+        class: 'list-row__main',
+        onClick: function () { toggleLine(l); }
+      }, [
+        h('div', { class: 'row row--tight' }, [
+          h('span', { class: 'tiny muted', text: String(i + 1) }),
+          h('span', { class: primaryIsEn ? 'en' : '', text: primary || '（空）' })
+        ]),
+        open ? h('div', { class: 'tiny muted', style: { marginTop: '.15rem', paddingLeft: '1.2rem' } }, [
+          '→ ', h('span', { class: primaryIsEn ? '' : 'en', text: secondary || '（空）' })
+        ]) : null
       ]),
-      open ? h('div', { class: 'tiny muted', style: { marginTop: '.15rem', paddingLeft: '1.2rem' } }, [
-        '→ ', h('span', { class: primaryIsEn ? '' : 'en', text: secondary || '（空）' })
-      ]) : null
+      // §4.1 スピーカーは開かなくても音だけ聞ける（音で思い出せるか試せる）。
+      // したがって openedCount は増やさない。
+      speakButton(l.en, speakerGender(l.speakerId), l.id)
     ]);
+  }
+
+  // 使えない環境ではボタン自体を出さない（CLAUDE.md: 機能を隠すか静かにフォールバック）
+  function speakButton(text, gender, key) {
+    if (!EST.speech.isAvailable() || !String(text || '').trim()) return null;
+    return h('button', {
+      class: 'speak-btn', title: '英文を聞く', 'aria-label': '英文を聞く',
+      onClick: function (e) {
+        e.stopPropagation();
+        EST.speech.speak(text, { gender: gender, topicId: view.topic.id, lineId: key });
+      }
+    }, '🔊');
+  }
+
+  function speakerGender(speakerId) {
+    var g = '';
+    (view.topic.speakers || []).forEach(function (s) { if (s.id === speakerId) g = s.gender || ''; });
+    return g;
   }
 
   function wordRow(w) {
@@ -185,20 +210,24 @@
     var primary = primaryIsEn ? w.en : w.ja;
     var secondary = primaryIsEn ? w.ja : w.en;
 
-    return h('button', {
-      class: 'list-row',
-      onClick: function () {
-        view.openWords[w.id] = !view.openWords[w.id];   // 語彙は記録対象外（F6で扱う）
-        drawControls(); drawLines();
-      }
-    }, [
-      h('div', { class: 'row row--tight' }, [
-        h('span', { class: primaryIsEn ? 'en' : '', text: primary || '（空）' }),
-        h('span', { class: 'chip', text: w.type === 'phrase' ? '句' : '語' })
+    return h('div', { class: 'list-row' }, [
+      h('button', {
+        class: 'list-row__main',
+        onClick: function () {
+          view.openWords[w.id] = !view.openWords[w.id];   // 語彙は記録対象外（F6で扱う）
+          drawControls(); drawLines();
+        }
+      }, [
+        h('div', { class: 'row row--tight' }, [
+          h('span', { class: primaryIsEn ? 'en' : '', text: primary || '（空）' }),
+          h('span', { class: 'chip', text: w.type === 'phrase' ? '句' : '語' })
+        ]),
+        open ? h('div', { class: 'tiny muted', style: { marginTop: '.15rem', paddingLeft: '1.2rem' } }, [
+          '→ ', h('span', { class: primaryIsEn ? '' : 'en', text: secondary || '（空）' })
+        ]) : null
       ]),
-      open ? h('div', { class: 'tiny muted', style: { marginTop: '.15rem', paddingLeft: '1.2rem' } }, [
-        '→ ', h('span', { class: primaryIsEn ? '' : 'en', text: secondary || '（空）' })
-      ]) : null
+      // 語彙は特定の話者の台詞ではないので、性別指定なしの既定ボイスで読む
+      speakButton(w.en, '', null)
     ]);
   }
 

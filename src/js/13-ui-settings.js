@@ -21,6 +21,7 @@
       U.mount(box, [
         profileCard(),
         displayCard(s),
+        speechCard(s),
         listModeCard(s),
         EST.profile.canEdit() ? publishCard() : null,
         backupCard(),
@@ -123,6 +124,100 @@
           return h('option', { value: String(v), selected: Number(s.fontScale) === v }, Math.round(v * 100) + '%');
         }))
       ])
+    ]);
+  }
+
+  // §7.5 の5段に、いまの値が含まれないときだけそれを足す。
+  // §5.7 の既定 ttsRate は 0.95 で5段のどれとも一致しないので、
+  // 黙って別の速度に変わってしまわないようにする。
+  function rateOptions(cur) {
+    var steps = EST.speech.RATE_STEPS.slice();
+    if (steps.indexOf(cur) < 0 && isFinite(cur) && cur > 0) steps.push(cur);
+    steps.sort(function (a, b) { return a - b; });
+    return steps.map(function (v) {
+      return h('option', { value: String(v), selected: cur === v }, v.toFixed(2) + '倍');
+    });
+  }
+
+  /* ---- 音声 §7.2 / §7.5 --------------------------------------------------- */
+  function speechCard(s) {
+    var U = ui();
+    // 使えない環境では設定ごと出さない（CLAUDE.md: ダイアログを出さず機能を隠す）
+    if (!EST.speech.isAvailable()) {
+      return h('div', { class: 'card' }, [
+        h('h2', { class: 'card__title', text: '音声' }),
+        h('div', { class: 'small muted', text: 'この端末では音声読み上げが使えません。' })
+      ]);
+    }
+
+    var body = h('div', { class: 'small muted', text: 'ボイスを読み込み中…' });
+
+    EST.speech.getVoices().then(function (voices) {
+      if (!voices.length) {
+        U.mount(body, h('div', { class: 'small muted', text: '英語のボイスが見つかりませんでした。端末に英語の音声を追加すると使えるようになります。' }));
+        return;
+      }
+      s.localVoiceByGender = s.localVoiceByGender || { female: null, male: null };
+
+      // §7.2 話者ごとに声を変える。自動割り当ての結果を見せたうえで、手で選び直せるようにする。
+      function voiceRow(label, key, gender) {
+        var auto = EST.speech.resolveVoiceFor(gender);
+        var autoName = auto && auto.voice ? auto.voice.name : '（なし）';
+        var cur = key === 'def' ? (s.localVoiceEn || '') : (s.localVoiceByGender[key] || '');
+        var sel = h('select', {
+          onChange: function (e) {
+            var v = e.target.value || null;
+            if (key === 'def') s.localVoiceEn = v;
+            else s.localVoiceByGender[key] = v;
+            EST.store.saveSettings(s).then(function () { EST.speech.applySettings(s); });
+          }
+        }, [h('option', { value: '', selected: !cur }, '自動（' + autoName + '）')].concat(
+          voices.map(function (v) {
+            var g = v.gender === 'female' ? '女性' : (v.gender === 'male' ? '男性' : '不明');
+            return h('option', { value: v.id, selected: cur === v.id }, v.name + '（' + g + '）');
+          })
+        ));
+        return h('div', { class: 'setting-row' }, [
+          h('div', { class: 'setting-row__label' }, [
+            label,
+            auto && auto.degraded
+              ? h('div', { class: 'setting-row__sub', text: '別々のボイスが取れないので、声の高さをずらして区別しています' })
+              : null
+          ]),
+          h('div', { class: 'row row--tight' }, [
+            sel,
+            h('button', {
+              class: 'btn btn--sm', text: '試聴',
+              onClick: function () {
+                EST.speech.speak('Good morning. May I see your passport, please?', { gender: gender });
+              }
+            })
+          ])
+        ]);
+      }
+
+      U.mount(body, [
+        voiceRow('女性の話者', 'female', 'female'),
+        voiceRow('男性の話者', 'male', 'male'),
+        voiceRow('性別の指定がない話者', 'def', '')
+      ]);
+    });
+
+    return h('div', { class: 'card' }, [
+      h('h2', { class: 'card__title', text: '音声' }),
+      h('div', { class: 'setting-row' }, [
+        h('div', { class: 'setting-row__label' }, [
+          '読み上げの速さ',
+          h('div', { class: 'setting-row__sub', text: 'シャドーイングで速くしたいときに使います' })
+        ]),
+        h('select', {
+          onChange: function (e) {
+            s.ttsRate = Number(e.target.value);
+            EST.store.saveSettings(s).then(function () { EST.speech.applySettings(s); });
+          }
+        }, rateOptions(Number(s.ttsRate)))
+      ]),
+      body
     ]);
   }
 

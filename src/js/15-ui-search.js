@@ -75,10 +75,24 @@
           h('div', { class: 'grow' }, [
             h('div', { class: 'line-view__ja', text: l.ja || '(和訳なし)' }),
             h('div', { class: 'line-view__en en', text: l.en })
-          ])
+          ]),
+          // §4.2 ヒットした行からその場で音声再生できる
+          speakButton(g.topic, l)
         ]);
       }))
     ]);
+  }
+
+  function speakButton(topic, line) {
+    if (!EST.speech.isAvailable() || !String(line.en || '').trim()) return null;
+    var gender = '';
+    (topic.speakers || []).forEach(function (s) { if (s.id === line.speakerId) gender = s.gender || ''; });
+    return h('button', {
+      class: 'speak-btn', title: '英文を聞く', 'aria-label': '英文を聞く',
+      onClick: function () {
+        EST.speech.speak(line.en, { gender: gender, topicId: topic.id, lineId: line.id });
+      }
+    }, '🔊');
   }
 
   EST.uiSearch = { renderSearch: renderSearch };

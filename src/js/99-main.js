@@ -71,6 +71,11 @@
   function route() {
     var r = currentRoute();
     window.scrollTo(0, 0);
+    // §7.2 画面遷移時に必ず止める。忘れると別画面で喋り続ける。
+    // 通して再生はループなので、発話を止めるだけでは次の行へ進んでしまう。
+    // ループごと止めてから cancel する。
+    try { EST.uiHome.stopPlayback(); } catch (e) {}
+    try { EST.speech.cancel(); } catch (e) {}
     try {
       if (r.name === 'home') EST.uiHome.renderHome(viewEl);
       else if (r.name === 'import') EST.uiImport.renderImport(viewEl);
@@ -134,6 +139,7 @@
     viewEl = document.getElementById('view');
     barEl = document.getElementById('appbar');
     applyThemeEarly();
+    installSpeechUnlock();
 
     if (!EST.profile.restore()) {
       renderProfilePicker(function () { start(); });
@@ -142,10 +148,23 @@
     start();
   }
 
+  // §7.2 iOS Safari は最初の発話をユーザージェスチャの同期処理内で行う必要がある。
+  // 起動後の最初のタップで解錠する。once なので以降は何もしない。
+  function installSpeechUnlock() {
+    function once() {
+      document.removeEventListener('pointerdown', once, true);
+      document.removeEventListener('touchend', once, true);
+      try { EST.speech.unlock(); } catch (e) {}
+    }
+    document.addEventListener('pointerdown', once, true);
+    document.addEventListener('touchend', once, true);
+  }
+
   function start() {
     EST.store.loadSettings()
       .then(function (s) {
         applyTheme(s);
+        EST.speech.applySettings(s);   // §7.5 速度と§7.2 ボイス指定を反映する
         return seedSamples(false);
       })
       .then(function () {

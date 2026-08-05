@@ -250,14 +250,27 @@ label.field > .field__label { display: block; font-size: .72rem; color: var(--mu
   background: var(--panel2); border-radius: .35rem; padding: .18rem .5rem; margin: .6rem 0 .2rem; }
 
 /* ---- 一覧モード（§4.1）・検索結果の行 -------------------------------
-   ネイティブ button の見た目を引きずらないよう、.btn には乗らず
-   .topic-card と同じ方式で自己完結させる。 */
-.list-row { display: block; width: 100%; text-align: left; cursor: pointer;
-  font: inherit; font-size: .9rem; color: var(--ink); background: transparent;
-  border: none; border-top: 1px solid var(--line); border-radius: 0;
-  padding: .55rem .15rem; }
+   行は div、中に「開くボタン」と「🔊」を並べる。行自体をbuttonにすると
+   🔊が button の入れ子になり、HTMLとして不正になるため。 */
+.list-row { display: flex; align-items: flex-start; gap: .25rem;
+  border-top: 1px solid var(--line); }
 .list-row:first-child { border-top: none; }
 .list-row:hover { background: var(--panel2); }
+.list-row__main { flex: 1 1 auto; min-width: 0; display: block; text-align: left;
+  cursor: pointer; font: inherit; font-size: .9rem; color: var(--ink);
+  background: transparent; border: none; border-radius: 0; padding: .55rem .15rem; }
+
+/* 🔊 音声再生。使えない環境ではそもそも描画しない（02-speech.js 側で判定） */
+.speak-btn { flex: 0 0 auto; align-self: center; cursor: pointer;
+  background: transparent; border: none; border-radius: .4rem;
+  font-size: .95rem; line-height: 1; padding: .4rem .45rem;
+  -webkit-tap-highlight-color: transparent; }
+.speak-btn:hover { background: var(--chip); }
+.speak-btn:active { transform: scale(0.92); }
+
+/* 通して再生（§11 F3「台本を入れて聞き流す」）で読み上げ中の行 */
+.line-view.is-playing { background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border-radius: .35rem; }
 
 /* ---- 編集プレビュー ------------------------------------------------- */
 .stat-bar { position: sticky; top: 3rem; z-index: 15;
@@ -370,7 +383,8 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
     engine: 'local',
     cloud: { endpoint: '', token: '', voiceMap: {}, model: 'tts-1-hd' },
     ttsRate: 0.95,
-    localVoiceEn: null,
+    localVoiceEn: null,                          // 性別指定のない話者に使う既定ボイス
+    localVoiceByGender: { female: null, male: null },  // §7.2 話者ごとに声を変える
     mic: { noiseFloor: null, onsetThreshold: null, calibratedAt: null },
     countRatio: 0.55,
     masteryBase: 1200,
@@ -1220,6 +1234,396 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
     newTopicId: newTopicId,
     pad3: pad3,
     parseJsonWithPosition: parseJsonWithPosition
+  };
+})(window.EST = window.EST || {});
+
+</script>
+<script>
+/* ---- 02-speech.js ---- */
+/* =====================================================================
+   02-speech.js — 音声エンジンの抽象化と内蔵TTS（SPEC §7.1 / §7.2 / §7.5）
+
+   UIコードは内蔵／外部の別を一切意識しない（§7.1）。この層が窓口になり、
+   中でエンジンを差し替える。F3 では内蔵（Web Speech API）だけを登録する。
+   外部TTS（§7.3）は engines に1つ足すだけで載る形にしてある。
+   ===================================================================== */
+;(function (EST) {
+  'use strict';
+
+  /* ---- 調整用の定数（実機で必ず調整する。SPEC §12） ------------------ */
+  var VOICE_RETRY_MS   = 200;    // §7.2 voices の非同期ロード。リトライ間隔
+  var VOICE_RETRY_MAX  = 3;      // 同上。リトライ回数
+  var KEEPALIVE_MS     = 10000;  // §7.2 Chromeは15秒以上で止まる。10秒ごとに突く
+  var TIMEOUT_FACTOR   = 2;      // §7.2 end が来ない場合の保険。想定所要の何倍で打ち切るか
+  var TIMEOUT_MIN_MS   = 3000;   // 短文で早すぎる打ち切りをしないための下限
+  var WORD_MS          = 400;    // §2.3 内蔵TTS想定の1語あたり（タイムアウト見積り用）
+  var PITCH_SHIFT      = 0.15;   // §7.2 片方の性別しか取れないときのpitchのずらし幅
+  var PITCH_MIN        = 0.5;
+  var PITCH_MAX        = 1.5;
+  var RATE_STEPS       = [0.7, 0.85, 1.0, 1.15, 1.3];  // §7.5 速度の5段
+  var RATE_MIN         = 0.5;
+  var RATE_MAX         = 2.0;
+  var DEFAULT_RATE     = 0.95;   // §5.7 ttsRate の既定
+
+  // §7.2 英語ボイスの優先語
+  var PREFERRED = ['google', 'samantha', 'ava', 'natural', 'enhanced'];
+
+  // ボイス名からの性別推定（§7.2）。端末ごとに品揃えが違うので、
+  // 当たらなくても止まらないように「推定できなければ不明」で通す。
+  var FEMALE_HINTS = ['samantha', 'karen', 'moira', 'tessa', 'fiona', 'victoria', 'ava',
+    'allison', 'susan', 'zira', 'hazel', 'serena', 'kate', 'catherine', 'nicky', 'joanna',
+    'salli', 'kimberly', 'amy', 'emma', 'aria', 'jenny', 'michelle', 'sonia', 'libby',
+    'natasha', 'clara', 'nova', 'shelley', 'veena', 'rishi female'];
+  var MALE_HINTS = ['alex', 'daniel', 'fred', 'tom', 'aaron', 'arthur', 'oliver', 'rishi',
+    'david', 'mark', 'george', 'ryan', 'guy', 'nathan', 'matthew', 'brian', 'justin',
+    'joey', 'eric', 'christopher', 'roger', 'steffan', 'thomas', 'william', 'liam',
+    'gordon', 'reed', 'albert', 'junior'];
+
+  // 実測長は audio ストアに置く（§5.8 の6ストアから増やさない）。
+  // audio は §5.9 で「共有・端末内で再生成できる」扱いなので、
+  // 端末とボイスに依存する実測長の置き場所として性質が一致する。
+  var DUR_PREFIX = 'dur|';
+
+  /* ---- 状態 ------------------------------------------------------------ */
+  var voicesCache = null;      // SpeechSynthesisVoice[]（生）
+  var voicesPromise = null;
+  var auto = { female: null, male: null, any: null };  // 自動割り当ての結果
+  var manual = { female: null, male: null, def: null };// 設定での手動指定（voiceId）
+  var currentRate = DEFAULT_RATE;
+  var currentEngine = 'local'; // §5.7 engine。F3 では local だけを登録する
+  var current = null;          // 再生中のutteranceと後始末
+  var unlocked = false;        // iOSの解錠済みか
+
+  function syn() { return self.speechSynthesis; }
+
+  /* =====================================================================
+     内蔵エンジン（Web Speech API）
+     ===================================================================== */
+  var localEngine = {
+    name: 'local',
+
+    isAvailable: function () {
+      return !!(self.speechSynthesis && self.SpeechSynthesisUtterance);
+    },
+
+    // §7.1 事前生成は外部TTSのみ意味を持つ。内蔵では何もしないで即座に返す。
+    prepare: function () { return Promise.resolve(null); },
+
+    speak: function (text, opts) {
+      return loadVoices().then(function () {
+        return new Promise(function (resolve) {
+          stopCurrent();
+
+          var rate = clampRate(opts.rate != null ? opts.rate : currentRate);
+          var pick = resolveVoice(opts);
+          var u = new SpeechSynthesisUtterance(text);
+          if (pick.voice) { u.voice = pick.voice; u.lang = pick.voice.lang || 'en-US'; }
+          else { u.lang = 'en-US'; }
+          u.rate = rate;
+          u.pitch = pick.pitch;
+          u.volume = opts.volume == null ? 1 : opts.volume;
+
+          var t0 = 0, done = false, keepTimer = null, failTimer = null;
+
+          function finish(ok) {
+            if (done) return;
+            done = true;
+            if (keepTimer) clearInterval(keepTimer);
+            if (failTimer) clearTimeout(failTimer);
+            if (current && current.finish === finish) current = null;
+            var ms = t0 ? (Date.now() - t0) : 0;
+            // §2.3 実測長は測ったときの rate と一緒に保存する。
+            // あとで速度を変えたら 実測Ms × 測定時のrate ÷ 新しいrate で補正できる。
+            if (ok && ms > 0 && opts.topicId && opts.lineId) {
+              saveDuration(opts.topicId, opts.lineId, ms, rate, pick.id);
+            }
+            resolve({ durationMs: ms, rate: rate, voiceId: pick.id, pitch: pick.pitch, spoken: !!ok });
+          }
+
+          u.onstart = function () {
+            t0 = Date.now();
+            // §7.2 Chromeは15秒以上の連続発話で止まる。10秒ごとに pause→resume で突く。
+            keepTimer = setInterval(function () {
+              try {
+                if (syn() && syn().speaking) { syn().pause(); syn().resume(); }
+              } catch (e) { /* 対応していない端末は放っておく */ }
+            }, KEEPALIVE_MS);
+          };
+          u.onend = function () { finish(true); };
+          u.onerror = function () { finish(false); };
+
+          // §7.2 end が来ない端末があるので、想定所要の2倍で打ち切る
+          var expect = estimateMs(text, rate);
+          failTimer = setTimeout(function () {
+            try { syn().cancel(); } catch (e) {}
+            finish(t0 > 0);
+          }, Math.max(TIMEOUT_MIN_MS, expect * TIMEOUT_FACTOR));
+
+          current = { finish: finish };
+          try { syn().speak(u); } catch (e) { finish(false); }
+        });
+      });
+    }
+  };
+
+  var engines = { local: localEngine };
+
+  // §7.1 いまのエンジンを返す。未実装のエンジンが指定されていたら黙って内蔵に落とす。
+  function engine() {
+    return engines[currentEngine] || engines.local;
+  }
+
+  /* =====================================================================
+     ボイスの読み込みと選択（§7.2）
+     ===================================================================== */
+  function loadVoices() {
+    if (voicesCache && voicesCache.length) return Promise.resolve(voicesCache);
+    if (voicesPromise) return voicesPromise;
+
+    voicesPromise = new Promise(function (resolve) {
+      if (!localEngine.isAvailable()) { voicesCache = []; resolve([]); return; }
+
+      var tries = 0;
+      function attempt() {
+        var list = [];
+        try { list = syn().getVoices() || []; } catch (e) { list = []; }
+        if (list.length) { setVoices(list); resolve(voicesCache); return; }
+        // §7.2 getVoices() は初回空配列。200msのリトライを3回。
+        if (tries++ >= VOICE_RETRY_MAX) { voicesCache = []; resolve([]); return; }
+        setTimeout(attempt, VOICE_RETRY_MS);
+      }
+
+      // voiceschanged が遅れて来る端末があるので、来たら取り込み直す
+      try {
+        syn().addEventListener('voiceschanged', function () {
+          var list = [];
+          try { list = syn().getVoices() || []; } catch (e) { list = []; }
+          if (list.length) setVoices(list);
+        });
+      } catch (e) {}
+
+      attempt();
+    });
+    return voicesPromise;
+  }
+
+  function setVoices(list) {
+    voicesCache = list;
+    assignByGender();
+  }
+
+  function isEnglish(v) { return /^en(-|_|$)/i.test(v.lang || ''); }
+
+  // §7.2 の優先語を含むものを先に持ってくる
+  function englishVoices() {
+    var list = (voicesCache || []).filter(isEnglish);
+    return list.slice().sort(function (a, b) {
+      return prefScore(b) - prefScore(a);
+    });
+  }
+
+  function prefScore(v) {
+    var n = (v.name || '').toLowerCase();
+    for (var i = 0; i < PREFERRED.length; i++) {
+      if (n.indexOf(PREFERRED[i]) >= 0) return PREFERRED.length - i;
+    }
+    return 0;
+  }
+
+  function voiceId(v) { return v ? (v.voiceURI || v.name) : null; }
+
+  function byId(id) {
+    if (!id) return null;
+    var hit = null;
+    (voicesCache || []).forEach(function (v) { if (!hit && voiceId(v) === id) hit = v; });
+    return hit;
+  }
+
+  // 名前・voiceURI から男女を推定する。分からなければ ''。
+  function guessGender(v) {
+    if (!v) return '';
+    var s = ((v.name || '') + ' ' + (v.voiceURI || '')).toLowerCase();
+    // "female" は "male" を含むので先に見る
+    if (s.indexOf('female') >= 0) return 'female';
+    if (s.indexOf('male') >= 0) return 'male';
+    var i;
+    for (i = 0; i < FEMALE_HINTS.length; i++) if (s.indexOf(FEMALE_HINTS[i]) >= 0) return 'female';
+    for (i = 0; i < MALE_HINTS.length; i++) if (s.indexOf(MALE_HINTS[i]) >= 0) return 'male';
+    return '';
+  }
+
+  // §7.2 手順1〜2: 優先順に並べ、gender ごとに1つずつ確保する
+  function assignByGender() {
+    var list = englishVoices();
+    auto = { female: null, male: null, any: list[0] || null };
+    list.forEach(function (v) {
+      var g = guessGender(v);
+      if (g === 'female' && !auto.female) auto.female = v;
+      if (g === 'male' && !auto.male) auto.male = v;
+    });
+  }
+
+  /* 話者に割り当てるボイスとpitchを決める（§7.2）。
+     取れなかったときは静かに劣化させ、機能は止めない。 */
+  function resolveVoice(opts) {
+    opts = opts || {};
+    var gender = (opts.gender === 'female' || opts.gender === 'male') ? opts.gender : '';
+    var base = byId(manual.def) || auto.any;
+
+    // 呼び出し側が明示したボイスが最優先（設定画面の試聴など）
+    if (opts.voiceId) {
+      var forced = byId(opts.voiceId);
+      if (forced) return { voice: forced, pitch: clampPitch(opts.pitch == null ? 1 : opts.pitch), id: voiceId(forced) };
+    }
+    // 設定画面で手動指定されていればそれに従う
+    if (gender && manual[gender]) {
+      var mv = byId(manual[gender]);
+      if (mv) return { voice: mv, pitch: 1, id: voiceId(mv) };
+    }
+    // 性別が分からない話者は既定ボイスのまま
+    if (!gender) return { voice: base, pitch: 1, id: voiceId(base) };
+
+    // 手順2: 男女とも確保できている
+    if (auto.female && auto.male) {
+      var av = auto[gender];
+      return { voice: av, pitch: 1, id: voiceId(av) };
+    }
+    // 手順3: 片方しか取れない → 同じボイスで pitch を ±0.15 ずらして区別する。
+    // 英語ボイスが1つも無い端末（voiceは未指定でブラウザ任せ）でも pitch は効くので、
+    // ここで諦めずにずらす。手順4の「同じ声で通す」は、
+    // 必要な性別のボイスがちょうど取れているときだけ。
+    var have = auto.female ? 'female' : (auto.male ? 'male' : '');
+    var only = auto.female || auto.male || base;   // null でも構わない
+    if (have === gender && only) {
+      return { voice: only, pitch: 1, id: voiceId(only) };
+    }
+    var pitch = 1 + (gender === 'female' ? PITCH_SHIFT : -PITCH_SHIFT);
+    return { voice: only, pitch: clampPitch(pitch), id: voiceId(only), degraded: true };
+  }
+
+  /* =====================================================================
+     実測長の保存（§2.3）
+     ===================================================================== */
+  function durKey(topicId, lineId) { return DUR_PREFIX + topicId + '|' + lineId; }
+
+  function saveDuration(topicId, lineId, ms, rate, vid) {
+    return EST.store.put('audio', {
+      key: durKey(topicId, lineId),
+      kind: 'duration',
+      topicId: topicId,
+      lineId: lineId,
+      ms: ms,
+      rate: rate,          // 測ったときの速度。F4・F5 がこれで補正する
+      voiceId: vid,
+      at: Date.now()
+    }).catch(function (e) {
+      // 測れなくても再生自体は成立しているので、黙って諦める
+      console.warn('[speech] 実測長を保存できませんでした', e);
+    });
+  }
+
+  function getDuration(topicId, lineId) {
+    return EST.store.get('audio', durKey(topicId, lineId)).then(function (r) {
+      return (r && r.kind === 'duration') ? r : null;
+    }).catch(function () { return null; });
+  }
+
+  // 語数からの概算（§2.3 の代用式）。タイムアウト計算にも使う。
+  function estimateMs(text, rate) {
+    var words = String(text || '').trim().split(/\s+/).filter(Boolean).length;
+    return words * WORD_MS / clampRate(rate || currentRate);
+  }
+
+  /* =====================================================================
+     公開インターフェース（§7.1）
+     ===================================================================== */
+  function isAvailable() { return engine().isAvailable(); }
+
+  function prepare(text, opts) { return engine().prepare(text, opts || {}); }
+
+  function speak(text, opts) {
+    opts = opts || {};
+    var t = String(text == null ? '' : text).trim();
+    if (!t || !isAvailable()) return Promise.resolve({ durationMs: 0, spoken: false });
+    return engine().speak(t, opts);
+  }
+
+  function stopCurrent() {
+    var c = current;
+    current = null;
+    if (c && c.finish) c.finish(false);
+    try { if (syn()) syn().cancel(); } catch (e) {}
+  }
+
+  function cancel() { stopCurrent(); }
+
+  function isSpeaking() {
+    try { return !!(syn() && (syn().speaking || syn().pending)); } catch (e) { return false; }
+  }
+
+  function setRate(r) { currentRate = clampRate(r); }
+  function getRate() { return currentRate; }
+
+  // UIが SpeechSynthesisVoice を直接触らないように整えて返す
+  function getVoices() {
+    return loadVoices().then(function () {
+      return englishVoices().map(function (v) {
+        return { id: voiceId(v), name: v.name, lang: v.lang, gender: guessGender(v) };
+      });
+    });
+  }
+
+  // 設定を反映する。起動時と設定変更時に呼ぶ。
+  function applySettings(s) {
+    if (!s) return;
+    currentEngine = engines[s.engine] ? s.engine : 'local';
+    if (s.ttsRate != null) currentRate = clampRate(s.ttsRate);
+    manual.def = s.localVoiceEn || null;
+    var g = s.localVoiceByGender || {};
+    manual.female = g.female || null;
+    manual.male = g.male || null;
+  }
+
+  // §7.2 iOS Safari は最初の発話をユーザージェスチャの同期処理内で行う必要がある。
+  // 起動後の最初のタップで無音のUtteranceを鳴らして解錠する。
+  function unlock() {
+    if (unlocked || !isAvailable()) return;
+    unlocked = true;
+    try {
+      var u = new SpeechSynthesisUtterance(' ');
+      u.volume = 0;
+      syn().speak(u);
+    } catch (e) { /* 解錠できなくても以降の再生は試みる */ }
+  }
+
+  function clampRate(r) {
+    r = Number(r);
+    if (!isFinite(r) || r <= 0) return DEFAULT_RATE;
+    return Math.min(RATE_MAX, Math.max(RATE_MIN, r));
+  }
+  function clampPitch(p) {
+    p = Number(p);
+    if (!isFinite(p)) return 1;
+    return Math.min(PITCH_MAX, Math.max(PITCH_MIN, p));
+  }
+
+  EST.speech = {
+    RATE_STEPS: RATE_STEPS,
+    // §7.1 のインターフェース
+    prepare: prepare,
+    speak: speak,
+    cancel: cancel,
+    setRate: setRate,
+    isAvailable: isAvailable,
+    getVoices: getVoices,
+    // 補助
+    getRate: getRate,
+    isSpeaking: isSpeaking,
+    applySettings: applySettings,
+    unlock: unlock,
+    getDuration: getDuration,
+    estimateMs: estimateMs,
+    resolveVoiceFor: function (gender) { return resolveVoice({ gender: gender }); }
   };
 })(window.EST = window.EST || {});
 
@@ -2146,9 +2550,19 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
 
     // §5.9 まりの部屋には書き出し・削除を出さない
     var canEdit = EST.profile.canEdit();
+    // 音声が使えない環境ではボタンごと出さない
+    var playBtn = EST.speech.isAvailable() ? h('button', {
+      class: 'btn', text: '通して再生',
+      onClick: function () {
+        if (playback) stopPlayback();
+        else startPlayback(t, playBtn);
+      }
+    }) : null;
+
     var actions = h('div', { class: 'card' }, [
       h('div', { class: 'row row--tight' }, [
         h('button', { class: 'btn btn--primary', text: '続きから', disabled: true }),
+        playBtn,
         h('button', {
           class: 'btn', text: '一覧を見る',
           onClick: function () { location.hash = '#/list/' + encodeURIComponent(t.id); }
@@ -2187,8 +2601,12 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
     return [head, actions, body, words];
   }
 
+  // 行の要素を id で引けるようにしておく（通して再生のハイライト用）
+  var lineEls = {};
+
   function buildLineList(t) {
     var out = [];
+    lineEls = {};
     var startAt = {};
     (t.blocks || []).forEach(function (b, i) { startAt[b.from] = { no: i + 1, label: b.label }; });
     var spLabel = {};
@@ -2197,7 +2615,7 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
     t.lines.forEach(function (l, i) {
       var st = startAt[l.id];
       if (st) out.push(h('div', { class: 'block-head', text: 'ブロック' + st.no + '　' + (st.label || '') }));
-      out.push(h('div', { class: 'line-view' }, [
+      var row = h('div', { class: 'line-view' }, [
         h('div', { class: 'line-view__no' }, [
           h('div', { text: String(i + 1) }),
           h('div', { class: t.myRole === l.speakerId ? 'line-view__mine' : '', text: spLabel[l.speakerId] || l.speakerId })
@@ -2206,10 +2624,79 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
           h('div', { class: 'line-view__en en', text: l.en }),
           l.ja ? h('div', { class: 'line-view__ja', text: l.ja }) : null,
           l.note ? h('div', { class: 'tiny muted', text: l.note }) : null
-        ])
-      ]));
+        ]),
+        speakLineButton(t, l)
+      ]);
+      lineEls[l.id] = row;
+      out.push(row);
     });
     return out;
+  }
+
+  function genderOf(t, speakerId) {
+    var g = '';
+    (t.speakers || []).forEach(function (s) { if (s.id === speakerId) g = s.gender || ''; });
+    return g;
+  }
+
+  function speakLineButton(t, l) {
+    if (!EST.speech.isAvailable() || !String(l.en || '').trim()) return null;
+    return h('button', {
+      class: 'speak-btn', title: '英文を聞く', 'aria-label': '英文を聞く',
+      onClick: function () {
+        stopPlayback();
+        EST.speech.speak(l.en, { gender: genderOf(t, l.speakerId), topicId: t.id, lineId: l.id });
+      }
+    }, '🔊');
+  }
+
+  /* ---- 通して再生（§11 F3「台本を入れて聞き流す」） ----------------------
+     全役を順に、英文だけ読む。skip の行は飛ばす。
+     練習画面（F5）とは別物で、ここは聞き流すためだけの導線。
+  --------------------------------------------------------------------- */
+  var playback = null;   // { topicId, cancelled }
+
+  function highlight(lineId) {
+    Object.keys(lineEls).forEach(function (id) {
+      if (lineEls[id]) lineEls[id].classList.toggle('is-playing', id === lineId);
+    });
+  }
+
+  function stopPlayback() {
+    if (playback) playback.cancelled = true;
+    playback = null;
+    EST.speech.cancel();
+    highlight(null);
+  }
+
+  function startPlayback(t, button) {
+    var lines = (t.lines || []).filter(function (l) { return !l.skip && String(l.en || '').trim(); });
+    if (!lines.length) return;
+
+    var session = { topicId: t.id, cancelled: false };
+    playback = session;
+    button.textContent = '停止';
+    button.classList.add('btn--danger');
+
+    function done() {
+      if (playback === session) playback = null;
+      highlight(null);
+      button.textContent = '通して再生';
+      button.classList.remove('btn--danger');
+    }
+
+    function next(i) {
+      if (session.cancelled || i >= lines.length) { done(); return; }
+      var l = lines[i];
+      highlight(l.id);
+      EST.speech.speak(l.en, { gender: genderOf(t, l.speakerId), topicId: t.id, lineId: l.id })
+        .then(function () {
+          if (session.cancelled) { done(); return; }
+          next(i + 1);
+        })
+        .catch(function () { done(); });
+    }
+    next(0);
   }
 
   function exportTopic(t) {
@@ -2233,7 +2720,7 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
       });
   }
 
-  EST.uiHome = { renderHome: renderHome, renderTopic: renderTopic };
+  EST.uiHome = { renderHome: renderHome, renderTopic: renderTopic, stopPlayback: stopPlayback };
 })(window.EST = window.EST || {});
 
 </script>
@@ -3206,6 +3693,7 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
       U.mount(box, [
         profileCard(),
         displayCard(s),
+        speechCard(s),
         listModeCard(s),
         EST.profile.canEdit() ? publishCard() : null,
         backupCard(),
@@ -3308,6 +3796,100 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
           return h('option', { value: String(v), selected: Number(s.fontScale) === v }, Math.round(v * 100) + '%');
         }))
       ])
+    ]);
+  }
+
+  // §7.5 の5段に、いまの値が含まれないときだけそれを足す。
+  // §5.7 の既定 ttsRate は 0.95 で5段のどれとも一致しないので、
+  // 黙って別の速度に変わってしまわないようにする。
+  function rateOptions(cur) {
+    var steps = EST.speech.RATE_STEPS.slice();
+    if (steps.indexOf(cur) < 0 && isFinite(cur) && cur > 0) steps.push(cur);
+    steps.sort(function (a, b) { return a - b; });
+    return steps.map(function (v) {
+      return h('option', { value: String(v), selected: cur === v }, v.toFixed(2) + '倍');
+    });
+  }
+
+  /* ---- 音声 §7.2 / §7.5 --------------------------------------------------- */
+  function speechCard(s) {
+    var U = ui();
+    // 使えない環境では設定ごと出さない（CLAUDE.md: ダイアログを出さず機能を隠す）
+    if (!EST.speech.isAvailable()) {
+      return h('div', { class: 'card' }, [
+        h('h2', { class: 'card__title', text: '音声' }),
+        h('div', { class: 'small muted', text: 'この端末では音声読み上げが使えません。' })
+      ]);
+    }
+
+    var body = h('div', { class: 'small muted', text: 'ボイスを読み込み中…' });
+
+    EST.speech.getVoices().then(function (voices) {
+      if (!voices.length) {
+        U.mount(body, h('div', { class: 'small muted', text: '英語のボイスが見つかりませんでした。端末に英語の音声を追加すると使えるようになります。' }));
+        return;
+      }
+      s.localVoiceByGender = s.localVoiceByGender || { female: null, male: null };
+
+      // §7.2 話者ごとに声を変える。自動割り当ての結果を見せたうえで、手で選び直せるようにする。
+      function voiceRow(label, key, gender) {
+        var auto = EST.speech.resolveVoiceFor(gender);
+        var autoName = auto && auto.voice ? auto.voice.name : '（なし）';
+        var cur = key === 'def' ? (s.localVoiceEn || '') : (s.localVoiceByGender[key] || '');
+        var sel = h('select', {
+          onChange: function (e) {
+            var v = e.target.value || null;
+            if (key === 'def') s.localVoiceEn = v;
+            else s.localVoiceByGender[key] = v;
+            EST.store.saveSettings(s).then(function () { EST.speech.applySettings(s); });
+          }
+        }, [h('option', { value: '', selected: !cur }, '自動（' + autoName + '）')].concat(
+          voices.map(function (v) {
+            var g = v.gender === 'female' ? '女性' : (v.gender === 'male' ? '男性' : '不明');
+            return h('option', { value: v.id, selected: cur === v.id }, v.name + '（' + g + '）');
+          })
+        ));
+        return h('div', { class: 'setting-row' }, [
+          h('div', { class: 'setting-row__label' }, [
+            label,
+            auto && auto.degraded
+              ? h('div', { class: 'setting-row__sub', text: '別々のボイスが取れないので、声の高さをずらして区別しています' })
+              : null
+          ]),
+          h('div', { class: 'row row--tight' }, [
+            sel,
+            h('button', {
+              class: 'btn btn--sm', text: '試聴',
+              onClick: function () {
+                EST.speech.speak('Good morning. May I see your passport, please?', { gender: gender });
+              }
+            })
+          ])
+        ]);
+      }
+
+      U.mount(body, [
+        voiceRow('女性の話者', 'female', 'female'),
+        voiceRow('男性の話者', 'male', 'male'),
+        voiceRow('性別の指定がない話者', 'def', '')
+      ]);
+    });
+
+    return h('div', { class: 'card' }, [
+      h('h2', { class: 'card__title', text: '音声' }),
+      h('div', { class: 'setting-row' }, [
+        h('div', { class: 'setting-row__label' }, [
+          '読み上げの速さ',
+          h('div', { class: 'setting-row__sub', text: 'シャドーイングで速くしたいときに使います' })
+        ]),
+        h('select', {
+          onChange: function (e) {
+            s.ttsRate = Number(e.target.value);
+            EST.store.saveSettings(s).then(function () { EST.speech.applySettings(s); });
+          }
+        }, rateOptions(Number(s.ttsRate)))
+      ]),
+      body
     ]);
   }
 
@@ -3696,18 +4278,43 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
     var primary = primaryIsEn ? l.en : l.ja;
     var secondary = primaryIsEn ? l.ja : l.en;
 
-    return h('button', {
-      class: 'list-row',
-      onClick: function () { toggleLine(l); }
-    }, [
-      h('div', { class: 'row row--tight' }, [
-        h('span', { class: 'tiny muted', text: String(i + 1) }),
-        h('span', { class: primaryIsEn ? 'en' : '', text: primary || '（空）' })
+    // 行そのものはdivにして、中に「開くボタン」と「🔊」を並べる。
+    // button の入れ子はHTMLとして不正なので、行自体をbuttonにはできない。
+    return h('div', { class: 'list-row' }, [
+      h('button', {
+        class: 'list-row__main',
+        onClick: function () { toggleLine(l); }
+      }, [
+        h('div', { class: 'row row--tight' }, [
+          h('span', { class: 'tiny muted', text: String(i + 1) }),
+          h('span', { class: primaryIsEn ? 'en' : '', text: primary || '（空）' })
+        ]),
+        open ? h('div', { class: 'tiny muted', style: { marginTop: '.15rem', paddingLeft: '1.2rem' } }, [
+          '→ ', h('span', { class: primaryIsEn ? '' : 'en', text: secondary || '（空）' })
+        ]) : null
       ]),
-      open ? h('div', { class: 'tiny muted', style: { marginTop: '.15rem', paddingLeft: '1.2rem' } }, [
-        '→ ', h('span', { class: primaryIsEn ? '' : 'en', text: secondary || '（空）' })
-      ]) : null
+      // §4.1 スピーカーは開かなくても音だけ聞ける（音で思い出せるか試せる）。
+      // したがって openedCount は増やさない。
+      speakButton(l.en, speakerGender(l.speakerId), l.id)
     ]);
+  }
+
+  // 使えない環境ではボタン自体を出さない（CLAUDE.md: 機能を隠すか静かにフォールバック）
+  function speakButton(text, gender, key) {
+    if (!EST.speech.isAvailable() || !String(text || '').trim()) return null;
+    return h('button', {
+      class: 'speak-btn', title: '英文を聞く', 'aria-label': '英文を聞く',
+      onClick: function (e) {
+        e.stopPropagation();
+        EST.speech.speak(text, { gender: gender, topicId: view.topic.id, lineId: key });
+      }
+    }, '🔊');
+  }
+
+  function speakerGender(speakerId) {
+    var g = '';
+    (view.topic.speakers || []).forEach(function (s) { if (s.id === speakerId) g = s.gender || ''; });
+    return g;
   }
 
   function wordRow(w) {
@@ -3716,20 +4323,24 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
     var primary = primaryIsEn ? w.en : w.ja;
     var secondary = primaryIsEn ? w.ja : w.en;
 
-    return h('button', {
-      class: 'list-row',
-      onClick: function () {
-        view.openWords[w.id] = !view.openWords[w.id];   // 語彙は記録対象外（F6で扱う）
-        drawControls(); drawLines();
-      }
-    }, [
-      h('div', { class: 'row row--tight' }, [
-        h('span', { class: primaryIsEn ? 'en' : '', text: primary || '（空）' }),
-        h('span', { class: 'chip', text: w.type === 'phrase' ? '句' : '語' })
+    return h('div', { class: 'list-row' }, [
+      h('button', {
+        class: 'list-row__main',
+        onClick: function () {
+          view.openWords[w.id] = !view.openWords[w.id];   // 語彙は記録対象外（F6で扱う）
+          drawControls(); drawLines();
+        }
+      }, [
+        h('div', { class: 'row row--tight' }, [
+          h('span', { class: primaryIsEn ? 'en' : '', text: primary || '（空）' }),
+          h('span', { class: 'chip', text: w.type === 'phrase' ? '句' : '語' })
+        ]),
+        open ? h('div', { class: 'tiny muted', style: { marginTop: '.15rem', paddingLeft: '1.2rem' } }, [
+          '→ ', h('span', { class: primaryIsEn ? '' : 'en', text: secondary || '（空）' })
+        ]) : null
       ]),
-      open ? h('div', { class: 'tiny muted', style: { marginTop: '.15rem', paddingLeft: '1.2rem' } }, [
-        '→ ', h('span', { class: primaryIsEn ? '' : 'en', text: secondary || '（空）' })
-      ]) : null
+      // 語彙は特定の話者の台詞ではないので、性別指定なしの既定ボイスで読む
+      speakButton(w.en, '', null)
     ]);
   }
 
@@ -3860,10 +4471,24 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
           h('div', { class: 'grow' }, [
             h('div', { class: 'line-view__ja', text: l.ja || '(和訳なし)' }),
             h('div', { class: 'line-view__en en', text: l.en })
-          ])
+          ]),
+          // §4.2 ヒットした行からその場で音声再生できる
+          speakButton(g.topic, l)
         ]);
       }))
     ]);
+  }
+
+  function speakButton(topic, line) {
+    if (!EST.speech.isAvailable() || !String(line.en || '').trim()) return null;
+    var gender = '';
+    (topic.speakers || []).forEach(function (s) { if (s.id === line.speakerId) gender = s.gender || ''; });
+    return h('button', {
+      class: 'speak-btn', title: '英文を聞く', 'aria-label': '英文を聞く',
+      onClick: function () {
+        EST.speech.speak(line.en, { gender: gender, topicId: topic.id, lineId: line.id });
+      }
+    }, '🔊');
   }
 
   EST.uiSearch = { renderSearch: renderSearch };
@@ -3945,6 +4570,11 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
   function route() {
     var r = currentRoute();
     window.scrollTo(0, 0);
+    // §7.2 画面遷移時に必ず止める。忘れると別画面で喋り続ける。
+    // 通して再生はループなので、発話を止めるだけでは次の行へ進んでしまう。
+    // ループごと止めてから cancel する。
+    try { EST.uiHome.stopPlayback(); } catch (e) {}
+    try { EST.speech.cancel(); } catch (e) {}
     try {
       if (r.name === 'home') EST.uiHome.renderHome(viewEl);
       else if (r.name === 'import') EST.uiImport.renderImport(viewEl);
@@ -4008,6 +4638,7 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
     viewEl = document.getElementById('view');
     barEl = document.getElementById('appbar');
     applyThemeEarly();
+    installSpeechUnlock();
 
     if (!EST.profile.restore()) {
       renderProfilePicker(function () { start(); });
@@ -4016,10 +4647,23 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
     start();
   }
 
+  // §7.2 iOS Safari は最初の発話をユーザージェスチャの同期処理内で行う必要がある。
+  // 起動後の最初のタップで解錠する。once なので以降は何もしない。
+  function installSpeechUnlock() {
+    function once() {
+      document.removeEventListener('pointerdown', once, true);
+      document.removeEventListener('touchend', once, true);
+      try { EST.speech.unlock(); } catch (e) {}
+    }
+    document.addEventListener('pointerdown', once, true);
+    document.addEventListener('touchend', once, true);
+  }
+
   function start() {
     EST.store.loadSettings()
       .then(function (s) {
         applyTheme(s);
+        EST.speech.applySettings(s);   // §7.5 速度と§7.2 ボイス指定を反映する
         return seedSamples(false);
       })
       .then(function () {
