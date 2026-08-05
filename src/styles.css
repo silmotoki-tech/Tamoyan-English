@@ -88,12 +88,22 @@ body {
 
 .app { min-height: 100vh; }
 
-/* ---- アプリバー -------------------------------------------------- */
+/* ---- アプリバー --------------------------------------------------
+   上端の safe-area を必ず見込む。ポータル（タモやんApps）から
+   ホーム画面アプリとして開くと、ポータル側の
+   apple-mobile-web-app-status-bar-style: black-translucent が効き、
+   viewport-fit=cover と相まって内容がiOSのステータスバーの下に潜り込む。
+   時計やバッテリーとタイトルが重なるのを防ぐ。
+   ステータスバーが不透明なとき（単体でSafariから追加した場合）は
+   inset が 0 になるので、この指定は何もしない。 */
 .appbar {
   position: sticky; top: 0; z-index: 20;
   display: flex; align-items: center; gap: .5rem;
   min-height: 3rem;
-  padding: .45rem max(.75rem, env(safe-area-inset-left)) .45rem max(.75rem, env(safe-area-inset-right));
+  padding: calc(.45rem + env(safe-area-inset-top))
+           max(.75rem, env(safe-area-inset-right))
+           .45rem
+           max(.75rem, env(safe-area-inset-left));
   background: color-mix(in srgb, var(--bg) 88%, transparent);
   backdrop-filter: saturate(1.4) blur(8px);
   border-bottom: 1px solid var(--line);
@@ -104,7 +114,10 @@ body {
 
 .view {
   max-width: 44rem; margin: 0 auto;
-  padding: .85rem max(.75rem, env(safe-area-inset-left)) 5rem max(.75rem, env(safe-area-inset-right));
+  padding: .85rem
+           max(.75rem, env(safe-area-inset-right))
+           calc(5rem + env(safe-area-inset-bottom))
+           max(.75rem, env(safe-area-inset-left));
 }
 
 /* ---- 汎用パーツ ---------------------------------------------------- */
@@ -185,7 +198,8 @@ label.field > .field__label { display: block; font-size: .72rem; color: var(--mu
 .note-box li { margin: .1rem 0; }
 
 /* トースト */
-.toast-root { position: fixed; left: 0; right: 0; bottom: 1.2rem; z-index: 60;
+.toast-root { position: fixed; left: 0; right: 0; z-index: 60;
+  bottom: calc(1.2rem + env(safe-area-inset-bottom));
   display: flex; flex-direction: column; align-items: center; gap: .4rem; pointer-events: none; }
 .toast { background: #22262b; color: #f4f2ee; font-size: .82rem;
   padding: .5rem .9rem; border-radius: 1.2rem; box-shadow: 0 6px 20px rgba(0,0,0,.28);
