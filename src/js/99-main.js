@@ -9,10 +9,29 @@
   var viewEl = null, barEl = null;
 
   /* ---- テーマと文字サイズ ------------------------------------------------ */
+  // styles.css の --bg（ライト/ダーク）と同じ値。iOSのステータスバー／
+  // 起動画面の色に使う <meta name="theme-color"> をここから合わせる。
+  var THEME_BG_LIGHT = '#faf9f7';
+  var THEME_BG_DARK = '#17181a';
+
   function applyTheme(s) {
     var root = document.documentElement;
-    root.setAttribute('data-theme', s && s.theme ? s.theme : 'auto');
+    var theme = s && s.theme ? s.theme : 'auto';
+    root.setAttribute('data-theme', theme);
     root.style.setProperty('--fs', String((s && Number(s.fontScale)) || 1));
+    syncThemeColor(theme);
+  }
+
+  // <meta name="theme-color"> は本来 prefers-color-scheme で自動追従するが、
+  // 設定で明示的に light/dark を選んだときは両方のタグを同じ値に揃えて上書きする。
+  // auto に戻したら、それぞれ本来のライト/ダーク値に戻す。
+  function syncThemeColor(theme) {
+    var light = document.querySelector('meta[name="theme-color"][media*="light"]');
+    var dark = document.querySelector('meta[name="theme-color"][media*="dark"]');
+    if (!light || !dark) return;
+    if (theme === 'light') { light.setAttribute('content', THEME_BG_LIGHT); dark.setAttribute('content', THEME_BG_LIGHT); }
+    else if (theme === 'dark') { light.setAttribute('content', THEME_BG_DARK); dark.setAttribute('content', THEME_BG_DARK); }
+    else { light.setAttribute('content', THEME_BG_LIGHT); dark.setAttribute('content', THEME_BG_DARK); }
   }
 
   // DBを開く前に localStorage のミラーから当てる（起動時に一瞬白くならないように）

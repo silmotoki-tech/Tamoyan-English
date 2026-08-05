@@ -188,11 +188,52 @@
       EST.app.setBar(t.title || '(無題)', EST.profile.canEdit() ? [
         h('button', { class: 'btn btn--sm', text: '編集', onClick: function () { location.hash = '#/edit/' + encodeURIComponent(t.id); } })
       ] : []);
-      U.mount(view, buildTopicDetail(t));
+      U.mount(view, buildTopicDetail(t, view));
     });
   }
 
-  function buildTopicDetail(t) {
+  // §5.9「audienceは後から変えられるようにする」。編集画面を開き直さず、
+  // タモやんの部屋にだけこの場で切り替えられるようにする。
+  function switchAudience(t, next, view) {
+    if (next === t.audience) return;
+    var U = ui();
+    var updated = JSON.parse(JSON.stringify(t));
+    updated.audience = next;
+    updated.updatedAt = Date.now();
+
+    EST.store.put('topics', updated)
+      .then(function () { return EST.backup.snapshot('audience変更: ' + (updated.title || '')); })
+      .then(function () {
+        var me = EST.profile.get();
+        var msg;
+        if (next === 'both') msg = '両方にしました。';
+        else if (next === me) msg = '自分用にしました。';
+        else msg = EST.profile.audienceLabel(next) + 'にしました。自分の一覧には出ません。';
+        U.toast(msg);
+
+        // 変更した瞬間に自分の部屋から見えなくなることがある（§5.9）。
+        // 見えなくなった詳細画面に留まっても仕方がないのでホームへ戻す。
+        if (EST.profile.canSee(updated)) renderTopic(view, updated.id);
+        else location.hash = '#/';
+      });
+  }
+
+  function audienceSwitchRow(t, view) {
+    var me = EST.profile.get();
+    var other = EST.profile.other().id;
+    return h('div', { class: 'row row--tight', style: { marginTop: '.5rem' } }, [
+      h('span', { class: 'tiny muted', text: '誰の台本か' }),
+      [me, other, 'both'].map(function (a) {
+        return h('button', {
+          class: 'btn btn--sm' + (t.audience === a ? ' btn--primary' : ''),
+          text: EST.profile.audienceLabel(a),
+          onClick: function () { switchAudience(t, a, view); }
+        });
+      })
+    ]);
+  }
+
+  function buildTopicDetail(t, view) {
     var U = ui();
     var sec = EST.schema.lapSeconds(t.lines);
     var myLabel = '';
@@ -208,11 +249,10 @@
         h('span', {}, [h('b', { text: String(t.lines.length) }), '行']),
         h('span', {}, [h('b', { text: String((t.blocks || []).length || 1) }), 'ブロック']),
         h('span', {}, ['語彙 ', h('b', { text: String((t.words || []).length) }), '個']),
-        h('span', {}, ['自分の役 ', h('b', { text: myLabel || '未設定' })]),
-        EST.profile.canEdit()
-          ? h('span', {}, ['台本 ', h('b', { text: EST.profile.audienceLabel(t.audience) })])
-          : null
-      ])
+        h('span', {}, ['自分の役 ', h('b', { text: myLabel || '未設定' })])
+      ]),
+      // §5.9 audienceは後から変えられる。タモやんの部屋にのみ表示する。
+      EST.profile.canEdit() ? audienceSwitchRow(t, view) : null
     ]);
 
     // §5.9 まりの部屋には書き出し・削除を出さない

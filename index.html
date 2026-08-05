@@ -5,6 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
 <title>英会話台本トレーナー</title>
+<!-- iOSのホーム画面追加対応（SPEC §10.2）。7日間未使用でデータが消える問題と、
+     マイク権限を毎回聞かれる問題（F4以降）を緩和する。すべて自己完結で外部参照なし。 -->
+<link rel="apple-touch-icon" href="data:image/png;base64,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">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="英会話台本">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#faf9f7">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#17181a">
+<link rel="manifest" href="data:application/manifest+json;base64,eyJuYW1lIjoi6Iux5Lya6Kmx5Y+w5pys44OI44Os44O844OK44O8Iiwic2hvcnRfbmFtZSI6IuiLseS8muipseWPsOacrCIsInN0YXJ0X3VybCI6Ii4vIiwic2NvcGUiOiIuLyIsImRpc3BsYXkiOiJzdGFuZGFsb25lIiwiYmFja2dyb3VuZF9jb2xvciI6IiNmYWY5ZjciLCJ0aGVtZV9jb2xvciI6IiNmYWY5ZjciLCJsYW5nIjoiamEiLCJpY29ucyI6W3sic3JjIjoiZGF0YTppbWFnZS9wbmc7YmFzZTY0LGlWQk9SdzBLR2dvQUFBQU5TVWhFVWdBQUFNQUFBQURBQ0FZQUFBQlMzR3dIQUFBRjdVbEVRVlI0MnUzZEwyOGRSeFNHOGZsRytRTDlBa1ZsQWFWUmNRMHJSUVVsQVdaVlFJaWhxN0JJTVFscVpKaktMQ2FWTEJVbElDQ2txa28zT2lDVkhUbVY3L1hlc3pOemZpTzlrbVhmUDdzeis4ek9zNTdaYlE5Ky9HNFJxWnFtRWdRQUlnQVFBWUFJQUVRQUlBSUFFUUNJQUVBRUFDSUFFQUdBQ0FCRUFDQUNBQkVBaUFCQUJBQWlBQkFCZ0FnQVJBQWd5N2UvL0xBY3Z6aFpMcTR1bDcvLy9XZjVYT0xuK0YzOExWNmpyZ0F3M1lILzhvL2ZsN3VXZUMwUUFEQkZmdjd0MXh1OS9WMUx2Q2ZlcXc0Qk1QVEJmOThDQWdDVVBmaEJBSUJoeC96N0RIditiempFQ1FBd1RIWVIzbDNFV04wQ1lJamUvMURGV1FBQTNlZjAvT3hnQU1SbnEyTUFkSjAxeC82M3VZQTZCa0NKS3ordUNBRmd1TVIwaGtPWCtBNTFEWUJTOGt1R0FWQmFmc2t3QUVyTEx4a0dRSG41SmNNQUtDMi9aQmdBNWVXWERBT2d0UHlTWVFDVWxsOHlESUR5OGt1R0FWQmFmc2t3QU1yTEx4a0d3SlNMWGl5V0FjQVErZWFuN3plVjM5dGtPTFpKMndDZ2pQeVNZUUJzbGovZi9kVWRBTEZOMmdZQUI4L0Q0Nk9sMXhMYnBvMEFVRVoreVRBQVNzc3ZHUVpBZWZrbHd3QW9MYjlrR0FEbDVaY01BNkMwL0pKaEFKU1dYeklNZ1BMeVM0WUJVRnAreVRBQXlzc3ZHUVpBYWZrbHd3QllYWDVITDJRWUFIc25udHM3ZW9sOTBKWUEyQ3Z2UDM0WUhvRFlCMjBKZ0ozejZPbmpaWllTKzZKTkFWQkdmc2t3QUlhUTN4aWVaQTJ6eURBQXVwUGYrSjdNNzlLMkFPaEtmcU5Yemp6YmFGc0FkQ08vMThmbFdiNUJoZ0hRamZ4ZW42YVFOZDJDREFPZ0MvbTliYUphMW9RN01neUF6ZVgzdHFuS1dWT3V5VEFBTnBYZnJ5MVd5VnAwUTRZQjBJMzhidVVmWkJnQVhjanZWbXNQeURBQWJpVHJYdjkzV2FXVkpjT2VLUUNBLy9MczFmTnUxdWxteVhEc3M3WUh3T2J5UzRZQnNHbU9UcDUwTis3TzhwSFlkd0FVcjREWGI5OTB0MEE5UzRaajN3RkFmcnVRWHpJTWdOTHlTNFlCVUZwK3lUQUF5c3N2R1FiQWRQSjduekYybHFOVWx1RkdmZzlYTHE0dTc3MnQ4UmxrR0FCbDVKY01BMkFhK1YxcmU4a3dBSWFUMzlQenM5VzJPVDZMREFPZ2pQeVNZUUNVbDE4eURJRFZreldVT01UamliSmtlTTJoR3dBNlM0Wk1yaW0vczIwL0FEYk1ERDNveUdjd0FHeWNHY2JRSXpzTUFNZ3ZrQUZBZmczbEFEQ2wvTTVXcXNod0k3OUtaUmx1NUZlcExNT04vQ3FWWmJpUlg2V3lERGZ5cTFTVzRVWitsY295M01pdlVsbUdHL2xWS3N2d2xBRE05SlQzWHNxc3p4U1lEb0NzRzBwVmxPRVpIN0RYeUs5U1dZYW5BeURycHJJVnl6NDMrUVZBWXJKdUsxNjU3SEtiZHdDUVh6SU1BUEpMaGdGQWZza3dBTWd2R1FZQStTWERBQ0MvWkJnQTVKY01BNEQ4a21FQWtGOHlEQUR5UzRZQjBLWDhQbnI2ZUxpNmlXMG13eE1ERUFLV1VVWitkRkRHbzZDaWpDekR3d0p3L09Ja3BYSGplOVRSdkhYVTlHN3o5bTdPa3BNQ1lIekxrMG9Eb0ZGMUZtVUJjRm8zWEN3TkFMRlRaNlVCMEpzNWE1WUZ3SGlXTjVVR0lLc1JaMXY0blRsdFpMVE9vem1OenpmQmErdUpneU1OSHh1Um0yK0s3OVpUeDBlUzRVWis1MXZrc2ZYaW9aRmt1SkhmdWVXWERFOEFBUGtsdzJVQnlMclgvOHp5dTVVTWovQk1nZTRCZVBicU9ma2RWSWFqN1FCQWZza3dBUGJMMGNrVDQ5WEJ2U3JhRUFCNzV2WGJOK1IzY0JtT05nUUErU1hEQUNDL1pCZ0E1SmNNQTREOGttRUFkQ0Mvc3o3OHVVZlg2bFdHVzlVR3ViaTZMSC93ZjA3VVJkVU9wNUZmcVN6RHJhcjhPdkJ2cHFvTXQ0cnllM3ArNXFEL0lsRW5GV1c0a1YrcExNT04vRXBsR2U0R0FHdCtyUmt1RFVCRzcwTisrNURobnM3Q3JWTEZrOTgrWkxpbmpxZ2JBTWh2TFJjRFFESUE1TGV2NFNnQWtvZEE1TGNmR1RZRVN1NTF5RzlmSFJJSlRyNE1Tbjc3a21HWFFaUGxpL3hxanlHbVFoeGljWVpGTDlwakdBQ2laMWh6N0JtZnBmZlhIa05OaDE3ekNvUXJQOXBqeUNXUmExUzZnMTk3REgxWGlLaXdmVTYvOFI0SHYvYVk0czV3TVY3Y1JjVGl0Y2I4Mm1NYUFLNVhmRnc3am4rZ1hPK0Y0dWY0WGZ6TmdhODlwZ1ZBQkFBaUFCQUJnQWdBUkFBZ0FnQVJBSWdBUUFRQUlnQVFBWUFJQUVRQUlBSUFFUUNJQUVBRUFDSUFFQUNvQkFHQUNBQkV5dVVUeUlLR0hFMkhmcUVBQUFBQVNVVk9SSzVDWUlJPSIsInNpemVzIjoiMTkyeDE5MiIsInR5cGUiOiJpbWFnZS9wbmciLCJwdXJwb3NlIjoiYW55In1dfQ==">
 <style>
 /* =====================================================================
    英会話台本トレーナー スタイル
@@ -2068,11 +2077,52 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
       EST.app.setBar(t.title || '(無題)', EST.profile.canEdit() ? [
         h('button', { class: 'btn btn--sm', text: '編集', onClick: function () { location.hash = '#/edit/' + encodeURIComponent(t.id); } })
       ] : []);
-      U.mount(view, buildTopicDetail(t));
+      U.mount(view, buildTopicDetail(t, view));
     });
   }
 
-  function buildTopicDetail(t) {
+  // §5.9「audienceは後から変えられるようにする」。編集画面を開き直さず、
+  // タモやんの部屋にだけこの場で切り替えられるようにする。
+  function switchAudience(t, next, view) {
+    if (next === t.audience) return;
+    var U = ui();
+    var updated = JSON.parse(JSON.stringify(t));
+    updated.audience = next;
+    updated.updatedAt = Date.now();
+
+    EST.store.put('topics', updated)
+      .then(function () { return EST.backup.snapshot('audience変更: ' + (updated.title || '')); })
+      .then(function () {
+        var me = EST.profile.get();
+        var msg;
+        if (next === 'both') msg = '両方にしました。';
+        else if (next === me) msg = '自分用にしました。';
+        else msg = EST.profile.audienceLabel(next) + 'にしました。自分の一覧には出ません。';
+        U.toast(msg);
+
+        // 変更した瞬間に自分の部屋から見えなくなることがある（§5.9）。
+        // 見えなくなった詳細画面に留まっても仕方がないのでホームへ戻す。
+        if (EST.profile.canSee(updated)) renderTopic(view, updated.id);
+        else location.hash = '#/';
+      });
+  }
+
+  function audienceSwitchRow(t, view) {
+    var me = EST.profile.get();
+    var other = EST.profile.other().id;
+    return h('div', { class: 'row row--tight', style: { marginTop: '.5rem' } }, [
+      h('span', { class: 'tiny muted', text: '誰の台本か' }),
+      [me, other, 'both'].map(function (a) {
+        return h('button', {
+          class: 'btn btn--sm' + (t.audience === a ? ' btn--primary' : ''),
+          text: EST.profile.audienceLabel(a),
+          onClick: function () { switchAudience(t, a, view); }
+        });
+      })
+    ]);
+  }
+
+  function buildTopicDetail(t, view) {
     var U = ui();
     var sec = EST.schema.lapSeconds(t.lines);
     var myLabel = '';
@@ -2088,11 +2138,10 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
         h('span', {}, [h('b', { text: String(t.lines.length) }), '行']),
         h('span', {}, [h('b', { text: String((t.blocks || []).length || 1) }), 'ブロック']),
         h('span', {}, ['語彙 ', h('b', { text: String((t.words || []).length) }), '個']),
-        h('span', {}, ['自分の役 ', h('b', { text: myLabel || '未設定' })]),
-        EST.profile.canEdit()
-          ? h('span', {}, ['台本 ', h('b', { text: EST.profile.audienceLabel(t.audience) })])
-          : null
-      ])
+        h('span', {}, ['自分の役 ', h('b', { text: myLabel || '未設定' })])
+      ]),
+      // §5.9 audienceは後から変えられる。タモやんの部屋にのみ表示する。
+      EST.profile.canEdit() ? audienceSwitchRow(t, view) : null
     ]);
 
     // §5.9 まりの部屋には書き出し・削除を出さない
@@ -3834,10 +3883,29 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
   var viewEl = null, barEl = null;
 
   /* ---- テーマと文字サイズ ------------------------------------------------ */
+  // styles.css の --bg（ライト/ダーク）と同じ値。iOSのステータスバー／
+  // 起動画面の色に使う <meta name="theme-color"> をここから合わせる。
+  var THEME_BG_LIGHT = '#faf9f7';
+  var THEME_BG_DARK = '#17181a';
+
   function applyTheme(s) {
     var root = document.documentElement;
-    root.setAttribute('data-theme', s && s.theme ? s.theme : 'auto');
+    var theme = s && s.theme ? s.theme : 'auto';
+    root.setAttribute('data-theme', theme);
     root.style.setProperty('--fs', String((s && Number(s.fontScale)) || 1));
+    syncThemeColor(theme);
+  }
+
+  // <meta name="theme-color"> は本来 prefers-color-scheme で自動追従するが、
+  // 設定で明示的に light/dark を選んだときは両方のタグを同じ値に揃えて上書きする。
+  // auto に戻したら、それぞれ本来のライト/ダーク値に戻す。
+  function syncThemeColor(theme) {
+    var light = document.querySelector('meta[name="theme-color"][media*="light"]');
+    var dark = document.querySelector('meta[name="theme-color"][media*="dark"]');
+    if (!light || !dark) return;
+    if (theme === 'light') { light.setAttribute('content', THEME_BG_LIGHT); dark.setAttribute('content', THEME_BG_LIGHT); }
+    else if (theme === 'dark') { light.setAttribute('content', THEME_BG_DARK); dark.setAttribute('content', THEME_BG_DARK); }
+    else { light.setAttribute('content', THEME_BG_LIGHT); dark.setAttribute('content', THEME_BG_DARK); }
   }
 
   // DBを開く前に localStorage のミラーから当てる（起動時に一瞬白くならないように）
