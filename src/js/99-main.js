@@ -44,6 +44,8 @@
     if (parts[0] === 'settings') return { name: 'settings' };
     if (parts[0] === 'topic') return { name: 'topic', id: decodeURIComponent(parts[1] || '') };
     if (parts[0] === 'edit') return { name: 'edit', id: decodeURIComponent(parts[1] || '') };
+    if (parts[0] === 'list') return { name: 'list', id: decodeURIComponent(parts[1] || '') };
+    if (parts[0] === 'search') return { name: 'search' };
     return { name: 'home' };
   }
 
@@ -55,6 +57,8 @@
       else if (r.name === 'import') EST.uiImport.renderImport(viewEl);
       else if (r.name === 'edit') EST.uiImport.renderEditor(viewEl, r.id);
       else if (r.name === 'topic') EST.uiHome.renderTopic(viewEl, r.id);
+      else if (r.name === 'list') EST.uiList.renderList(viewEl, r.id);
+      else if (r.name === 'search') EST.uiSearch.renderSearch(viewEl);
       else if (r.name === 'settings') EST.uiSettings.render(viewEl);
     } catch (e) {
       console.error('[route]', e);

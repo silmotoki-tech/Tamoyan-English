@@ -21,6 +21,7 @@
       U.mount(box, [
         profileCard(),
         displayCard(s),
+        listModeCard(s),
         EST.profile.canEdit() ? publishCard() : null,
         backupCard(),
         autoBackupCard(),
@@ -121,6 +122,37 @@
         }, [0.9, 1.0, 1.1, 1.25, 1.4].map(function (v) {
           return h('option', { value: String(v), selected: Number(s.fontScale) === v }, Math.round(v * 100) + '%');
         }))
+      ])
+    ]);
+  }
+
+  /* ---- 一覧モード §4.1 ---------------------------------------------------- */
+  function listModeCard(s) {
+    var U = ui();
+    var row = h('div', { class: 'row row--tight' });
+    function draw() {
+      U.mount(row, [
+        h('button', {
+          class: 'btn btn--sm' + (s.recordOpens ? ' btn--primary' : ''),
+          text: 'ON',
+          onClick: function () { s.recordOpens = true; EST.store.saveSettings(s).then(draw); }
+        }),
+        h('button', {
+          class: 'btn btn--sm' + (!s.recordOpens ? ' btn--primary' : ''),
+          text: 'OFF',
+          onClick: function () { s.recordOpens = false; EST.store.saveSettings(s).then(draw); }
+        })
+      ]);
+    }
+    draw();
+    return h('div', { class: 'card' }, [
+      h('h2', { class: 'card__title', text: '一覧モード' }),
+      h('div', { class: 'setting-row' }, [
+        h('div', { class: 'setting-row__label' }, [
+          '開いた行を復習に回す',
+          h('div', { class: 'setting-row__sub', text: '一覧モードでタップして開いた行を「思い出せなかった」として記録します' })
+        ]),
+        row
       ])
     ]);
   }

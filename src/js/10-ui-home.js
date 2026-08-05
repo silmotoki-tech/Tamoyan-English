@@ -43,7 +43,13 @@
     }
 
     U.append(wrap, [
-      pending('🔍', '検索（全トピック横断）', 'F2'),
+      h('button', { class: 'home-item', onClick: function () { location.hash = '#/search'; } }, [
+        h('span', { class: 'home-item__icon', text: '🔍' }),
+        h('span', { class: 'home-item__body' }, [
+          h('div', { text: '検索（全トピック横断）' }),
+          h('div', { class: 'home-item__sub', text: '日本語でも英語でも引けます' })
+        ])
+      ]),
       pending('📅', '今日の練習', 'F5'),
       pending('🔁', '再確認', 'F7'),
       pending('📇', '語彙をまわす', 'F6')
@@ -214,7 +220,10 @@
     var actions = h('div', { class: 'card' }, [
       h('div', { class: 'row row--tight' }, [
         h('button', { class: 'btn btn--primary', text: '続きから', disabled: true }),
-        h('button', { class: 'btn', text: '一覧を見る', disabled: true }),
+        h('button', {
+          class: 'btn', text: '一覧を見る',
+          onClick: function () { location.hash = '#/list/' + encodeURIComponent(t.id); }
+        }),
         canEdit ? h('button', {
           class: 'btn', text: 'JSON書き出し',
           onClick: function () { exportTopic(t); }
@@ -225,7 +234,7 @@
         }) : null
       ]),
       h('div', { class: 'tiny muted', style: { marginTop: '.35rem' },
-        text: '「続きから」は F5、「一覧を見る」は F2 で使えるようになります。' })
+        text: '「続きから」は F5 で使えるようになります。' })
     ]);
 
     var body = h('div', { class: 'card' }, buildLineList(t));

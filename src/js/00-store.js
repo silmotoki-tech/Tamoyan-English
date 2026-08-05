@@ -41,6 +41,7 @@
     dailyGoalLaps: 10,
     theme: 'auto',
     fontScale: 1.0,
+    recordOpens: true,         // §4.1 一覧モードで開いた行を復習キューに入れるか
     autoBackups: []            // §6.4 直近3世代（部屋ごとに持つ）
   };
 
@@ -136,6 +137,21 @@
     return String(key || '').indexOf((profileId || pid()) + '|') === 0;
   }
 
+  /* ---- 一覧モードで開いた記録（§4.1・§5.5） ---------------------------
+     Progress レコードが無ければ既定形で新規作成し、openedCount を1増やす。
+     カウント・レイテンシ等は F4〜F7 が別途書き込むので、ここでは触らない。
+  --------------------------------------------------------------------- */
+  function markLineOpened(topicId, lineId) {
+    var key = progressKey(topicId, lineId);
+    return get('progress', key).then(function (rec) {
+      var next = rec || EST.schema.defaultProgress(pid(), topicId, lineId);
+      next.openedCount = (next.openedCount || 0) + 1;
+      next.lastOpenedAt = Date.now();
+      next.updatedAt = Date.now();
+      return put('progress', next);
+    });
+  }
+
   // ---- 設定 -----------------------------------------------------------
   function withDefaults(defaults, v) {
     var out = JSON.parse(JSON.stringify(defaults));
@@ -204,6 +220,7 @@
     topicProgressKey: topicProgressKey,
     settingsKey: settingsKey,
     belongsToProfile: belongsToProfile,
+    markLineOpened: markLineOpened,
     loadShared: loadShared,
     saveShared: saveShared,
     open: open,

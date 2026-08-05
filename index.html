@@ -240,6 +240,16 @@ label.field > .field__label { display: block; font-size: .72rem; color: var(--mu
 .block-head { font-size: .74rem; font-weight: 700; color: var(--muted);
   background: var(--panel2); border-radius: .35rem; padding: .18rem .5rem; margin: .6rem 0 .2rem; }
 
+/* ---- 一覧モード（§4.1）・検索結果の行 -------------------------------
+   ネイティブ button の見た目を引きずらないよう、.btn には乗らず
+   .topic-card と同じ方式で自己完結させる。 */
+.list-row { display: block; width: 100%; text-align: left; cursor: pointer;
+  font: inherit; font-size: .9rem; color: var(--ink); background: transparent;
+  border: none; border-top: 1px solid var(--line); border-radius: 0;
+  padding: .55rem .15rem; }
+.list-row:first-child { border-top: none; }
+.list-row:hover { background: var(--panel2); }
+
 /* ---- 編集プレビュー ------------------------------------------------- */
 .stat-bar { position: sticky; top: 3rem; z-index: 15;
   background: var(--panel2); border: 1px solid var(--line); border-radius: .5rem;
@@ -360,6 +370,7 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
     dailyGoalLaps: 10,
     theme: 'auto',
     fontScale: 1.0,
+    recordOpens: true,         // §4.1 一覧モードで開いた行を復習キューに入れるか
     autoBackups: []            // §6.4 直近3世代（部屋ごとに持つ）
   };
 
@@ -455,6 +466,21 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
     return String(key || '').indexOf((profileId || pid()) + '|') === 0;
   }
 
+  /* ---- 一覧モードで開いた記録（§4.1・§5.5） ---------------------------
+     Progress レコードが無ければ既定形で新規作成し、openedCount を1増やす。
+     カウント・レイテンシ等は F4〜F7 が別途書き込むので、ここでは触らない。
+  --------------------------------------------------------------------- */
+  function markLineOpened(topicId, lineId) {
+    var key = progressKey(topicId, lineId);
+    return get('progress', key).then(function (rec) {
+      var next = rec || EST.schema.defaultProgress(pid(), topicId, lineId);
+      next.openedCount = (next.openedCount || 0) + 1;
+      next.lastOpenedAt = Date.now();
+      next.updatedAt = Date.now();
+      return put('progress', next);
+    });
+  }
+
   // ---- 設定 -----------------------------------------------------------
   function withDefaults(defaults, v) {
     var out = JSON.parse(JSON.stringify(defaults));
@@ -523,6 +549,7 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
     topicProgressKey: topicProgressKey,
     settingsKey: settingsKey,
     belongsToProfile: belongsToProfile,
+    markLineOpened: markLineOpened,
     loadShared: loadShared,
     saveShared: saveShared,
     open: open,
@@ -597,6 +624,18 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
     if (!t.length) return 0;
     var m = t.match(/[ぁ-ゖァ-ヺー一-鿿々]/g);
     return m ? m.length / t.length : 0;
+  }
+
+  // カタカナ→ひらがな（§4.2 横断検索の表記揺れ吸収）。長音符ーはそのまま残す。
+  function toHiragana(s) {
+    return String(s || '').replace(/[ァ-ヶ]/g, function (c) {
+      return String.fromCharCode(c.charCodeAt(0) - 0x60);
+    });
+  }
+
+  // 検索用の正規化：カタカナをひらがなに寄せ、英字は小文字化する
+  function normalizeForSearch(s) {
+    return toHiragana(String(s == null ? '' : s)).toLowerCase();
   }
 
   // 1行を EN / JA / IGNORE に分類する（§6.1 手順2）
@@ -1090,6 +1129,27 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
     };
   }
 
+  /* ---- Progress の既定形（§5.5） -------------------------------------
+     一覧モード（§4.1）で行を開いた記録だけを先に持たせる。
+     counts/latency/mastered 等の実データは F4〜F7 が書き込む。
+  --------------------------------------------------------------------- */
+  function defaultProgress(profileId, topicId, lineId) {
+    return {
+      key: profileId + '|' + topicId + '|' + lineId,
+      profileId: profileId,
+      topicId: topicId,
+      lineId: lineId,
+      counts: { total: 0, byStage: {} },
+      latency: { history: [], median5: null, best: null },
+      stalls: 0,
+      openedCount: 0,
+      lastOpenedAt: null,
+      mastered: false,
+      masteredAt: null,
+      updatedAt: 0
+    };
+  }
+
   /* ---- 見積り（§6.2 の「1周 約◯秒」） -------------------------------- */
   function lapSeconds(lines, rate) {
     rate = Number(rate) || DEFAULT_RATE;
@@ -1133,6 +1193,8 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
 
     countWords: countWords,
     jaRatio: jaRatio,
+    toHiragana: toHiragana,
+    normalizeForSearch: normalizeForSearch,
     classifyLine: classifyLine,
     normalizeRaw: normalizeRaw,
     parseScript: parseScript,
@@ -1144,6 +1206,7 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
 
     validateTopic: validateTopic,
     normalizeTopic: normalizeTopic,
+    defaultProgress: defaultProgress,
     lapSeconds: lapSeconds,
     newTopicId: newTopicId,
     pad3: pad3,
@@ -1860,7 +1923,13 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
     }
 
     U.append(wrap, [
-      pending('🔍', '検索（全トピック横断）', 'F2'),
+      h('button', { class: 'home-item', onClick: function () { location.hash = '#/search'; } }, [
+        h('span', { class: 'home-item__icon', text: '🔍' }),
+        h('span', { class: 'home-item__body' }, [
+          h('div', { text: '検索（全トピック横断）' }),
+          h('div', { class: 'home-item__sub', text: '日本語でも英語でも引けます' })
+        ])
+      ]),
       pending('📅', '今日の練習', 'F5'),
       pending('🔁', '再確認', 'F7'),
       pending('📇', '語彙をまわす', 'F6')
@@ -2031,7 +2100,10 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
     var actions = h('div', { class: 'card' }, [
       h('div', { class: 'row row--tight' }, [
         h('button', { class: 'btn btn--primary', text: '続きから', disabled: true }),
-        h('button', { class: 'btn', text: '一覧を見る', disabled: true }),
+        h('button', {
+          class: 'btn', text: '一覧を見る',
+          onClick: function () { location.hash = '#/list/' + encodeURIComponent(t.id); }
+        }),
         canEdit ? h('button', {
           class: 'btn', text: 'JSON書き出し',
           onClick: function () { exportTopic(t); }
@@ -2042,7 +2114,7 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
         }) : null
       ]),
       h('div', { class: 'tiny muted', style: { marginTop: '.35rem' },
-        text: '「続きから」は F5、「一覧を見る」は F2 で使えるようになります。' })
+        text: '「続きから」は F5 で使えるようになります。' })
     ]);
 
     var body = h('div', { class: 'card' }, buildLineList(t));
@@ -3085,6 +3157,7 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
       U.mount(box, [
         profileCard(),
         displayCard(s),
+        listModeCard(s),
         EST.profile.canEdit() ? publishCard() : null,
         backupCard(),
         autoBackupCard(),
@@ -3185,6 +3258,37 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
         }, [0.9, 1.0, 1.1, 1.25, 1.4].map(function (v) {
           return h('option', { value: String(v), selected: Number(s.fontScale) === v }, Math.round(v * 100) + '%');
         }))
+      ])
+    ]);
+  }
+
+  /* ---- 一覧モード §4.1 ---------------------------------------------------- */
+  function listModeCard(s) {
+    var U = ui();
+    var row = h('div', { class: 'row row--tight' });
+    function draw() {
+      U.mount(row, [
+        h('button', {
+          class: 'btn btn--sm' + (s.recordOpens ? ' btn--primary' : ''),
+          text: 'ON',
+          onClick: function () { s.recordOpens = true; EST.store.saveSettings(s).then(draw); }
+        }),
+        h('button', {
+          class: 'btn btn--sm' + (!s.recordOpens ? ' btn--primary' : ''),
+          text: 'OFF',
+          onClick: function () { s.recordOpens = false; EST.store.saveSettings(s).then(draw); }
+        })
+      ]);
+    }
+    draw();
+    return h('div', { class: 'card' }, [
+      h('h2', { class: 'card__title', text: '一覧モード' }),
+      h('div', { class: 'setting-row' }, [
+        h('div', { class: 'setting-row__label' }, [
+          '開いた行を復習に回す',
+          h('div', { class: 'setting-row__sub', text: '一覧モードでタップして開いた行を「思い出せなかった」として記録します' })
+        ]),
+        row
       ])
     ]);
   }
@@ -3375,6 +3479,349 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
 
 </script>
 <script>
+/* ---- 14-ui-list.js ---- */
+/* =====================================================================
+   14-ui-list.js — 一覧モード（SPEC §4.1）
+   和訳だけを縦に並べ、タップすると英文が下に開く。「思い出せなかった」を
+   1行ずつ開いたときだけ記録する（§5.5）。音声再生（🔊）はF3の内蔵TTSが
+   入ってから追加する。ここでは開閉とテキスト書き出しだけを扱う。
+   ===================================================================== */
+;(function (EST) {
+  'use strict';
+
+  var h = null;
+  function ui() { h = EST.ui.h; return EST.ui; }
+
+  // 画面ごとの一時状態。ページを離れたらリセットしてよい。
+  var view = {
+    topic: null,
+    settings: null,
+    direction: 'ja',      // 'ja' = 和文が主表示 / 'en' = 英文が主表示
+    tab: 'lines',         // 'lines' | 'words'
+    openLines: {},
+    openWords: {}
+  };
+
+  var linesBox = null, tabsBox = null, controlsBox = null;
+
+  function renderList(root, id) {
+    var U = ui();
+    EST.store.get('topics', id).then(function (t) {
+      if (!t) {
+        EST.app.setBar('一覧', []);
+        U.mount(root, h('div', { class: 'empty', text: 'このトピックは見つかりませんでした。' }));
+        return;
+      }
+      // §5.9 自分の部屋の台本でなければ一覧モードにも入らせない（トピック詳細と同じ扱い）
+      if (!EST.profile.canSee(t)) {
+        location.hash = EST.profile.canEdit() ? ('#/edit/' + encodeURIComponent(t.id)) : '#/';
+        return;
+      }
+
+      view = { topic: t, settings: null, direction: 'ja', tab: t.lines.length ? 'lines' : 'words', openLines: {}, openWords: {} };
+
+      EST.app.setBar(t.title || '(無題)', [
+        h('button', { class: 'btn btn--sm', text: 'トピックへ', onClick: function () { location.hash = '#/topic/' + encodeURIComponent(t.id); } })
+      ]);
+
+      build(root);
+
+      EST.store.loadSettings().then(function (s) {
+        view.settings = s;
+      });
+    });
+  }
+
+  function build(root) {
+    var U = ui();
+    var t = view.topic;
+
+    controlsBox = h('div', { class: 'row row--tight', style: { marginBottom: '.5rem' } });
+    tabsBox = h('div', { class: 'row row--tight', style: { marginBottom: '.6rem' } });
+    linesBox = h('div', {});
+
+    U.mount(root, [
+      h('div', { class: 'card' }, [
+        controlsBox,
+        tabsBox,
+        linesBox
+      ]),
+      h('div', { class: 'card' }, [
+        h('h2', { class: 'card__title', text: '書き出し' }),
+        h('div', { class: 'row row--tight' }, [
+          h('button', { class: 'btn btn--sm', text: 'テキストで書き出す', onClick: function () { exportAs('text'); } }),
+          h('button', { class: 'btn btn--sm', text: 'Markdownで書き出す', onClick: function () { exportAs('md'); } })
+        ]),
+        h('div', { class: 'tiny muted', style: { marginTop: '.3rem' }, text: '語彙一覧の書き出しはF6で追加します。' })
+      ])
+    ]);
+
+    if (!t.lines.length) view.tab = 'words';
+    drawControls();
+    drawTabs();
+    drawLines();
+  }
+
+  /* ---- 上部の操作（反転トグル・全部開く） -------------------------------- */
+  function drawControls() {
+    var U = ui();
+    var allOpen = isAllOpenInActiveTab();
+    U.mount(controlsBox, [
+      h('button', {
+        class: 'btn btn--sm', text: view.direction === 'ja' ? '和→英 ⇄' : '英→和 ⇄',
+        onClick: function () { view.direction = view.direction === 'ja' ? 'en' : 'ja'; drawLines(); }
+      }),
+      h('button', {
+        class: 'btn btn--sm', text: allOpen ? '全部閉じる' : '全部開く',
+        onClick: toggleAll
+      })
+    ]);
+  }
+
+  function activeItems() {
+    return view.tab === 'lines' ? visibleLines() : (view.topic.words || []);
+  }
+  function activeOpenSet() {
+    return view.tab === 'lines' ? view.openLines : view.openWords;
+  }
+  function itemKey(item) { return view.tab === 'lines' ? item.id : item.id; }
+
+  function isAllOpenInActiveTab() {
+    var items = activeItems();
+    if (!items.length) return false;
+    var set = activeOpenSet();
+    return items.every(function (it) { return !!set[itemKey(it)]; });
+  }
+
+  // 「全部開く」は一括で目を通す操作なので、§5.5 の openedCount は増やさない
+  function toggleAll() {
+    var items = activeItems();
+    var set = activeOpenSet();
+    var makeOpen = !isAllOpenInActiveTab();
+    items.forEach(function (it) { set[itemKey(it)] = makeOpen; });
+    drawControls();
+    drawLines();
+  }
+
+  /* ---- タブ（文 / 語彙） -------------------------------------------------- */
+  function drawTabs() {
+    var U = ui();
+    var t = view.topic;
+    U.mount(tabsBox, [
+      h('button', {
+        class: 'btn btn--sm' + (view.tab === 'lines' ? ' btn--primary' : ''),
+        text: '文 ' + visibleLines().length,
+        onClick: function () { view.tab = 'lines'; drawControls(); drawLines(); }
+      }),
+      h('button', {
+        class: 'btn btn--sm' + (view.tab === 'words' ? ' btn--primary' : ''),
+        text: '語彙 ' + (t.words ? t.words.length : 0),
+        onClick: function () { view.tab = 'words'; drawControls(); drawLines(); }
+      })
+    ]);
+  }
+
+  // ト書き等（skip:true）は音読対象ではないので一覧モードにも出さない
+  function visibleLines() {
+    return (view.topic.lines || []).filter(function (l) { return !l.skip; });
+  }
+
+  /* ---- 行の表示 ------------------------------------------------------------ */
+  function drawLines() {
+    var U = ui();
+    if (view.tab === 'lines') {
+      var lines = visibleLines();
+      if (!lines.length) { U.mount(linesBox, h('div', { class: 'empty', text: '表示できる行がありません。' })); return; }
+      U.mount(linesBox, lines.map(function (l, i) { return lineRow(l, i); }));
+    } else {
+      var words = view.topic.words || [];
+      if (!words.length) { U.mount(linesBox, h('div', { class: 'empty', text: 'このトピックには語彙がありません。' })); return; }
+      U.mount(linesBox, words.map(function (w) { return wordRow(w); }));
+    }
+  }
+
+  function lineRow(l, i) {
+    var U = ui();
+    var open = !!view.openLines[l.id];
+    var primaryIsEn = view.direction === 'en';
+    var primary = primaryIsEn ? l.en : l.ja;
+    var secondary = primaryIsEn ? l.ja : l.en;
+
+    return h('button', {
+      class: 'list-row',
+      onClick: function () { toggleLine(l); }
+    }, [
+      h('div', { class: 'row row--tight' }, [
+        h('span', { class: 'tiny muted', text: String(i + 1) }),
+        h('span', { class: primaryIsEn ? 'en' : '', text: primary || '（空）' })
+      ]),
+      open ? h('div', { class: 'tiny muted', style: { marginTop: '.15rem', paddingLeft: '1.2rem' } }, [
+        '→ ', h('span', { class: primaryIsEn ? '' : 'en', text: secondary || '（空）' })
+      ]) : null
+    ]);
+  }
+
+  function wordRow(w) {
+    var open = !!view.openWords[w.id];
+    var primaryIsEn = view.direction === 'en';
+    var primary = primaryIsEn ? w.en : w.ja;
+    var secondary = primaryIsEn ? w.ja : w.en;
+
+    return h('button', {
+      class: 'list-row',
+      onClick: function () {
+        view.openWords[w.id] = !view.openWords[w.id];   // 語彙は記録対象外（F6で扱う）
+        drawControls(); drawLines();
+      }
+    }, [
+      h('div', { class: 'row row--tight' }, [
+        h('span', { class: primaryIsEn ? 'en' : '', text: primary || '（空）' }),
+        h('span', { class: 'chip', text: w.type === 'phrase' ? '句' : '語' })
+      ]),
+      open ? h('div', { class: 'tiny muted', style: { marginTop: '.15rem', paddingLeft: '1.2rem' } }, [
+        '→ ', h('span', { class: primaryIsEn ? '' : 'en', text: secondary || '（空）' })
+      ]) : null
+    ]);
+  }
+
+  // 1行ずつ開いたときだけ §5.5 の openedCount を増やす。閉じる操作や
+  // 「全部開く」由来のものはここを通らない。
+  function toggleLine(l) {
+    var willOpen = !view.openLines[l.id];
+    view.openLines[l.id] = willOpen;
+    drawControls();
+    drawLines();
+    if (willOpen && view.settings && view.settings.recordOpens !== false) {
+      EST.store.markLineOpened(view.topic.id, l.id).catch(function (e) {
+        console.warn('[list] 開いた記録に失敗しました', e);
+      });
+    }
+  }
+
+  /* ---- 書き出し（§4.3。テキスト／Markdownのみ。Anki TSVはF6） ------------- */
+  function exportAs(kind) {
+    var U = ui();
+    var t = view.topic;
+    var lines = visibleLines();
+    var name = (t.title || 'topic').replace(/[\\/:*?"<>|]/g, '_');
+
+    var text;
+    if (kind === 'md') {
+      var mdParts = ['# ' + (t.title || '(無題)')];
+      if (t.titleEn) mdParts.push('*' + t.titleEn + '*');
+      lines.forEach(function (l) {
+        mdParts.push('- ' + (l.ja || '(和訳なし)') + '\n  → **' + (l.en || '') + '**');
+      });
+      text = mdParts.join('\n\n');
+      U.download(name + '.md', text, 'text/markdown');
+    } else {
+      var txtParts = [t.title || '(無題)'];
+      if (t.titleEn) txtParts.push(t.titleEn);
+      txtParts.push('');
+      lines.forEach(function (l) {
+        txtParts.push('・' + (l.ja || '(和訳なし)'));
+        txtParts.push('    → ' + (l.en || ''));
+      });
+      text = txtParts.join('\n');
+      U.download(name + '.txt', text, 'text/plain');
+    }
+    U.toast('書き出しました');
+  }
+
+  EST.uiList = { renderList: renderList };
+})(window.EST = window.EST || {});
+
+</script>
+<script>
+/* ---- 15-ui-search.js ---- */
+/* =====================================================================
+   15-ui-search.js — 横断検索（SPEC §4.2）
+   全トピックを対象に日本語でも英語でも部分一致で引ける。検索は「これから
+   見に行く」操作であって、思い出せなかった記録（§4.1）の対象ではない。
+   練習画面（F5）がまだ無いので、ヒットからの遷移先はトピック詳細にする。
+   ===================================================================== */
+;(function (EST) {
+  'use strict';
+
+  var h = null;
+  function ui() { h = EST.ui.h; return EST.ui; }
+
+  var resultsBox = null;
+  var allTopics = [];
+
+  function renderSearch(root) {
+    var U = ui();
+    EST.app.setBar('検索', []);
+
+    var input = h('input', {
+      type: 'text', placeholder: '日本語でも英語でも入力してください',
+      onInput: function (e) { runSearch(e.target.value); }
+    });
+
+    resultsBox = h('div', { style: { marginTop: '.7rem' } });
+
+    U.mount(root, [
+      h('div', { class: 'card' }, [input]),
+      resultsBox
+    ]);
+
+    EST.store.getAll('topics').then(function (topics) {
+      // §5.9 検索対象は自分の部屋に属するトピックだけ
+      allTopics = EST.profile.visible(topics);
+      drawHint();
+      try { input.focus(); } catch (e) {}
+    });
+  }
+
+  function drawHint() {
+    ui().mount(resultsBox, h('div', { class: 'empty', text: 'キーワードを入力してください。' }));
+  }
+
+  function runSearch(raw) {
+    var U = ui();
+    var q = String(raw || '').trim();
+    if (!q) { drawHint(); return; }
+    var nq = EST.schema.normalizeForSearch(q);
+
+    var groups = [];
+    allTopics.forEach(function (t) {
+      var hits = (t.lines || []).filter(function (l) { return !l.skip; }).filter(function (l) {
+        return EST.schema.normalizeForSearch(l.en).indexOf(nq) >= 0
+            || EST.schema.normalizeForSearch(l.ja).indexOf(nq) >= 0;
+      });
+      if (hits.length) groups.push({ topic: t, hits: hits });
+    });
+
+    if (!groups.length) {
+      U.mount(resultsBox, h('div', { class: 'empty', text: '見つかりませんでした。' }));
+      return;
+    }
+    U.mount(resultsBox, groups.map(groupBox));
+  }
+
+  function groupBox(g) {
+    var U = ui();
+    return h('div', { class: 'card' }, [
+      h('button', {
+        class: 'card__title', style: { background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: 'var(--ink)', textAlign: 'left' },
+        onClick: function () { location.hash = '#/topic/' + encodeURIComponent(g.topic.id); }
+      }, g.topic.title || '(無題)'),
+      h('div', {}, g.hits.map(function (l) {
+        return h('div', { class: 'line-view' }, [
+          h('div', { class: 'grow' }, [
+            h('div', { class: 'line-view__ja', text: l.ja || '(和訳なし)' }),
+            h('div', { class: 'line-view__en en', text: l.en })
+          ])
+        ]);
+      }))
+    ]);
+  }
+
+  EST.uiSearch = { renderSearch: renderSearch };
+})(window.EST = window.EST || {});
+
+</script>
+<script>
 /* ---- 99-main.js ---- */
 /* =====================================================================
    99-main.js — 起動とハッシュルーティング
@@ -3422,6 +3869,8 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
     if (parts[0] === 'settings') return { name: 'settings' };
     if (parts[0] === 'topic') return { name: 'topic', id: decodeURIComponent(parts[1] || '') };
     if (parts[0] === 'edit') return { name: 'edit', id: decodeURIComponent(parts[1] || '') };
+    if (parts[0] === 'list') return { name: 'list', id: decodeURIComponent(parts[1] || '') };
+    if (parts[0] === 'search') return { name: 'search' };
     return { name: 'home' };
   }
 
@@ -3433,6 +3882,8 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
       else if (r.name === 'import') EST.uiImport.renderImport(viewEl);
       else if (r.name === 'edit') EST.uiImport.renderEditor(viewEl, r.id);
       else if (r.name === 'topic') EST.uiHome.renderTopic(viewEl, r.id);
+      else if (r.name === 'list') EST.uiList.renderList(viewEl, r.id);
+      else if (r.name === 'search') EST.uiSearch.renderSearch(viewEl);
       else if (r.name === 'settings') EST.uiSettings.render(viewEl);
     } catch (e) {
       console.error('[route]', e);

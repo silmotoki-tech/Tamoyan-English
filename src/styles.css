@@ -232,6 +232,16 @@ label.field > .field__label { display: block; font-size: .72rem; color: var(--mu
 .block-head { font-size: .74rem; font-weight: 700; color: var(--muted);
   background: var(--panel2); border-radius: .35rem; padding: .18rem .5rem; margin: .6rem 0 .2rem; }
 
+/* ---- 一覧モード（§4.1）・検索結果の行 -------------------------------
+   ネイティブ button の見た目を引きずらないよう、.btn には乗らず
+   .topic-card と同じ方式で自己完結させる。 */
+.list-row { display: block; width: 100%; text-align: left; cursor: pointer;
+  font: inherit; font-size: .9rem; color: var(--ink); background: transparent;
+  border: none; border-top: 1px solid var(--line); border-radius: 0;
+  padding: .55rem .15rem; }
+.list-row:first-child { border-top: none; }
+.list-row:hover { background: var(--panel2); }
+
 /* ---- 編集プレビュー ------------------------------------------------- */
 .stat-bar { position: sticky; top: 3rem; z-index: 15;
   background: var(--panel2); border: 1px solid var(--line); border-radius: .5rem;

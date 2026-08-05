@@ -56,6 +56,18 @@
     return m ? m.length / t.length : 0;
   }
 
+  // カタカナ→ひらがな（§4.2 横断検索の表記揺れ吸収）。長音符ーはそのまま残す。
+  function toHiragana(s) {
+    return String(s || '').replace(/[ァ-ヶ]/g, function (c) {
+      return String.fromCharCode(c.charCodeAt(0) - 0x60);
+    });
+  }
+
+  // 検索用の正規化：カタカナをひらがなに寄せ、英字は小文字化する
+  function normalizeForSearch(s) {
+    return toHiragana(String(s == null ? '' : s)).toLowerCase();
+  }
+
   // 1行を EN / JA / IGNORE に分類する（§6.1 手順2）
   function classifyLine(s) {
     var t = String(s || '').trim();
@@ -547,6 +559,27 @@
     };
   }
 
+  /* ---- Progress の既定形（§5.5） -------------------------------------
+     一覧モード（§4.1）で行を開いた記録だけを先に持たせる。
+     counts/latency/mastered 等の実データは F4〜F7 が書き込む。
+  --------------------------------------------------------------------- */
+  function defaultProgress(profileId, topicId, lineId) {
+    return {
+      key: profileId + '|' + topicId + '|' + lineId,
+      profileId: profileId,
+      topicId: topicId,
+      lineId: lineId,
+      counts: { total: 0, byStage: {} },
+      latency: { history: [], median5: null, best: null },
+      stalls: 0,
+      openedCount: 0,
+      lastOpenedAt: null,
+      mastered: false,
+      masteredAt: null,
+      updatedAt: 0
+    };
+  }
+
   /* ---- 見積り（§6.2 の「1周 約◯秒」） -------------------------------- */
   function lapSeconds(lines, rate) {
     rate = Number(rate) || DEFAULT_RATE;
@@ -590,6 +623,8 @@
 
     countWords: countWords,
     jaRatio: jaRatio,
+    toHiragana: toHiragana,
+    normalizeForSearch: normalizeForSearch,
     classifyLine: classifyLine,
     normalizeRaw: normalizeRaw,
     parseScript: parseScript,
@@ -601,6 +636,7 @@
 
     validateTopic: validateTopic,
     normalizeTopic: normalizeTopic,
+    defaultProgress: defaultProgress,
     lapSeconds: lapSeconds,
     newTopicId: newTopicId,
     pad3: pad3,
