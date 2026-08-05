@@ -22,7 +22,7 @@
 
   var WORD_MS             = 400;   // §2.3 内蔵TTS想定の1語あたりの所要
   var LINE_GAP_MS         = 350;   // 行と行のあいだの間
-  var DEFAULT_RATE        = 0.95;  // §5.7 ttsRate の既定
+  var DEFAULT_RATE        = 0.85;  // §5.7 ttsRate の既定（§7.5 の5段階に含まれる値）
 
   // §5.1 誰の課題か。未指定は "both" として扱う（既存データを壊さないため）
   var AUDIENCES = ['tamo', 'mari', 'both'];

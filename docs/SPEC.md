@@ -1,10 +1,12 @@
-# 英会話台本トレーナー 設計書 v3.0
+# 英会話台本トレーナー 設計書 v3.1
 
 **プロジェクト名（仮）**: `english-script-trainer`
 **一行で言うと**: 1本の会話台本を、反射的に口から出る状態まで持っていくための反復訓練アプリ。
 **更新日**: 2026-08-03
 **想定実装環境**: Claude Code
 
+> **v3.0からの変更**: `ttsRate` の既定を 0.95 → **0.85** に修正（§7.5 の5段階に無い値だった）。`localVoiceByGender` と、実測長を `audio` ストアに置くことを §5.7・§5.8 に明記。
+>
 > **v2.9からの変更**: §2.3 の `expectedMs` を「実測値があれば内蔵TTSでも使う」に修正（§7.1 と矛盾していた）。§7.2 に**話者ごとに声を変える**規則を追加（`speakers[].gender` が使われないままだった）。
 >
 > **v2.8からの変更**: §10.4 に「アプリ本体の更新が相手の端末に届かない」問題と、まりに渡す前にService Workerを入れる方針を追記。
@@ -529,8 +531,9 @@ v1.1にあった `blanks` `keyPhrases` `linking` は削除する。`blanks` は�
 {
   "engine": "local",                  // "local" | "cloud"
   "cloud": { "endpoint": "", "token": "", "voiceMap": {}, "model": "tts-1-hd" },
-  "ttsRate": 0.95,
+  "ttsRate": 0.85,                    // §7.5 の5段階のいずれかであること
   "localVoiceEn": null,
+  "localVoiceByGender": { "female": null, "male": null },   // §7.2 話者別
   "mic": { "noiseFloor": null, "onsetThreshold": null, "calibratedAt": null },
   "countRatio": 0.55,                 // カウント成立の発話率
   "masteryBase": 1200, "masteryPerWord": 60,   // 定着閾値の係数
@@ -540,6 +543,10 @@ v1.1にあった `blanks` `keyPhrases` `linking` は削除する。`blanks` は�
 }
 ```
 
+**`ttsRate` の既定は 0.85 とする。** §7.5 の5段階（0.7 / 0.85 / 1.0 / 1.15 / 1.3）に必ず含まれる値にすること。段階外の値を既定にすると、設定画面を開いただけで速度が黙って変わる。
+
+0.85 を選ぶのは、**使う2人が A1〜A2 の段階にいる**ため。1.0 でシャドーイング（S4）に入ると口が追いつかず、続かない。慣れたら1タップで上げられる。最終的には 1.0 以上で回せる状態を目指す。
+
 ### 5.8 ストレージ（IndexedDB `est-db` v3）
 
 | ストア | keyPath | 用途 |
@@ -548,8 +555,10 @@ v1.1にあった `blanks` `keyPhrases` `linking` は削除する。`blanks` は�
 | `progress` | `key` | ラインごとの進捗 |
 | `wordProgress` | `key` | 語彙ごとの進捗 |
 | `topicProgress` | `topicId` | トピックごとの進捗・ブロック・ステージ・日次ログ |
-| `audio` | `key` | 外部TTSの音声キャッシュ |
+| `audio` | `key` | 外部TTSの音声キャッシュと、お手本音声の実測長（`dur|...`） |
 | `settings` | `k` | 設定（`"app"` 1件） |
+
+**実測長（§2.3）は `audio` ストアに置く。** ストアを増やさずに済むうえ、性質が一致している。どちらも端末とボイスに依存し、消えても再生すれば作り直せる。したがって §6.4 のバックアップ対象にも含めない。
 
 ### 5.9 プロフィール（部屋）
 

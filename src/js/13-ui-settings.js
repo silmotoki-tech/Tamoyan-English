@@ -128,8 +128,8 @@
   }
 
   // §7.5 の5段に、いまの値が含まれないときだけそれを足す。
-  // §5.7 の既定 ttsRate は 0.95 で5段のどれとも一致しないので、
-  // 黙って別の速度に変わってしまわないようにする。
+  // 既定は §5.7 で 0.85（5段に含まれる）に直ったが、それ以前の 0.95 のまま
+  // 保存されている端末があるので、開いただけで速度が黙って変わらないよう残す。
   function rateOptions(cur) {
     var steps = EST.speech.RATE_STEPS.slice();
     if (steps.indexOf(cur) < 0 && isFinite(cur) && cur > 0) steps.push(cur);

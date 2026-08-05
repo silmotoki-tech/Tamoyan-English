@@ -21,7 +21,7 @@
   var RATE_STEPS       = [0.7, 0.85, 1.0, 1.15, 1.3];  // §7.5 速度の5段
   var RATE_MIN         = 0.5;
   var RATE_MAX         = 2.0;
-  var DEFAULT_RATE     = 0.95;   // §5.7 ttsRate の既定
+  var DEFAULT_RATE     = 0.85;   // §5.7 ttsRate の既定（§7.5 の5段階に含まれる値）
 
   // §7.2 英語ボイスの優先語
   var PREFERRED = ['google', 'samantha', 'ava', 'natural', 'enhanced'];

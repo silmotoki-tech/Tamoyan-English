@@ -31,8 +31,10 @@
   var DEFAULT_SETTINGS = {
     engine: 'local',
     cloud: { endpoint: '', token: '', voiceMap: {}, model: 'tts-1-hd' },
-    ttsRate: 0.95,
-    localVoiceEn: null,                          // 性別指定のない話者に使う既定ボイス
+    // §5.7 §7.5 の5段階に必ず含まれる値にする。段階外だと設定画面を開いた
+    // だけで速度が黙って変わる。0.85 なのは使う2人が A1〜A2 の段階にいるため。
+    ttsRate: 0.85,
+    localVoiceEn: null,                                // 性別指定のない話者に使う既定ボイス
     localVoiceByGender: { female: null, male: null },  // §7.2 話者ごとに声を変える
     mic: { noiseFloor: null, onsetThreshold: null, calibratedAt: null },
     countRatio: 0.55,
@@ -154,11 +156,20 @@
   }
 
   // ---- 設定 -----------------------------------------------------------
+  function isPlainObject(x) {
+    return !!x && typeof x === 'object' && !Array.isArray(x);
+  }
+
+  // §5.7 の形をそのまま保つ。既定側が入れ子オブジェクトのキー
+  // （cloud / mic / localVoiceByGender）は、保存側に一部しか無くても
+  // 残りを既定で埋める。丸ごと差し替えるとキーが欠けたまま保存されてしまう。
   function withDefaults(defaults, v) {
     var out = JSON.parse(JSON.stringify(defaults));
-    if (v && typeof v === 'object') {
+    if (isPlainObject(v)) {
       Object.keys(v).forEach(function (k) {
-        if (v[k] !== undefined) out[k] = v[k];
+        if (v[k] === undefined) return;
+        if (isPlainObject(out[k]) && isPlainObject(v[k])) out[k] = withDefaults(out[k], v[k]);
+        else out[k] = v[k];
       });
     }
     return out;

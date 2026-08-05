@@ -1,7 +1,9 @@
 /* =====================================================================
    07-backup.js — 全体バックアップと復元（SPEC §6.4 / §5.9）
    個人アプリはデータが飛ぶと二度と使われなくなるので、ここは必ず作る。
-   音声キャッシュ（audio）は再生成できるのでバックアップに含めない。
+   audio ストアはバックアップに含めない（§5.8）。外部TTSの音声キャッシュも、
+   お手本音声の実測長（dur|...）も、端末とボイスに依存し、消えても
+   再生し直せば作り直せるため。
 
    §5.9 の権限:
      タモやん … 全体（台本＋全員の進捗＋設定）
@@ -13,7 +15,7 @@
   var BACKUP_KIND = 'est-backup';
   var AUTO_KEEP = 3;   // §6.4 直近3世代
 
-  // audio 以外のストア。topics だけは共有なので扱いを分ける。
+  // プロフィールごとに分かれるストア。topics は共有、audio は対象外（§5.8）。
   var PROGRESS_STORES = ['progress', 'wordProgress', 'topicProgress'];
 
   function keyPathOf(name) { return name === 'topicProgress' ? 'topicId' : 'key'; }
