@@ -4350,6 +4350,29 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
      ための診断パネル。較正・音量バー・onset/offsetのログを見られる。 */
   var stopActiveMicTest = null;   // 設定画面を離れるときに確実に止めるため
 
+  // マイクが使えない理由をユーザーに伝える。「許可が必要」は一度拒否すると
+  // JS側からは二度とネイティブの許可ダイアログを出せない（iOS/ブラウザ共通の
+  // 仕様）ので、2.2秒で消えるトーストではなく消えずに残るダイアログで
+  // 手動での直し方まで示す。
+  function explainMicError(err) {
+    var U = ui();
+    var reason = err && err.reason;
+    if (reason === 'denied') {
+      U.alert('マイクを使うには', [
+        'このサイトのマイクが「許可しない」になっています。',
+        'iPhone: 設定 → Safari → マイク で確認・変更できます。',
+        'または、Safariでこのページを開いた状態でアドレスバーの「ⓘ」→「Webサイトの設定」からも変更できます。',
+        '変更したら、このページを開き直してください。'
+      ]);
+    } else if (reason === 'no-device') {
+      U.alert('マイクが見つかりません', ['マイクが接続された端末で開いてください。']);
+    } else if (reason === 'unsupported') {
+      U.alert('この端末では使えません', ['この端末・ブラウザはマイクの機能に対応していません。']);
+    } else {
+      U.alert('マイクを使えませんでした', [String(err && err.message || err || '不明なエラーです')]);
+    }
+  }
+
   function micCard(s) {
     var U = ui();
     if (!EST.mic.isSupported()) {
@@ -4406,12 +4429,7 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
         });
         onOnset = EST.mic.on('onset', function () { pushLog('onset'); });
         onOffset = EST.mic.on('offset', function (e) { pushLog('offset durationMs=' + e.durationMs); });
-      }).catch(function (err) {
-        var msg = err && err.reason === 'denied' ? 'マイクの許可が必要です'
-          : err && err.reason === 'no-device' ? 'マイクが見つかりません'
-          : 'マイクを使えませんでした';
-        U.toast(msg);
-      });
+      }).catch(function (err) { explainMicError(err); });
     }
 
     testBtn = h('button', {
@@ -4437,15 +4455,15 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
         h('button', {
           class: 'btn btn--sm', text: '較正する',
           onClick: function () {
-            U.alert('較正', ['1.5秒間、静かにしてください。準備ができたら閉じてください。']).then(function () {
-              return EST.mic.calibrate();
-            }).then(function (r) {
+            // ボタンを押した直後に間を置かずマイクを要求する。確認ダイアログを
+            // 挟んで許可が下りてから較正を始める形にすると、iOSでは
+            // ユーザー操作からの猶予が切れて許可ダイアログが機能しないことが
+            // あるため、静かにしてくださいの案内はトースト（非ブロッキング）にする。
+            U.toast('1.5秒間、静かにしてください…');
+            EST.mic.calibrate().then(function (r) {
               refreshStatus();
               U.toast('較正しました');
-            }).catch(function (err) {
-              var msg = err && err.reason === 'denied' ? 'マイクの許可が必要です' : 'マイクを使えませんでした';
-              U.toast(msg);
-            });
+            }).catch(function (err) { explainMicError(err); });
           }
         }),
         testBtn
