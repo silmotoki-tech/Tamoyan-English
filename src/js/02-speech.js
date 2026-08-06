@@ -292,6 +292,17 @@
     return words * WORD_MS / clampRate(rate || currentRate);
   }
 
+  // §2.3（v3.0）カウント判定に使う expectedMs。実測があれば内蔵TTSでもそれを使う。
+  // 実測は測定時のrateと一緒に保存してあるので、いまのrateとの比で補正する。
+  // F3では返すところまでだった実測値を、F4（カウント判定）で初めて消費する。
+  function expectedMsFor(topicId, lineId, text, rate) {
+    var r = clampRate(rate || currentRate);
+    return getDuration(topicId, lineId).then(function (rec) {
+      if (rec && rec.ms > 0 && rec.rate > 0) return rec.ms * rec.rate / r;
+      return estimateMs(text, r);
+    });
+  }
+
   /* =====================================================================
      公開インターフェース（§7.1）
      ===================================================================== */
@@ -381,6 +392,7 @@
     unlock: unlock,
     getDuration: getDuration,
     estimateMs: estimateMs,
+    expectedMsFor: expectedMsFor,
     resolveVoiceFor: function (gender) { return resolveVoice({ gender: gender }); }
   };
 })(window.EST = window.EST || {});

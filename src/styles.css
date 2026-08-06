@@ -330,3 +330,10 @@ label.field > .field__label { display: block; font-size: .72rem; color: var(--mu
 .setting-row__label { flex: 1 1 auto; font-size: .86rem; }
 .setting-row__sub { font-size: .72rem; color: var(--muted); }
 .setting-row select, .setting-row input { width: auto; min-width: 6rem; }
+
+/* マイク診断パネル（§2.1〜§2.5。設定画面のみ。練習画面の常時ボタンはF5） */
+.mic-meter { height: .55rem; border-radius: .3rem; background: var(--panel2);
+  overflow: hidden; }
+.mic-meter__fill { height: 100%; width: 0%; background: var(--accent);
+  transition: width 60ms linear; }
+.mic-log { margin-top: .4rem; min-height: 1.2rem; font-family: ui-monospace, monospace; }

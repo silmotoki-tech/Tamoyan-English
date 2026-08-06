@@ -12,6 +12,8 @@
 
   function render(view) {
     var U = ui();
+    // 前回このカードでマイクのテストを起動したままだったら止める
+    if (stopActiveMicTest) { stopActiveMicTest(); stopActiveMicTest = null; }
     EST.app.setBar('設定', []);
 
     var box = h('div', {});
@@ -22,6 +24,7 @@
         profileCard(),
         displayCard(s),
         speechCard(s),
+        micCard(s),
         listModeCard(s),
         EST.profile.canEdit() ? publishCard() : null,
         backupCard(),
@@ -218,6 +221,123 @@
         }, rateOptions(Number(s.ttsRate)))
       ]),
       body
+    ]);
+  }
+
+  /* ---- マイク §2.1〜§2.5 ---------------------------------------------------
+     練習画面（F5）の「常時置く再較正ボタン」ではなく、実機で単体確認する
+     ための診断パネル。較正・音量バー・onset/offsetのログを見られる。 */
+  var stopActiveMicTest = null;   // 設定画面を離れるときに確実に止めるため
+
+  function micCard(s) {
+    var U = ui();
+    if (!EST.mic.isSupported()) {
+      return h('div', { class: 'card' }, [
+        h('h2', { class: 'card__title', text: 'マイク' }),
+        h('div', { class: 'small muted', text: 'この端末ではマイクが使えません。' })
+      ]);
+    }
+
+    var statusBox = h('div', { class: 'small muted', text: '確認中…' });
+    var meterFill = h('div', { class: 'mic-meter__fill' });
+    var logBox = h('div', { class: 'mic-log' });
+    var logLines = [];
+    var testing = false;
+    var testBtn;
+
+    function refreshStatus() {
+      EST.store.loadSettings().then(function (cur) {
+        var m = cur.mic || {};
+        U.mount(statusBox, m.calibratedAt
+          ? h('span', { text: '最終較正: ' + U.fmtDate(m.calibratedAt) })
+          : h('span', { text: '未較正（既定値で動作しています）' }));
+      });
+    }
+    refreshStatus();
+
+    function pushLog(line) {
+      logLines.unshift(line);
+      logLines = logLines.slice(0, 6);
+      U.mount(logBox, logLines.map(function (l) { return h('div', { class: 'tiny muted', text: l }); }));
+    }
+
+    var onLevel, onOnset, onOffset;
+
+    function stopTest() {
+      if (!testing) return;
+      EST.mic.off('level', onLevel);
+      EST.mic.off('onset', onOnset);
+      EST.mic.off('offset', onOffset);
+      EST.mic.stop();
+      testing = false;
+      stopActiveMicTest = null;
+      testBtn.textContent = '発話を試す';
+      meterFill.style.width = '0%';
+    }
+
+    function startTest() {
+      EST.mic.start().then(function () {
+        testing = true;
+        stopActiveMicTest = stopTest;
+        testBtn.textContent = '停止';
+        onLevel = EST.mic.on('level', function (e) {
+          meterFill.style.width = Math.min(100, Math.round(e.rms * 300)) + '%';
+        });
+        onOnset = EST.mic.on('onset', function () { pushLog('onset'); });
+        onOffset = EST.mic.on('offset', function (e) { pushLog('offset durationMs=' + e.durationMs); });
+      }).catch(function (err) {
+        var msg = err && err.reason === 'denied' ? 'マイクの許可が必要です'
+          : err && err.reason === 'no-device' ? 'マイクが見つかりません'
+          : 'マイクを使えませんでした';
+        U.toast(msg);
+      });
+    }
+
+    testBtn = h('button', {
+      class: 'btn btn--sm', text: '発話を試す',
+      onClick: function () { testing ? stopTest() : startTest(); }
+    });
+
+    var ratioInput = h('input', {
+      type: 'number', step: '0.05', min: '0.1', max: '1',
+      value: String(s.countRatio || EST.mic.COUNT_RATIO_DEFAULT), style: { width: '5rem' },
+      onChange: function (e) {
+        var v = Number(e.target.value);
+        if (!isFinite(v) || v <= 0 || v > 1) { e.target.value = String(s.countRatio || EST.mic.COUNT_RATIO_DEFAULT); return; }
+        s.countRatio = v;
+        EST.store.saveSettings(s).then(function () { EST.mic.applySettings(s); });
+      }
+    });
+
+    return h('div', { class: 'card' }, [
+      h('h2', { class: 'card__title', text: 'マイク' }),
+      statusBox,
+      h('div', { class: 'row row--tight', style: { marginTop: '.5rem' } }, [
+        h('button', {
+          class: 'btn btn--sm', text: '較正する',
+          onClick: function () {
+            U.alert('較正', ['1.5秒間、静かにしてください。準備ができたら閉じてください。']).then(function () {
+              return EST.mic.calibrate();
+            }).then(function (r) {
+              refreshStatus();
+              U.toast('較正しました');
+            }).catch(function (err) {
+              var msg = err && err.reason === 'denied' ? 'マイクの許可が必要です' : 'マイクを使えませんでした';
+              U.toast(msg);
+            });
+          }
+        }),
+        testBtn
+      ]),
+      h('div', { class: 'mic-meter', style: { marginTop: '.5rem' } }, [meterFill]),
+      logBox,
+      h('div', { class: 'setting-row' }, [
+        h('div', { class: 'setting-row__label' }, [
+          'カウント成立の比率',
+          h('div', { class: 'setting-row__sub', text: '発話区間が想定の何割あれば1回とカウントするか（既定0.55）' })
+        ]),
+        ratioInput
+      ])
     ]);
   }
 

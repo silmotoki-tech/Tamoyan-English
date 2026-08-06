@@ -76,6 +76,8 @@
     // ループごと止めてから cancel する。
     try { EST.uiHome.stopPlayback(); } catch (e) {}
     try { EST.speech.cancel(); } catch (e) {}
+    // マイクも画面をまたいで開いたままにしない。stop()は聞いていなければ何もしない。
+    try { EST.mic.stop(); } catch (e) {}
     try {
       if (r.name === 'home') EST.uiHome.renderHome(viewEl);
       else if (r.name === 'import') EST.uiImport.renderImport(viewEl);
@@ -165,6 +167,7 @@
       .then(function (s) {
         applyTheme(s);
         EST.speech.applySettings(s);   // §7.5 速度と§7.2 ボイス指定を反映する
+        EST.mic.applySettings(s);      // §2.1 較正値・§2.3 countRatio を反映する
         return seedSamples(false);
       })
       .then(function () {
