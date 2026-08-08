@@ -167,7 +167,7 @@
       .then(function (s) {
         applyTheme(s);
         EST.speech.applySettings(s);   // §7.5 速度と§7.2 ボイス指定を反映する
-        EST.mic.applySettings(s);      // §2.1 較正値・§2.3 countRatio を反映する
+        EST.mic.applySettings(s);      // §2.1 較正値を反映する（countRatioはF5が使う）
         return seedSamples(false);
       })
       .then(function () {

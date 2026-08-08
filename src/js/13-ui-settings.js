@@ -280,17 +280,21 @@
 
     function pushLog(line) {
       logLines.unshift(line);
-      logLines = logLines.slice(0, 6);
+      logLines = logLines.slice(0, 10);
       U.mount(logBox, logLines.map(function (l) { return h('div', { class: 'tiny muted', text: l }); }));
     }
 
-    var onLevel, onOnset, onOffset;
+    var onLevel, onOnset, onOffset, onRep, onStall, onTimeout;
 
     function stopTest() {
       if (!testing) return;
+      // stop() が全リスナーを解除するが、off しておくほうが意図が明確
       EST.mic.off('level', onLevel);
       EST.mic.off('onset', onOnset);
       EST.mic.off('offset', onOffset);
+      EST.mic.off('rep', onRep);
+      EST.mic.off('stall', onStall);
+      EST.mic.off('timeout', onTimeout);
       EST.mic.stop();
       testing = false;
       stopActiveMicTest = null;
@@ -308,6 +312,15 @@
         });
         onOnset = EST.mic.on('onset', function () { pushLog('onset'); });
         onOffset = EST.mic.on('offset', function (e) { pushLog('offset durationMs=' + e.durationMs); });
+        // §2.2 「1回」が確定したときのイベント。markCue()を打っていなければ
+        // latencyMs は null になる（§2.8）。
+        onRep = EST.mic.on('rep', function (e) {
+          pushLog('rep spokenMs=' + e.spokenMs
+            + ' latencyMs=' + (e.latencyMs == null ? '-' : e.latencyMs)
+            + ' 区間' + e.segments.length + ' 詰まり' + e.stalls.length);
+        });
+        onStall = EST.mic.on('stall', function (e) { pushLog('stall elapsedMs=' + e.elapsedMs); });
+        onTimeout = EST.mic.on('timeout', function () { pushLog('timeout（発話なし）'); });
       }).catch(function (err) { explainMicError(err); });
     }
 
@@ -316,14 +329,13 @@
       onClick: function () { testing ? stopTest() : startTest(); }
     });
 
-    var ratioInput = h('input', {
-      type: 'number', step: '0.05', min: '0.1', max: '1',
-      value: String(s.countRatio || EST.mic.COUNT_RATIO_DEFAULT), style: { width: '5rem' },
-      onChange: function (e) {
-        var v = Number(e.target.value);
-        if (!isFinite(v) || v <= 0 || v > 1) { e.target.value = String(s.countRatio || EST.mic.COUNT_RATIO_DEFAULT); return; }
-        s.countRatio = v;
-        EST.store.saveSettings(s).then(function () { EST.mic.applySettings(s); });
+    // §2.4 レイテンシを測るには t0 が要る。試験中に手で打てるようにしておく。
+    var cueBtn = h('button', {
+      class: 'btn btn--sm', text: 'キューを打つ',
+      onClick: function () {
+        if (!testing) { U.toast('先に「発話を試す」を押してください'); return; }
+        EST.mic.markCue();
+        pushLog('markCue');
       }
     });
 
@@ -345,17 +357,14 @@
             }).catch(function (err) { explainMicError(err); });
           }
         }),
-        testBtn
+        testBtn,
+        cueBtn
       ]),
       h('div', { class: 'mic-meter', style: { marginTop: '.5rem' } }, [meterFill]),
       logBox,
-      h('div', { class: 'setting-row' }, [
-        h('div', { class: 'setting-row__label' }, [
-          'カウント成立の比率',
-          h('div', { class: 'setting-row__sub', text: '発話区間が想定の何割あれば1回とカウントするか（既定0.55）' })
-        ]),
-        ratioInput
-      ])
+      h('div', { class: 'tiny muted', style: { marginTop: '.4rem' },
+        text: 'キューを打たずに喋っても「1回」は確定します（そのとき latencyMs は空欄）。'
+            + 'カウントするかどうかの判定は練習画面（F5）で行います。' })
     ]);
   }
 

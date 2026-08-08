@@ -1675,44 +1675,54 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
 <script>
 /* ---- 03-mic.js ---- */
 /* =====================================================================
-   03-mic.js — 音量検知エンジン（SPEC §2.1〜§2.7 / §1.8 / §10.3）
+   03-mic.js — 音量検知エンジン（SPEC §2.1〜§2.8 / §1.8 / §10.3）
 
-   UIから完全に独立させる。イベントを発火するだけのモジュールにし、
-   UIはそれを購読する（SPEC §12）。コンソールから単体で確認できる。
+   §2.8 UIから完全に独立させる。イベントを発火するだけのモジュールにし、
+   UIはそれを購読する。コンソールから単体で動かせる形にする。
 
-     EST.mic.on('onset',  ({t}) => ...)
-     EST.mic.on('offset', ({t, durationMs}) => ...)
-     EST.mic.on('level',  ({rms}) => ...)      // 音量バー用（15fpsに間引く）
-     EST.mic.calibrate()   // Promise<{noiseFloor, onsetThreshold}>
+     EST.mic.start() / stop()
+     EST.mic.calibrate()          // → Promise<{noiseFloor, onsetThreshold}>
+     EST.mic.gate(open)           // TTS再生中は閉じる（§2.6）
+     EST.mic.markCue()            // レイテンシの t0 を打つ（§2.4）
+     EST.mic.cancelLast()         // 「今のはナシ」（§2.4）
+     EST.mic.on(event, cb)        // onset / offset / level / rep / stall / timeout
 
-   「1回分の計測」（beginAttempt）と「判定」（judgeCount等）は生の検知の
-   上に乗る薄い層。どちらもUIから独立しており、どのタイミングで
-   attemptを開始・終了するか（ステージ進行）はF5が決める。
+   §2.8 カウント成否の判定（§2.3）はここでは行わない。何回と数えるかは
+   ステージ側（F5）の仕事で、EST.mic は起きた事実だけを報告する。
+   expectedMs を知っているのはステージ層なので、この線引きを崩すと
+   マイクモジュールが台本を知らないと試験できなくなる。
    ===================================================================== */
 ;(function (EST) {
   'use strict';
 
   /* ---- 調整用の定数（実機で必ず調整する。SPEC §12） ------------------ */
-  var FFT_SIZE           = 2048;   // §2.1
-  var SMOOTHING          = 0.3;    // §2.1
-  var CALIBRATE_MS       = 1500;   // §2.1 較正にかける時間
-  var ONSET_MULTIPLIER   = 3.5;    // §2.1 onsetThreshold = noiseFloor * これ
-  var ONSET_FLOOR        = 0.008;  // §2.1 onsetThresholdの下限
-  var OFFSET_RATIO       = 0.7;    // §2.1 offsetThreshold = onsetThreshold * これ
-  var LOOP_MS            = 20;     // §2.2 解析間隔
-  var ONSET_FRAMES       = 3;      // §2.2 onset確定に必要な連続フレーム数
-  var OFFSET_FRAMES      = 15;     // §2.2 offset確定に必要な連続フレーム数（=300ms）
-  var STALL_MS           = 1500;   // §2.5 詰まりとみなす無音の長さ
-  var LEVEL_EMIT_MS      = 66;     // §10.3 音量バーの描画間引き（解析20ms・描画66ms）
-  var COUNT_RATIO_DEFAULT = 0.55;  // §2.3 settings.countRatio が無いときの既定
+  var FFT_SIZE            = 2048;   // §2.1
+  var SMOOTHING           = 0.3;    // §2.1
+  var CALIBRATE_MS        = 1500;   // §2.1 較正にかける時間
+  var ONSET_MULTIPLIER    = 3.5;    // §2.1 onsetThreshold = noiseFloor * これ
+  var ONSET_FLOOR         = 0.008;  // §2.1 onsetThresholdの下限
+  var OFFSET_RATIO        = 0.7;    // §2.1 offsetThreshold = onsetThreshold * これ
+  var NOISE_FLOOR_MAX     = 0.05;   // §2.1 これを超えたら較正値として採用しない
+  var LOOP_MS             = 20;     // §2.2 解析間隔
+  var ONSET_FRAMES        = 3;      // §2.2 onset確定に必要な連続フレーム数
+  var OFFSET_FRAMES       = 15;     // §2.2 offset確定に必要な連続フレーム数（=300ms）
+  var STALL_MS            = 1500;   // §2.5 詰まりとみなす無音の長さ
+  // §2.2 offset から この時間 新しい onset が来なければ「1回」を確定する。
+  // STALL_MS と近すぎると詰まった瞬間に回が切れ、離れすぎると次の回の
+  // 先頭を前の回に飲み込む。実機で必ず調整する。
+  var REP_GAP_MS          = 2500;
+  // §2.4 キュー表示から この時間 一度も発話が無ければ「発話なし」で閉じる。
+  // 無限に待つと画面が固まったように見える。
+  var NO_ONSET_TIMEOUT_MS = 10000;
+  var LEVEL_EMIT_MS       = 66;     // §10.3 音量バーの描画間引き（解析20ms・描画66ms）
   // 未較正のまま start() された場合の保守的な既定値。すぐ試せることを優先し、
   // 較正を必須にはしない（コンソールから即試せるようにするため）。
-  var UNCALIBRATED_ONSET = 0.025;
+  var UNCALIBRATED_ONSET  = 0.025;
 
   /* ---- 状態 -------------------------------------------------------------- */
   var audioCtx = null, stream = null, source = null, analyser = null, buf = null;
   var listening = false;     // start()〜stop() の間か
-  var muted = false;         // §2.6 TTS再生中などにカウント窓を閉じる
+  var gateOpen = true;       // §2.6 TTS再生中などにカウント窓を閉じる
   var loopTimer = null;
   var visHandlerInstalled = false;
 
@@ -1723,13 +1733,16 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
   var voiced = false;        // 現在「発話中」state か（§2.2）
   var onsetStreak = 0, offsetStreak = 0;
   var segmentOnsetAt = 0;
-  var lastAboveOffsetAt = 0; // 直近で声が確認できていた時刻（offsetの確定待ち300msを含めないため）
+  var lastAboveOffsetAt = 0; // 直近で声が確認できていた時刻（offset確定待ち300msを含めないため）
 
   var lastLevelEmit = 0;
 
-  var countRatio = COUNT_RATIO_DEFAULT;
+  /* 進行中の「1回」（§2.2）。markCue() が無くても onset で自動的に開くので、
+     コンソールから start() して喋るだけで rep が出る（§2.8）。 */
+  var rep = null;            // { cueAt, firstOnsetAt, spokenMs, segments, stalls, lastOffsetAt, stallPending }
+  var lastRep = null;        // §2.4 cancelLast() 用
 
-  var listeners = { onset: [], offset: [], level: [] };
+  var listeners = { onset: [], offset: [], level: [], rep: [], stall: [], timeout: [] };
 
   function on(ev, fn) { if (listeners[ev]) listeners[ev].push(fn); return fn; }
   function off(ev, fn) {
@@ -1745,7 +1758,8 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
 
   /* ---- サポート判定・エラー分類（§2.7） ---------------------------------- */
   function isSupported() {
-    return !!(self.navigator && navigator.mediaDevices && navigator.mediaDevices.getUserMedia && self.AudioContext);
+    return !!(self.navigator && navigator.mediaDevices && navigator.mediaDevices.getUserMedia
+              && (self.AudioContext || self.webkitAudioContext));
   }
 
   function classifyError(e) {
@@ -1777,8 +1791,7 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
       source.connect(analyser);
       buf = new Uint8Array(analyser.fftSize);
     }).catch(function (e) {
-      var reason = classifyError(e);
-      return Promise.reject({ reason: reason, message: String(e && e.message || e) });
+      return Promise.reject({ reason: classifyError(e), message: String(e && e.message || e) });
     });
   }
 
@@ -1793,27 +1806,60 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
   }
 
   /* ---- 較正（§2.1） ------------------------------------------------------- */
+  function measureNoiseFloor() {
+    return new Promise(function (resolve) {
+      var samples = [];
+      var startedAt = Date.now();
+      var timer = setInterval(function () {
+        samples.push(computeRms());
+        if (Date.now() - startedAt >= CALIBRATE_MS) {
+          clearInterval(timer);
+          resolve(samples.length
+            ? samples.reduce(function (a, b) { return a + b; }, 0) / samples.length
+            : 0);
+        }
+      }, LOOP_MS);
+    });
+  }
+
+  function applyNoiseFloor(noiseFloor) {
+    var ot = Math.max(noiseFloor * ONSET_MULTIPLIER, ONSET_FLOOR);
+    onsetThreshold = ot;
+    offsetThreshold = ot * OFFSET_RATIO;
+    calibrated = true;
+    return ot;
+  }
+
+  // §2.1 測った値が異常なら採用しない。noiseFloor が閾値を超えたら
+  // うるさい場所にいるか較正中に声が入っている。そのまま採用すると
+  // 閾値が上がりすぎて「何を喋っても検知されない」状態になり原因も分からない。
+  // 1回だけ自動でやり直し、それでも高ければ既定値を使って警告を返す。
   function calibrate() {
     return ensureStream().then(function () {
-      return new Promise(function (resolve) {
-        var samples = [];
-        var startedAt = Date.now();
-        var timer = setInterval(function () {
-          samples.push(computeRms());
-          if (Date.now() - startedAt >= CALIBRATE_MS) {
-            clearInterval(timer);
-            var noiseFloor = samples.length
-              ? samples.reduce(function (a, b) { return a + b; }, 0) / samples.length
-              : 0;
-            var ot = Math.max(noiseFloor * ONSET_MULTIPLIER, ONSET_FLOOR);
-            onsetThreshold = ot;
-            offsetThreshold = ot * OFFSET_RATIO;
-            calibrated = true;
-            resolve({ noiseFloor: noiseFloor, onsetThreshold: ot });
+      return measureNoiseFloor().then(function (nf1) {
+        if (nf1 <= NOISE_FLOOR_MAX) {
+          return { noiseFloor: nf1, onsetThreshold: applyNoiseFloor(nf1), retried: false, tooNoisy: false };
+        }
+        // 1回だけ自動でやり直す
+        return measureNoiseFloor().then(function (nf2) {
+          if (nf2 <= NOISE_FLOOR_MAX) {
+            return { noiseFloor: nf2, onsetThreshold: applyNoiseFloor(nf2), retried: true, tooNoisy: false };
           }
-        }, LOOP_MS);
+          onsetThreshold = UNCALIBRATED_ONSET;
+          offsetThreshold = UNCALIBRATED_ONSET * OFFSET_RATIO;
+          calibrated = false;
+          return {
+            noiseFloor: nf2,
+            onsetThreshold: UNCALIBRATED_ONSET,
+            retried: true,
+            tooNoisy: true,
+            message: '静かな場所で較正し直してください'
+          };
+        });
       });
     }).then(function (result) {
+      // うるさすぎて採用しなかった値は保存しない（次回も既定値から始める）
+      if (result.tooNoisy) return result;
       return EST.store.loadSettings().then(function (s) {
         s.mic = { noiseFloor: result.noiseFloor, onsetThreshold: result.onsetThreshold, calibratedAt: Date.now() };
         return EST.store.saveSettings(s);
@@ -1824,24 +1870,77 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
   // 保存済みの較正値があれば読み込む。無ければ保守的な既定値のまま。
   function loadCalibration() {
     return EST.store.loadSettings().then(function (s) {
-      var m = s.mic || {};
-      if (m.onsetThreshold) {
-        onsetThreshold = m.onsetThreshold;
-        offsetThreshold = onsetThreshold * OFFSET_RATIO;
-        calibrated = true;
-      } else {
+      applySettings(s);
+      if (!calibrated) {
         console.warn('[mic] 較正されていません。既定値で動作します。EST.mic.calibrate() を推奨します。');
       }
-      countRatio = (typeof s.countRatio === 'number' && s.countRatio > 0) ? s.countRatio : COUNT_RATIO_DEFAULT;
     });
+  }
+
+  /* =====================================================================
+     「1回」の管理（§2.2 / §2.4 / §2.5）
+     ===================================================================== */
+  function openRep(cueAt) {
+    rep = {
+      cueAt: cueAt || null,      // markCue()が無ければnull → latencyMsもnull（§2.8）
+      firstOnsetAt: null,
+      spokenMs: 0,
+      segments: [],
+      stalls: [],
+      lastOffsetAt: null,
+      stallPending: null,
+      timedOut: false
+    };
+  }
+
+  function closeRep() {
+    if (!rep) return;
+    var payload = {
+      spokenMs: rep.spokenMs,
+      latencyMs: (rep.cueAt != null && rep.firstOnsetAt != null) ? (rep.firstOnsetAt - rep.cueAt) : null,
+      stalls: rep.stalls.slice(),
+      segments: rep.segments.slice()
+    };
+    lastRep = payload;
+    rep = null;
+    emit('rep', payload);
+  }
+
+  // §2.2/§2.4 無音の経過を見て、詰まり・回の確定・発話なしの打ち切りを判断する。
+  // 解析ループから毎フレーム呼ばれる。
+  function tickRepTimers(now) {
+    if (!rep || voiced) return;
+
+    // §2.4 キューを打ったのに一度も発話が無いまま10秒
+    if (rep.firstOnsetAt == null) {
+      if (rep.cueAt != null && (now - rep.cueAt) >= NO_ONSET_TIMEOUT_MS) {
+        rep.timedOut = true;
+        rep = null;
+        emit('timeout', { t: now });
+      }
+      return;
+    }
+
+    var since = now - rep.lastOffsetAt;
+    // §2.2 2500ms 新しいonsetが来なければ「1回」を確定する
+    if (since >= REP_GAP_MS) { closeRep(); return; }
+
+    // §2.5 発話開始後の1.5秒以上の無音は「詰まり」。回は継続する。
+    // ただし詰まりは回の内側で起きる出来事なので、無音が続いたまま
+    // REP_GAP_MS に達した場合（＝その回が終わっただけ）は詰まりにしない。
+    // ここで先に emit すると、単発の発話でも必ず詰まり1件が付いてしまう。
+    // よって確定は「無音が STALL_MS を超えたあと、再び発話が始まったとき」に行う。
+    if (!rep.stallPending && since >= STALL_MS) {
+      rep.stallPending = { t: now, elapsedMs: now - rep.firstOnsetAt };
+    }
   }
 
   /* ---- 発話検知ループ（§2.2） ---------------------------------------------- */
   function loopTick() {
-    if (!listening || muted) return;
+    if (!listening || !gateOpen) return;
     var rms = computeRms();
-
     var now = Date.now();
+
     if (now - lastLevelEmit >= LEVEL_EMIT_MS) {
       lastLevelEmit = now;
       emit('level', { rms: rms });
@@ -1854,6 +1953,16 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
         onsetStreak = 0; offsetStreak = 0;
         segmentOnsetAt = now;
         lastAboveOffsetAt = now;
+        // §2.8 markCue()が呼ばれていなくても回を開く。latencyMsはnullになる。
+        if (!rep) openRep(null);
+        if (rep.firstOnsetAt == null) rep.firstOnsetAt = now;
+        // 直前の無音が STALL_MS を超えていて、かつ再び喋り始めた。
+        // ここで初めて「回の内側の詰まり」として確定する（§2.5）。
+        if (rep.stallPending) {
+          rep.stalls.push(rep.stallPending);
+          emit('stall', rep.stallPending);
+          rep.stallPending = null;
+        }
         emit('onset', { t: now });
       }
     } else {
@@ -1869,9 +1978,17 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
         // durationMsは実際に声があった長さにする。offset確定に使った
         // 300ms（OFFSET_FRAMES分の無音）を含めると実長より長く出てしまうため、
         // 最後に声が確認できた時刻までで区切る。
-        emit('offset', { t: now, durationMs: lastAboveOffsetAt - segmentOnsetAt });
+        var durationMs = lastAboveOffsetAt - segmentOnsetAt;
+        if (rep) {
+          rep.spokenMs += durationMs;
+          rep.segments.push({ startedAt: segmentOnsetAt, durationMs: durationMs });
+          rep.lastOffsetAt = lastAboveOffsetAt;
+        }
+        emit('offset', { t: now, durationMs: durationMs });
       }
     }
+
+    tickRepTimers(now);
   }
 
   /* ---- バックグラウンドで解析を止める（§10.3） ----------------------------- */
@@ -1895,7 +2012,9 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
       .then(loadCalibration)
       .then(function () {
         listening = true;
+        gateOpen = true;
         voiced = false; onsetStreak = 0; offsetStreak = 0;
+        rep = null; lastRep = null;
         installVisibilityHandling();
         if (!document.hidden) loopTimer = setInterval(loopTick, LOOP_MS);
         return true;
@@ -1904,23 +2023,48 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
 
   // stop() は「聞き終わった」の意味にする。リスナーも解除する。
   // 画面をまたいで購読が残ると、次の画面には存在しないDOM要素を
-  // 触ろうとするコールバックが残り続けるため（設定画面のテスト表示など）。
+  // 触ろうとするコールバックが残り続けるため。
   // 引き続き聞きたい呼び出し側は、次に start() したあと改めて on() する。
   function stop() {
     listening = false;
     voiced = false; onsetStreak = 0; offsetStreak = 0;
+    rep = null;
     if (loopTimer) { clearInterval(loopTimer); loopTimer = null; }
-    listeners.onset = []; listeners.offset = []; listeners.level = [];
+    Object.keys(listeners).forEach(function (k) { listeners[k] = []; });
   }
 
   function isListening() { return listening; }
 
-  function setMuted(v) { muted = !!v; }
-  function isMuted() { return muted; }
+  /* ---- 公開API（§2.8） ----------------------------------------------------- */
+  // §2.6 TTS再生中はカウント窓を閉じる。gate(false)で閉、gate(true)で開。
+  function gate(open) {
+    gateOpen = (open !== false);
+    if (!gateOpen) {
+      // 閉じている間の音は無かったことにする。開いた瞬間に
+      // 直前のTTSの残響でonsetが立たないよう、検知state もリセットする。
+      voiced = false; onsetStreak = 0; offsetStreak = 0;
+    }
+  }
+  function isGateOpen() { return gateOpen; }
+
+  // §2.4 レイテンシの t0 を打つ。進行中の回があれば先に確定させる。
+  function markCue() {
+    if (rep) closeRep();
+    openRep(Date.now());
+    return rep.cueAt;
+  }
+
+  // §2.4「今のはナシ」。直前に確定した1回の記録を取り消す。
+  // 進行中の回があるならそちらを破棄する。
+  function cancelLast() {
+    if (rep) { rep = null; return true; }
+    if (lastRep) { lastRep = null; return true; }
+    return false;
+  }
+  function getLastRep() { return lastRep; }
 
   function applySettings(s) {
     if (!s) return;
-    if (typeof s.countRatio === 'number' && s.countRatio > 0) countRatio = s.countRatio;
     var m = s.mic || {};
     if (m.onsetThreshold) {
       onsetThreshold = m.onsetThreshold;
@@ -1932,94 +2076,8 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
   function isCalibrated() { return calibrated; }
   function getThresholds() { return { onsetThreshold: onsetThreshold, offsetThreshold: offsetThreshold }; }
 
-  /* =====================================================================
-     1回分の計測（beginAttempt）— 生イベントの上の薄い層
-     いつ始めていつ終えるかはF5が決める。ここでは「発話区間の合計」
-     「最初のonsetまでの時間」「1.5秒以上の無音（詰まり）」だけを集計する。
-     ===================================================================== */
-  function beginAttempt() {
-    var t0 = Date.now();
-    var firstOnsetAt = null;
-    var spokenMs = 0;
-    var segStart = null;
-    var lastBoundaryAt = t0;
-    var stalls = [];
-    var stallOpen = false;
-    var ended = false;
-
-    function handleOnset(e) {
-      if (ended) return;
-      if (firstOnsetAt == null) firstOnsetAt = e.t;
-      segStart = e.t;
-      lastBoundaryAt = e.t;
-      stallOpen = false;
-    }
-    function handleOffset(e) {
-      if (ended) return;
-      // e.durationMsは既にoffset確定待ちの無音を除いた実長（03-mic.jsのloopTick側で補正済み）
-      if (segStart != null) { spokenMs += e.durationMs; segStart = null; }
-      lastBoundaryAt = e.t;
-    }
-    // §2.5 発話開始後、1.5秒以上の無音が入ったら詰まりとして記録する。
-    // levelイベント（約66ms間隔）を内部の時計代わりに使う。
-    function handleLevelTick() {
-      if (ended || firstOnsetAt == null || stallOpen || segStart != null) return;
-      var gap = Date.now() - lastBoundaryAt;
-      if (gap >= STALL_MS) {
-        stallOpen = true;
-        stalls.push({ t: Date.now(), elapsedMs: Date.now() - t0 });
-      }
-    }
-
-    on('onset', handleOnset);
-    on('offset', handleOffset);
-    on('level', handleLevelTick);
-
-    function detach() {
-      off('onset', handleOnset);
-      off('offset', handleOffset);
-      off('level', handleLevelTick);
-    }
-
-    function snapshot() {
-      var extra = segStart != null ? (Date.now() - segStart) : 0;
-      return {
-        t0: t0,
-        firstOnsetAt: firstOnsetAt,
-        latencyMs: firstOnsetAt != null ? (firstOnsetAt - t0) : null,
-        spokenMs: spokenMs + extra,
-        stalls: stalls.slice()
-      };
-    }
-
-    return {
-      t0: t0,
-      get spokenMs() { return snapshot().spokenMs; },
-      get stalls() { return stalls.slice(); },
-      end: function () {
-        if (ended) return snapshot();
-        if (segStart != null) { spokenMs += (Date.now() - segStart); segStart = null; }
-        ended = true;
-        detach();
-        return snapshot();
-      },
-      cancel: function () {
-        if (ended) return;
-        ended = true;
-        detach();
-      }
-    };
-  }
-
-  /* ---- 判定（純粋関数。SPEC §2.3・§2.4・§1.8） ---------------------------- */
-  // §2.3 spokenMs / expectedMs >= ratio なら1回としてカウント成立
-  function judgeCount(spokenMs, expectedMs, ratio) {
-    if (!expectedMs || expectedMs <= 0) return false;
-    var r = (ratio == null) ? countRatio : ratio;
-    return (spokenMs / expectedMs) >= r;
-  }
-
-  // §2.4 直近5回の中央値。平均だと外れ値に引っ張られるため。
+  /* ---- 計測値の加工（判定ではない。§2.4 / §1.8） --------------------------- */
+  // §2.4 直近5回の中央値。平均だと咳や物音の外れ値に引っ張られるため。
   function medianOfLastN(history, n) {
     n = n || 5;
     var arr = (history || []).slice(-n).slice().sort(function (a, b) { return a - b; });
@@ -2049,28 +2107,31 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
   }
 
   EST.mic = {
-    // 生の検知（§12）
-    on: on,
-    off: off,
-    calibrate: calibrate,
+    // §2.8 のインターフェース
     start: start,
     stop: stop,
+    calibrate: calibrate,
+    gate: gate,
+    markCue: markCue,
+    cancelLast: cancelLast,
+    on: on,
+    off: off,
+    // 状態の参照
     isListening: isListening,
     isSupported: isSupported,
     isCalibrated: isCalibrated,
+    isGateOpen: isGateOpen,
     getThresholds: getThresholds,
-    setMuted: setMuted,
-    isMuted: isMuted,
+    getLastRep: getLastRep,
     applySettings: applySettings,
-    // 1回分の計測
-    beginAttempt: beginAttempt,
-    // 判定
-    judgeCount: judgeCount,
+    // 計測値の加工（カウント成否の判定はF5。§2.8）
     medianOfLastN: medianOfLastN,
     estimateStallPosition: estimateStallPosition,
-    // 定数（設定画面等から参照する）
+    // 定数（実機調整で参照する）
     STALL_MS: STALL_MS,
-    COUNT_RATIO_DEFAULT: COUNT_RATIO_DEFAULT
+    REP_GAP_MS: REP_GAP_MS,
+    NO_ONSET_TIMEOUT_MS: NO_ONSET_TIMEOUT_MS,
+    NOISE_FLOOR_MAX: NOISE_FLOOR_MAX
   };
 })(window.EST = window.EST || {});
 
@@ -4401,17 +4462,21 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
 
     function pushLog(line) {
       logLines.unshift(line);
-      logLines = logLines.slice(0, 6);
+      logLines = logLines.slice(0, 10);
       U.mount(logBox, logLines.map(function (l) { return h('div', { class: 'tiny muted', text: l }); }));
     }
 
-    var onLevel, onOnset, onOffset;
+    var onLevel, onOnset, onOffset, onRep, onStall, onTimeout;
 
     function stopTest() {
       if (!testing) return;
+      // stop() が全リスナーを解除するが、off しておくほうが意図が明確
       EST.mic.off('level', onLevel);
       EST.mic.off('onset', onOnset);
       EST.mic.off('offset', onOffset);
+      EST.mic.off('rep', onRep);
+      EST.mic.off('stall', onStall);
+      EST.mic.off('timeout', onTimeout);
       EST.mic.stop();
       testing = false;
       stopActiveMicTest = null;
@@ -4429,6 +4494,15 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
         });
         onOnset = EST.mic.on('onset', function () { pushLog('onset'); });
         onOffset = EST.mic.on('offset', function (e) { pushLog('offset durationMs=' + e.durationMs); });
+        // §2.2 「1回」が確定したときのイベント。markCue()を打っていなければ
+        // latencyMs は null になる（§2.8）。
+        onRep = EST.mic.on('rep', function (e) {
+          pushLog('rep spokenMs=' + e.spokenMs
+            + ' latencyMs=' + (e.latencyMs == null ? '-' : e.latencyMs)
+            + ' 区間' + e.segments.length + ' 詰まり' + e.stalls.length);
+        });
+        onStall = EST.mic.on('stall', function (e) { pushLog('stall elapsedMs=' + e.elapsedMs); });
+        onTimeout = EST.mic.on('timeout', function () { pushLog('timeout（発話なし）'); });
       }).catch(function (err) { explainMicError(err); });
     }
 
@@ -4437,14 +4511,13 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
       onClick: function () { testing ? stopTest() : startTest(); }
     });
 
-    var ratioInput = h('input', {
-      type: 'number', step: '0.05', min: '0.1', max: '1',
-      value: String(s.countRatio || EST.mic.COUNT_RATIO_DEFAULT), style: { width: '5rem' },
-      onChange: function (e) {
-        var v = Number(e.target.value);
-        if (!isFinite(v) || v <= 0 || v > 1) { e.target.value = String(s.countRatio || EST.mic.COUNT_RATIO_DEFAULT); return; }
-        s.countRatio = v;
-        EST.store.saveSettings(s).then(function () { EST.mic.applySettings(s); });
+    // §2.4 レイテンシを測るには t0 が要る。試験中に手で打てるようにしておく。
+    var cueBtn = h('button', {
+      class: 'btn btn--sm', text: 'キューを打つ',
+      onClick: function () {
+        if (!testing) { U.toast('先に「発話を試す」を押してください'); return; }
+        EST.mic.markCue();
+        pushLog('markCue');
       }
     });
 
@@ -4466,17 +4539,14 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
             }).catch(function (err) { explainMicError(err); });
           }
         }),
-        testBtn
+        testBtn,
+        cueBtn
       ]),
       h('div', { class: 'mic-meter', style: { marginTop: '.5rem' } }, [meterFill]),
       logBox,
-      h('div', { class: 'setting-row' }, [
-        h('div', { class: 'setting-row__label' }, [
-          'カウント成立の比率',
-          h('div', { class: 'setting-row__sub', text: '発話区間が想定の何割あれば1回とカウントするか（既定0.55）' })
-        ]),
-        ratioInput
-      ])
+      h('div', { class: 'tiny muted', style: { marginTop: '.4rem' },
+        text: 'キューを打たずに喋っても「1回」は確定します（そのとき latencyMs は空欄）。'
+            + 'カウントするかどうかの判定は練習画面（F5）で行います。' })
     ]);
   }
 
@@ -5253,7 +5323,7 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
       .then(function (s) {
         applyTheme(s);
         EST.speech.applySettings(s);   // §7.5 速度と§7.2 ボイス指定を反映する
-        EST.mic.applySettings(s);      // §2.1 較正値・§2.3 countRatio を反映する
+        EST.mic.applySettings(s);      // §2.1 較正値を反映する（countRatioはF5が使う）
         return seedSamples(false);
       })
       .then(function () {
