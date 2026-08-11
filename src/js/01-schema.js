@@ -28,6 +28,12 @@
   var AUDIENCES = ['tamo', 'mari', 'both'];
   var AUDIENCE_DEFAULT = 'both';
 
+  // §6.5 台本の由来。配信の削除規則が見るのはこれ。
+  //   seed  … index.html に埋め込まれた同梱サンプル（付録B）
+  //   feed  … data/scripts.json が持ち込んだもの
+  //   local … 端末内で作った・取り込んだもの
+  var ORIGINS = ['seed', 'feed', 'local'];
+
   /* ---- 語のテーブル（チャンク自動分割用。§1.8） ---------------------- */
   function set(list) { var o = {}; list.forEach(function (w) { o[w] = true; }); return o; }
 
@@ -548,6 +554,11 @@
       // 保存時に myRole と同じくエラーで止める（黙って both になるのを防ぐ）。
       audience: AUDIENCES.indexOf(String(src.audience)) >= 0 ? String(src.audience)
                 : (opts.rescueAudience ? AUDIENCE_DEFAULT : ''),
+      // §6.5 どこから来た台本か。配信が削除できるのは feed 由来だけで、
+      // seed（同梱サンプル）と local（端末内で作ったもの）は対象外にする。
+      // 既存レコードの由来は保つ（再取り込みで上書きしない）。
+      origin: ORIGINS.indexOf(String(opts.origin)) >= 0 ? String(opts.origin)
+              : (ORIGINS.indexOf(String(src.origin)) >= 0 ? String(src.origin) : 'local'),
       myRole: myRole,
       speakers: speakers,
       blocks: blocks,
@@ -617,6 +628,7 @@
     SCHEMA_VERSION: SCHEMA_VERSION,
     AUDIENCES: AUDIENCES,
     AUDIENCE_DEFAULT: AUDIENCE_DEFAULT,
+    ORIGINS: ORIGINS,
     BLOCK_AUTO_MIN: BLOCK_AUTO_MIN,
     BLOCK_AUTO_SIZE: BLOCK_AUTO_SIZE,
     DEFAULT_RATE: DEFAULT_RATE,

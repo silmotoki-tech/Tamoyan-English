@@ -1,0 +1,94 @@
+{
+  "id": "tpc_mari_cafe",
+  "title": "カフェでコーヒーを注文する",
+  "titleEn": "Ordering Coffee at a Cafe",
+  "level": "A1",
+  "tags": ["旅行", "カフェ"],
+  "audience": "mari",
+  "myRole": "S2",
+  "speakers": [
+    { "id": "S1", "label": "Staff", "gender": "female" },
+    { "id": "S2", "label": "You", "gender": "female" }
+  ],
+  "blocks": [],
+  "lines": [
+    {
+      "id": "ln_001",
+      "speakerId": "S1",
+      "en": "Hi. What can I get you?",
+      "ja": "いらっしゃいませ。ご注文をどうぞ。",
+      "note": "What can I get you? は「何にしますか」。カフェではこう聞かれることが多い。",
+      "skip": false
+    },
+    {
+      "id": "ln_002",
+      "speakerId": "S2",
+      "en": "A small coffee, please.",
+      "ja": "スモールのコーヒーをお願いします。",
+      "note": "「ほしいもの＋please」だけで注文になる。文を作らなくてよい。",
+      "skip": false
+    },
+    {
+      "id": "ln_003",
+      "speakerId": "S1",
+      "en": "For here or to go?",
+      "ja": "店内でお召し上がりですか、お持ち帰りですか？",
+      "note": "必ず聞かれる。for here が店内、to go が持ち帰り。",
+      "skip": false
+    },
+    {
+      "id": "ln_004",
+      "speakerId": "S2",
+      "en": "To go, please.",
+      "ja": "持ち帰りでお願いします。",
+      "note": "3語で答えられる。店内なら For here, please.",
+      "skip": false
+    },
+    {
+      "id": "ln_005",
+      "speakerId": "S1",
+      "en": "Anything else?",
+      "ja": "他にご注文はありますか？",
+      "note": "2語だが必ず出てくる。聞き取れないと会話が止まる。",
+      "skip": false
+    },
+    {
+      "id": "ln_006",
+      "speakerId": "S2",
+      "en": "No, that's all. Thank you.",
+      "ja": "いいえ、以上です。ありがとう。",
+      "note": "That's all. で「以上です」。追加するなら And a cookie, please.",
+      "skip": false
+    },
+    {
+      "id": "ln_007",
+      "speakerId": "S1",
+      "en": "That'll be four dollars.",
+      "ja": "4ドルになります。",
+      "note": "That'll be 〜 は金額を言う定型。数字だけ聞き取れれば足りる。",
+      "skip": false
+    },
+    {
+      "id": "ln_008",
+      "speakerId": "S2",
+      "en": "Here you go. Thank you.",
+      "ja": "はい、どうぞ。ありがとう。",
+      "note": "Here you go. はお金や物を渡すときの定型。これ一つで済む。",
+      "skip": false
+    }
+  ],
+  "words": [
+    { "id": "w_001", "en": "What can I get you?", "ja": "何にしますか", "type": "phrase", "lineIds": ["ln_001"], "note": "カフェで最初に言われる" },
+    { "id": "w_002", "en": "small / medium / large", "ja": "小 / 中 / 大", "type": "word", "lineIds": ["ln_002"], "note": "サイズはこの3つ" },
+    { "id": "w_003", "en": "〜, please.", "ja": "〜をお願いします", "type": "phrase", "lineIds": ["ln_002"], "note": "ほしいものに please を付けるだけで注文になる" },
+    { "id": "w_004", "en": "for here", "ja": "店内で（食べる）", "type": "phrase", "lineIds": ["ln_003"], "note": "" },
+    { "id": "w_005", "en": "to go", "ja": "持ち帰りで", "type": "phrase", "lineIds": ["ln_003", "ln_004"], "note": "イギリスでは take away" },
+    { "id": "w_006", "en": "Anything else?", "ja": "他には？", "type": "phrase", "lineIds": ["ln_005"], "note": "2語だが必ず出てくる" },
+    { "id": "w_007", "en": "That's all.", "ja": "以上です", "type": "phrase", "lineIds": ["ln_006"], "note": "注文を締めるときの定型" },
+    { "id": "w_008", "en": "That'll be 〜", "ja": "〜になります（金額）", "type": "phrase", "lineIds": ["ln_007"], "note": "会計で必ず聞く" },
+    { "id": "w_009", "en": "Here you go.", "ja": "はい、どうぞ", "type": "phrase", "lineIds": ["ln_008"], "note": "物やお金を渡すとき" }
+  ],
+  "createdAt": 1785715200000,
+  "updatedAt": 1785715200000,
+  "schemaVersion": 3
+}

@@ -4,6 +4,7 @@
   "titleEn": "At the Check-in Counter",
   "level": "B1",
   "tags": ["旅行", "空港"],
+  "audience": "tamo",
   "myRole": "S2",
   "speakers": [
     { "id": "S1", "label": "Agent", "gender": "female" },

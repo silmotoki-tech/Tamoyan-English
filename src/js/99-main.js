@@ -101,13 +101,30 @@
   /* ---- サンプル台本の投入（付録B） --------------------------------------- */
   // 短い台本（12行）と長い台本（22行・4ブロック）の両方で確認できるようにする。
   // 台本は2人で共有するので、投入済みフラグも共有側（settings の "shared"）に置く。
+  // §6.5 由来を後から入れたので、既にある古いレコードには origin が無い。
+  // 同梱サンプルのIDと一致するものを seed、それ以外を local として補う。
+  // これをやらないと、由来なしのサンプルが配信の削除対象から外れない。
+  function backfillOrigins() {
+    var sampleIds = {};
+    (EST.SAMPLES || []).forEach(function (s) { if (s && s.id) sampleIds[s.id] = true; });
+    return EST.store.getAll('topics').then(function (all) {
+      var need = all.filter(function (t) { return EST.schema.ORIGINS.indexOf(t.origin) < 0; });
+      if (!need.length) return 0;
+      need.forEach(function (t) { t.origin = sampleIds[t.id] ? 'seed' : 'local'; });
+      return EST.store.bulkPut('topics', need).then(function () { return need.length; });
+    });
+  }
+
   function seedSamples(force) {
     var list = EST.SAMPLES || [];
     if (!list.length) return Promise.resolve(0);
     return EST.store.loadShared().then(function (sh) {
       if (sh.samplesSeeded && !force) return 0;
-      // 同梱サンプルは audience を持たない外部JSONなので、§6.3 の救済を適用する
-      var topics = list.map(function (raw) { return EST.schema.normalizeTopic(raw, { rescueAudience: true }); });
+      // 同梱サンプルは audience を持たない場合があるので §6.3 の救済を適用する。
+      // §6.5 由来を seed として記録し、配信の削除判定から外す。
+      var topics = list.map(function (raw) {
+        return EST.schema.normalizeTopic(raw, { rescueAudience: true, origin: 'seed' });
+      });
       return EST.store.bulkPut('topics', topics).then(function () {
         sh.samplesSeeded = true;
         return EST.store.saveShared(sh);
@@ -174,6 +191,10 @@
         EST.speech.applySettings(s);   // §7.5 速度と§7.2 ボイス指定を反映する
         EST.mic.applySettings(s);      // §2.1 較正値を反映する（countRatioはF5が使う）
         return seedSamples(false);
+      })
+      .then(function () {
+        // 配信を取りに行く前に、由来の無い既存レコードを埋めておく
+        return backfillOrigins();
       })
       .then(function () {
         // §6.5 配信の取得。失敗しても何もしないので待っても害はないが、

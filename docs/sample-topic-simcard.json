@@ -4,6 +4,7 @@
   "titleEn": "Buying a SIM Card at the Airport",
   "level": "B1",
   "tags": ["旅行", "買い物", "空港"],
+  "audience": "tamo",
   "myRole": "S2",
   "speakers": [
     { "id": "S1", "label": "Staff", "gender": "female" },

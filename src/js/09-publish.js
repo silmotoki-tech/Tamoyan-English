@@ -72,7 +72,8 @@
     // §6.3: 配信JSONは外部データなので、audience 未指定は "both" で救済する。
     // ここで止めてしまうと、値の抜けた1件のせいで配信全体が反映されなくなる。
     var incoming = feed.topics
-      .map(function (t) { return EST.schema.normalizeTopic(t, { rescueAudience: true }); })
+      // §6.5 配信が持ち込んだものは feed 由来として記録する
+      .map(function (t) { return EST.schema.normalizeTopic(t, { rescueAudience: true, origin: 'feed' }); })
       .filter(function (t) { return t.lines.length > 0; });
 
     return EST.store.getAll('topics').then(function (cur) {
@@ -90,18 +91,35 @@
         if (curIds[t.id]) updated++; else added++;
       });
 
-      // 配信から消えたトピックは一覧からも消す（§6.5）。ただし
-      // 手元で作っただけでまだ配信していない台本を巻き込まないよう、
-      // 前回の配信に入っていたものだけを対象にする。
-      var wasFed = Array.isArray(shared.feedTopicIds) ? shared.feedTopicIds : [];
-      var removeIds = wasFed.filter(function (id) { return !incomingIds[id] && curIds[id]; });
-
-      // 削除の件数も、自分の部屋に見えていたものだけを数える
       var curById = {};
       cur.forEach(function (t) { curById[t.id] = t; });
+
+      // §6.5 配信から消えたトピックは一覧からも消す。ただし
+      // **削除できるのは配信が持ち込んだトピック（origin: 'feed'）だけ**。
+      // 同梱サンプル（seed）と端末内で作った台本（local）は、たとえ過去に
+      // 配信へ混入していても対象外にする。由来が配信でないものを
+      // 配信の都合で消さない。seed はさらに samplesSeeded が立っていて
+      // 二度と復活しないので、消してはいけない。
+      var wasFed = Array.isArray(shared.feedTopicIds) ? shared.feedTopicIds : [];
+      var removeIds = wasFed.filter(function (id) {
+        if (incomingIds[id] || !curIds[id]) return false;
+        return (curById[id] && curById[id].origin) === 'feed';
+      });
+
+      // 削除の件数も、自分の部屋に見えていたものだけを数える
       var removedVisible = removeIds.filter(function (id) { return EST.profile.canSee(curById[id]); }).length;
 
-      var chain = EST.store.bulkPut('topics', incoming);
+      // 既に端末にあるトピックの由来は変えない。配信に混ざっていた
+      // 同梱サンプルを feed に塗り替えると、次の配信で削除対象になってしまう。
+      var toWrite = incoming.map(function (t) {
+        var prev = curById[t.id];
+        if (prev && EST.schema.ORIGINS.indexOf(prev.origin) >= 0 && prev.origin !== 'feed') {
+          return Object.assign({}, t, { origin: prev.origin });
+        }
+        return t;
+      });
+
+      var chain = EST.store.bulkPut('topics', toWrite);
       removeIds.forEach(function (id) {
         // 進捗レコードは消さない。再配信で復活したときに引き継げるようにする（§6.5）
         chain = chain.then(function () { return EST.store.del('topics', id); });

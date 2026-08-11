@@ -35,7 +35,9 @@ src/js/1x-ui-*.js     各画面
 src/js/99-main.js     起動・ルーティング
 build.js              src/ を index.html に結合（Node、依存ゼロ）
 index.html            成果物。リポジトリ直下。これが GitHub Pages で公開される
-data/scripts.json     配信台本。build.js は絶対に触らない（タモやんが更新する運用データ）
+publish.js            data/topics/ をまとめて data/scripts.json を作る（Node、依存ゼロ）
+data/topics/*.json    台本。1本1ファイル。★台本を足すときはここに置くだけ
+data/scripts.json     publish.js の出力。手で編集しない
 ```
 
 ファイルは番号順に結合される。新しいファイルを足すときは番号を振ること。
@@ -55,6 +57,22 @@ data/scripts.json     配信台本。build.js は絶対に触らない（タモ�
 - React / Vue / TypeScript の導入
 - 仕様書に書かれていない機能の先回り実装
 - `docs/SPEC.md` の書き換え（仕様変更が必要なら理由を説明して確認を取る）
+- **動作確認でデータベース全体を消すこと（`wipeAll()` など）**
+
+## 検証で実データを壊さない
+
+このアプリのデータは**タモやんが実際に使っている学習記録**である。台本も、
+周回数も、定着状況も、消えたら手で作り直すしかない。バックアップは
+本人が取るまで存在しない。
+
+- **`wipeAll()` を検証で使わない。** 台本と進捗が丸ごと消える
+- 検証用のデータを入れたら、**そのデータだけを名指しで消す**
+- 検証は `tpc_test_` で始まるIDなど、実データと区別できる形で作る
+- 消す前に「これは自分が作ったものか」を必ず確認する
+
+`data/scripts.json` も同じ。**タモやんが配信した内容が入っていることがある。**
+検証で書き換えたら、コミットから外すだけでなく、
+**元が空だったのか配信データだったのかを確認してから戻す。**
 
 ## 動作確認
 
@@ -69,4 +87,11 @@ node build.js          # 直下に index.html を生成
 npx serve .            # 表示されたURLをブラウザで開く
 ```
 
-**`data/scripts.json` を build.js から書き換えないこと。** 公開中の台本が消える。
+```
+node publish.js        # data/topics/ から data/scripts.json を生成
+```
+
+**`build.js` は `data/` を一切触らないこと。** アプリ本体と台本は別系統。
+
+**`data/scripts.json` を手で編集しないこと。** `publish.js` の出力なので次の実行で消える。
+台本を直すときは `data/topics/` の該当ファイルを直す。

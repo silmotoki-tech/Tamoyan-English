@@ -1,0 +1,133 @@
+{
+  "id": "tpc_tamo_restaurant",
+  "title": "レストランで席を取って注文する",
+  "titleEn": "Getting a Table and Ordering",
+  "level": "A2",
+  "tags": ["旅行", "レストラン"],
+  "audience": "tamo",
+  "myRole": "S2",
+  "speakers": [
+    { "id": "S1", "label": "Server", "gender": "female" },
+    { "id": "S2", "label": "You", "gender": "male" }
+  ],
+  "blocks": [],
+  "lines": [
+    {
+      "id": "ln_001",
+      "speakerId": "S1",
+      "en": "Hi there. Do you have a reservation?",
+      "ja": "いらっしゃいませ。ご予約はございますか？",
+      "note": "Hi there. は店員が使う軽い呼びかけ。Hi よりわずかに親しみがある。",
+      "skip": false
+    },
+    {
+      "id": "ln_002",
+      "speakerId": "S2",
+      "en": "No, we don't. Do you have a table for two?",
+      "ja": "いいえ。2人の席はありますか？",
+      "note": "a table for two が丸ごと使える形。人数だけ差し替えれば済む。",
+      "skip": false
+    },
+    {
+      "id": "ln_003",
+      "speakerId": "S1",
+      "en": "We do. Right this way, please.",
+      "ja": "ございます。こちらへどうぞ。",
+      "note": "We do. は Do you 〜? への短い肯定。Yes より自然に響く。",
+      "skip": false
+    },
+    {
+      "id": "ln_004",
+      "speakerId": "S2",
+      "en": "Thank you. Could we sit by the window?",
+      "ja": "ありがとうございます。窓際に座れますか？",
+      "note": "Could we 〜? は頼みごとの基本形。Can we より柔らかい。",
+      "skip": false
+    },
+    {
+      "id": "ln_005",
+      "speakerId": "S1",
+      "en": "Of course. Here are your menus.",
+      "ja": "もちろんです。メニューをどうぞ。",
+      "note": "Here are 〜 は複数のものを差し出すとき。1つなら Here is 〜。",
+      "skip": false
+    },
+    {
+      "id": "ln_006",
+      "speakerId": "S2",
+      "en": "Thanks. What do you recommend?",
+      "ja": "ありがとう。おすすめは何ですか？",
+      "note": "この一文だけで会話が続く。旅行中もっとも使い回しが効く質問。",
+      "skip": false
+    },
+    {
+      "id": "ln_007",
+      "speakerId": "S1",
+      "en": "The grilled salmon is very popular today.",
+      "ja": "本日はグリルサーモンがとても人気です。",
+      "note": "料理名は聞き取れなくてよい。popular が聞こえれば「おすすめ」と分かる。",
+      "skip": false
+    },
+    {
+      "id": "ln_008",
+      "speakerId": "S2",
+      "en": "That sounds good. I'll have that.",
+      "ja": "いいですね。それにします。",
+      "note": "That sounds good. と I'll have 〜 の2つで注文が成立する。最重要。",
+      "skip": false
+    },
+    {
+      "id": "ln_009",
+      "speakerId": "S1",
+      "en": "Great. Anything to drink?",
+      "ja": "承知しました。お飲み物はいかがですか？",
+      "note": "Anything to drink? は Would you like anything to drink? の短縮。実際はこう言われる。",
+      "skip": false
+    },
+    {
+      "id": "ln_010",
+      "speakerId": "S2",
+      "en": "Just water, please.",
+      "ja": "お水だけお願いします。",
+      "note": "Just 〜, please. は「〜だけで」を丁寧に言う型。断りにも使える。",
+      "skip": false
+    },
+    {
+      "id": "ln_011",
+      "speakerId": "S1",
+      "en": "Certainly. I'll be right back.",
+      "ja": "かしこまりました。すぐに戻ります。",
+      "note": "I'll be right back. は店員が離れるときの定型。聞けば「待てばいい」と分かる。",
+      "skip": false
+    },
+    {
+      "id": "ln_012",
+      "speakerId": "S2",
+      "en": "Thanks. No rush.",
+      "ja": "ありがとう。急がなくて大丈夫です。",
+      "note": "No rush. は2語で「ゆっくりで大丈夫」。余裕のある印象を与える。",
+      "skip": false
+    }
+  ],
+  "words": [
+    { "id": "w_001", "en": "reservation", "ja": "予約", "type": "word", "lineIds": ["ln_001"], "note": "動詞は reserve" },
+    { "id": "w_002", "en": "a table for two", "ja": "2人用の席", "type": "phrase", "lineIds": ["ln_002"], "note": "人数を差し替えて使う" },
+    { "id": "w_003", "en": "We do.", "ja": "ございます（あります）", "type": "phrase", "lineIds": ["ln_003"], "note": "Do you 〜? への短い肯定" },
+    { "id": "w_004", "en": "Right this way.", "ja": "こちらへどうぞ", "type": "phrase", "lineIds": ["ln_003"], "note": "案内するときの定型" },
+    { "id": "w_005", "en": "Could we 〜?", "ja": "〜してもよいですか", "type": "phrase", "lineIds": ["ln_004"], "note": "Can we より柔らかい依頼" },
+    { "id": "w_006", "en": "by the window", "ja": "窓際に", "type": "phrase", "lineIds": ["ln_004"], "note": "by は「〜のそばに」" },
+    { "id": "w_007", "en": "Here are 〜", "ja": "〜をどうぞ", "type": "phrase", "lineIds": ["ln_005"], "note": "1つなら Here is 〜" },
+    { "id": "w_008", "en": "What do you recommend?", "ja": "おすすめは何ですか", "type": "phrase", "lineIds": ["ln_006"], "note": "旅行中もっとも使い回しが効く質問" },
+    { "id": "w_009", "en": "popular", "ja": "人気のある", "type": "word", "lineIds": ["ln_007"], "note": "" },
+    { "id": "w_010", "en": "That sounds good.", "ja": "いいですね", "type": "phrase", "lineIds": ["ln_008"], "note": "提案を受けるときの万能句" },
+    { "id": "w_011", "en": "I'll have 〜", "ja": "〜にします（注文する）", "type": "phrase", "lineIds": ["ln_008"], "note": "注文の基本形。I want は避ける" },
+    { "id": "w_012", "en": "Anything to drink?", "ja": "お飲み物はいかがですか", "type": "phrase", "lineIds": ["ln_009"], "note": "実際はこの短縮形で言われる" },
+    { "id": "w_013", "en": "Just 〜, please.", "ja": "〜だけお願いします", "type": "phrase", "lineIds": ["ln_010"], "note": "やんわり断るときにも使える" },
+    { "id": "w_014", "en": "Certainly.", "ja": "かしこまりました", "type": "phrase", "lineIds": ["ln_011"], "note": "Of course より丁寧" },
+    { "id": "w_015", "en": "I'll be right back.", "ja": "すぐ戻ります", "type": "phrase", "lineIds": ["ln_011"], "note": "店員が離れるときの定型" },
+    { "id": "w_016", "en": "No rush.", "ja": "急がなくて大丈夫です", "type": "phrase", "lineIds": ["ln_012"], "note": "2語で余裕を示せる" }
+  ],
+  "createdAt": 1785715200000,
+  "updatedAt": 1785715200000,
+  "schemaVersion": 3
+}

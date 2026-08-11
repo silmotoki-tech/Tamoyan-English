@@ -1,341 +1,16 @@
 {
-  "publishedAt": 1786443049463,
+  "publishedAt": 1786446664976,
   "topics": [
     {
-      "id": "tpc_sample_checkin",
-      "title": "空港のチェックインカウンター",
-      "titleEn": "At the Check-in Counter",
-      "level": "B1",
+      "id": "tpc_mari_cafe",
+      "title": "カフェでコーヒーを注文する",
+      "titleEn": "Ordering Coffee at a Cafe",
+      "level": "A1",
       "tags": [
         "旅行",
-        "空港"
+        "カフェ"
       ],
-      "audience": "both",
-      "myRole": "S2",
-      "speakers": [
-        {
-          "id": "S1",
-          "label": "Agent",
-          "gender": "female"
-        },
-        {
-          "id": "S2",
-          "label": "You",
-          "gender": "male"
-        }
-      ],
-      "blocks": [],
-      "lines": [
-        {
-          "id": "ln_001",
-          "speakerId": "S1",
-          "en": "Good morning. May I see your passport, please?",
-          "ja": "おはようございます。パスポートを拝見してもよろしいですか？",
-          "note": "May I 〜 は Can I 〜 より丁寧。カウンター業務では定番。",
-          "alt": [],
-          "chunks": [
-            "Good morning. May I",
-            "see your passport, please?"
-          ],
-          "skip": false
-        },
-        {
-          "id": "ln_002",
-          "speakerId": "S2",
-          "en": "Sure, here you go.",
-          "ja": "はい、どうぞ。",
-          "note": "Here you go. は物を手渡すときの定型。",
-          "alt": [],
-          "chunks": [
-            "Sure, here you go."
-          ],
-          "skip": false
-        },
-        {
-          "id": "ln_003",
-          "speakerId": "S1",
-          "en": "Thank you. Are you checking any bags today?",
-          "ja": "ありがとうございます。本日、お預けの荷物はございますか？",
-          "note": "check a bag = 荷物を預ける。",
-          "alt": [],
-          "chunks": [
-            "Thank you. Are you",
-            "checking any bags today?"
-          ],
-          "skip": false
-        },
-        {
-          "id": "ln_004",
-          "speakerId": "S2",
-          "en": "Yes, just this one suitcase.",
-          "ja": "はい、このスーツケース一つだけです。",
-          "note": "just = only。会話では just のほうが自然で柔らかい。",
-          "alt": [],
-          "chunks": [
-            "Yes, just this one suitcase."
-          ],
-          "skip": false
-        },
-        {
-          "id": "ln_005",
-          "speakerId": "S1",
-          "en": "Could you place it on the scale for me?",
-          "ja": "こちらの計りに載せていただけますか？",
-          "note": "place = put のフォーマル版。",
-          "alt": [],
-          "chunks": [
-            "Could you place it",
-            "on the scale",
-            "for me?"
-          ],
-          "skip": false
-        },
-        {
-          "id": "ln_006",
-          "speakerId": "S2",
-          "en": "There you go. Is it under the weight limit?",
-          "ja": "はい、載せました。重量制限は超えていませんか？",
-          "note": "There you go. は動作を完了したときの「はい、どうぞ」。",
-          "alt": [],
-          "chunks": [
-            "There you go. Is it",
-            "under the weight limit?"
-          ],
-          "skip": false
-        },
-        {
-          "id": "ln_007",
-          "speakerId": "S1",
-          "en": "It's twenty-two kilos, so you're fine. The limit is twenty-three.",
-          "ja": "22キロですので大丈夫です。制限は23キロまでです。",
-          "note": "you're fine = 問題ありません。",
-          "alt": [],
-          "chunks": [
-            "It's twenty-two kilos,",
-            "so you're fine. The",
-            "limit is twenty-three."
-          ],
-          "skip": false
-        },
-        {
-          "id": "ln_008",
-          "speakerId": "S2",
-          "en": "Great. Could I get an aisle seat if possible?",
-          "ja": "よかった。できれば通路側の席をお願いできますか？",
-          "note": "aisle seat = 通路側。if possible を添えると角が立たない。",
-          "alt": [],
-          "chunks": [
-            "Great. Could I get",
-            "an aisle seat",
-            "if possible?"
-          ],
-          "skip": false
-        },
-        {
-          "id": "ln_009",
-          "speakerId": "S1",
-          "en": "Let me check. I have one available near the front.",
-          "ja": "確認いたします。前方に一席空きがございます。",
-          "note": "Let me check. は「確認します」の最頻出フレーズ。",
-          "alt": [],
-          "chunks": [
-            "Let me check. I",
-            "have one available",
-            "near the front."
-          ],
-          "skip": false
-        },
-        {
-          "id": "ln_010",
-          "speakerId": "S2",
-          "en": "That would be perfect. Thank you so much.",
-          "ja": "それで完璧です。本当にありがとうございます。",
-          "note": "提案を受け入れるときの丁寧な言い方。",
-          "alt": [],
-          "chunks": [
-            "That would be",
-            "perfect. Thank you",
-            "so much."
-          ],
-          "skip": false
-        },
-        {
-          "id": "ln_011",
-          "speakerId": "S1",
-          "en": "Here's your boarding pass. Your gate is B12 and boarding starts at ten forty.",
-          "ja": "こちらが搭乗券です。ゲートはB12、搭乗開始は10時40分です。",
-          "note": "時刻は ten forty のように読む。",
-          "alt": [],
-          "chunks": [
-            "Here's your boarding pass.",
-            "Your gate is B12",
-            "and boarding starts",
-            "at ten forty."
-          ],
-          "skip": false
-        },
-        {
-          "id": "ln_012",
-          "speakerId": "S2",
-          "en": "Got it. Thanks for your help. Have a good one.",
-          "ja": "承知しました。ご対応ありがとうございます。良い一日を。",
-          "note": "Have a good one. は Have a nice day. のカジュアル版。",
-          "alt": [],
-          "chunks": [
-            "Got it. Thanks",
-            "for your help. Have",
-            "a good one."
-          ],
-          "skip": false
-        }
-      ],
-      "words": [
-        {
-          "id": "w_001",
-          "en": "Here you go.",
-          "ja": "はい、どうぞ",
-          "type": "phrase",
-          "lineIds": [
-            "ln_002"
-          ],
-          "note": "物を手渡すとき"
-        },
-        {
-          "id": "w_002",
-          "en": "check a bag",
-          "ja": "荷物を預ける",
-          "type": "phrase",
-          "lineIds": [
-            "ln_003"
-          ],
-          "note": ""
-        },
-        {
-          "id": "w_003",
-          "en": "place it on the scale",
-          "ja": "計りに載せる",
-          "type": "phrase",
-          "lineIds": [
-            "ln_005"
-          ],
-          "note": ""
-        },
-        {
-          "id": "w_004",
-          "en": "There you go.",
-          "ja": "はい、できました",
-          "type": "phrase",
-          "lineIds": [
-            "ln_006"
-          ],
-          "note": "動作を完了したとき"
-        },
-        {
-          "id": "w_005",
-          "en": "weight limit",
-          "ja": "重量制限",
-          "type": "phrase",
-          "lineIds": [
-            "ln_006"
-          ],
-          "note": ""
-        },
-        {
-          "id": "w_006",
-          "en": "You're fine.",
-          "ja": "問題ありません",
-          "type": "phrase",
-          "lineIds": [
-            "ln_007"
-          ],
-          "note": ""
-        },
-        {
-          "id": "w_007",
-          "en": "aisle seat",
-          "ja": "通路側の席",
-          "type": "phrase",
-          "lineIds": [
-            "ln_008"
-          ],
-          "note": "窓側は window seat"
-        },
-        {
-          "id": "w_008",
-          "en": "if possible",
-          "ja": "できれば",
-          "type": "phrase",
-          "lineIds": [
-            "ln_008"
-          ],
-          "note": "後ろに添えると柔らかくなる"
-        },
-        {
-          "id": "w_009",
-          "en": "Let me check.",
-          "ja": "確認しますね",
-          "type": "phrase",
-          "lineIds": [
-            "ln_009"
-          ],
-          "note": ""
-        },
-        {
-          "id": "w_010",
-          "en": "available",
-          "ja": "空いている、利用できる",
-          "type": "word",
-          "lineIds": [
-            "ln_009"
-          ],
-          "note": ""
-        },
-        {
-          "id": "w_011",
-          "en": "That would be perfect.",
-          "ja": "それで完璧です",
-          "type": "phrase",
-          "lineIds": [
-            "ln_010"
-          ],
-          "note": "提案を受け入れる丁寧な言い方"
-        },
-        {
-          "id": "w_012",
-          "en": "boarding pass",
-          "ja": "搭乗券",
-          "type": "phrase",
-          "lineIds": [
-            "ln_011"
-          ],
-          "note": ""
-        },
-        {
-          "id": "w_013",
-          "en": "Have a good one.",
-          "ja": "良い一日を",
-          "type": "phrase",
-          "lineIds": [
-            "ln_012"
-          ],
-          "note": "Have a nice day. のカジュアル版"
-        }
-      ],
-      "createdAt": 1754179200000,
-      "updatedAt": 1786442250474,
-      "schemaVersion": 3
-    },
-    {
-      "id": "tpc_sample_simcard",
-      "title": "空港でSIMカードを購入する",
-      "titleEn": "Buying a SIM Card at the Airport",
-      "level": "B1",
-      "tags": [
-        "旅行",
-        "買い物",
-        "空港"
-      ],
-      "audience": "both",
+      "audience": "mari",
       "myRole": "S2",
       "speakers": [
         {
@@ -346,345 +21,111 @@
         {
           "id": "S2",
           "label": "You",
-          "gender": "male"
+          "gender": "female"
         }
       ],
-      "blocks": [
-        {
-          "id": "b1",
-          "label": "用件を伝える",
-          "from": "ln_001",
-          "to": "ln_006"
-        },
-        {
-          "id": "b2",
-          "label": "プランを確認する",
-          "from": "ln_007",
-          "to": "ln_012"
-        },
-        {
-          "id": "b3",
-          "label": "開通してもらう",
-          "from": "ln_013",
-          "to": "ln_018"
-        },
-        {
-          "id": "b4",
-          "label": "支払って締める",
-          "from": "ln_019",
-          "to": "ln_022"
-        }
-      ],
+      "blocks": [],
       "lines": [
         {
           "id": "ln_001",
-          "speakerId": "S2",
-          "en": "Hi, I'd like to get a SIM card for my phone.",
-          "ja": "こんにちは、スマホ用のSIMカードが欲しいのですが。",
-          "note": "I'd like to 〜 は I want to 〜 より丁寧で、店頭ではこちらが基本。",
-          "alt": [],
-          "chunks": [
-            "Hi, I'd like",
-            "to get a SIM card",
-            "for my phone."
-          ],
+          "speakerId": "S1",
+          "en": "Hi. What can I get you?",
+          "ja": "いらっしゃいませ。ご注文をどうぞ。",
+          "note": "What can I get you? は「何にしますか」。カフェではこう聞かれることが多い。",
           "skip": false
         },
         {
           "id": "ln_002",
-          "speakerId": "S1",
-          "en": "Sure. How long are you staying?",
-          "ja": "かしこまりました。ご滞在はどのくらいですか？",
-          "note": "How long are you staying? は滞在期間を聞く定番。現在進行形で未来を表す。",
-          "alt": [],
-          "chunks": [
-            "Sure. How long",
-            "are you staying?"
-          ],
+          "speakerId": "S2",
+          "en": "A small coffee, please.",
+          "ja": "スモールのコーヒーをお願いします。",
+          "note": "「ほしいもの＋please」だけで注文になる。文を作らなくてよい。",
           "skip": false
         },
         {
           "id": "ln_003",
-          "speakerId": "S2",
-          "en": "About ten days, and I'll be traveling around a lot.",
-          "ja": "10日ほどです。あちこち移動する予定です。",
-          "note": "travel around = あちこち回る。理由を一言添えると会話が続きやすい。",
-          "alt": [],
-          "chunks": [
-            "About ten days,",
-            "and I'll be traveling",
-            "around a lot."
-          ],
+          "speakerId": "S1",
+          "en": "For here or to go?",
+          "ja": "店内でお召し上がりですか、お持ち帰りですか？",
+          "note": "必ず聞かれる。for here が店内、to go が持ち帰り。",
           "skip": false
         },
         {
           "id": "ln_004",
-          "speakerId": "S1",
-          "en": "Got it. Do you need calls, or just data?",
-          "ja": "承知しました。通話も必要ですか、それともデータだけですか？",
-          "note": "Got it. は「承知しました」の口語。店員も客も使う。",
-          "alt": [],
-          "chunks": [
-            "Got it. Do",
-            "you need calls,",
-            "or just data?"
-          ],
+          "speakerId": "S2",
+          "en": "To go, please.",
+          "ja": "持ち帰りでお願いします。",
+          "note": "3語で答えられる。店内なら For here, please.",
           "skip": false
         },
         {
           "id": "ln_005",
-          "speakerId": "S2",
-          "en": "Mostly data, but I might need to make a few local calls.",
-          "ja": "ほとんどデータですが、現地で何回か電話するかもしれません。",
-          "note": "might need to 〜 で「〜するかもしれない」と含みを残す言い方。",
-          "alt": [],
-          "chunks": [
-            "Mostly data,",
-            "but I might need",
-            "to make a",
-            "few local calls."
-          ],
+          "speakerId": "S1",
+          "en": "Anything else?",
+          "ja": "他にご注文はありますか？",
+          "note": "2語だが必ず出てくる。聞き取れないと会話が止まる。",
           "skip": false
         },
         {
           "id": "ln_006",
-          "speakerId": "S1",
-          "en": "Then I'd recommend our ten-day plan. Twenty gigs for thirty dollars.",
-          "ja": "でしたら10日間プランがおすすめです。20ギガで30ドルです。",
-          "note": "gigs = gigabytes の口語。値段は for + 金額。",
-          "alt": [],
-          "chunks": [
-            "Then I'd recommend our",
-            "ten-day plan. Twenty gigs",
-            "for thirty dollars."
-          ],
+          "speakerId": "S2",
+          "en": "No, that's all. Thank you.",
+          "ja": "いいえ、以上です。ありがとう。",
+          "note": "That's all. で「以上です」。追加するなら And a cookie, please.",
           "skip": false
         },
         {
           "id": "ln_007",
-          "speakerId": "S2",
-          "en": "What happens if I run out of data before I leave?",
-          "ja": "帰国前にデータを使い切ったらどうなりますか？",
-          "note": "run out of 〜 = 〜を使い切る。旅行英語の最頻出表現のひとつ。",
-          "alt": [],
-          "chunks": [
-            "What happens",
-            "if I run out",
-            "of data",
-            "before I leave?"
-          ],
+          "speakerId": "S1",
+          "en": "That'll be four dollars.",
+          "ja": "4ドルになります。",
+          "note": "That'll be 〜 は金額を言う定型。数字だけ聞き取れれば足りる。",
           "skip": false
         },
         {
           "id": "ln_008",
-          "speakerId": "S1",
-          "en": "It slows down, but you can still use it. Or you can top up anytime.",
-          "ja": "速度が落ちますが、使い続けられます。いつでもチャージもできます。",
-          "note": "top up = チャージする、追加購入する。イギリス系英語圏で特によく使う。",
-          "alt": [],
-          "chunks": [
-            "It slows down,",
-            "but you can",
-            "still use it.",
-            "Or you can",
-            "top up anytime."
-          ],
-          "skip": false
-        },
-        {
-          "id": "ln_009",
           "speakerId": "S2",
-          "en": "That sounds fine. Does it come with a local number?",
-          "ja": "それで問題なさそうです。現地の電話番号は付いてきますか？",
-          "note": "come with 〜 = 〜が付いてくる。商品説明で頻出。",
-          "alt": [],
-          "chunks": [
-            "That sounds fine.",
-            "Does it come",
-            "with a local number?"
-          ],
-          "skip": false
-        },
-        {
-          "id": "ln_010",
-          "speakerId": "S1",
-          "en": "Yes, you'll get one as soon as we activate it.",
-          "ja": "はい、開通した時点ですぐ発番されます。",
-          "note": "activate = 開通する、有効化する。as soon as 〜 = 〜したらすぐ。",
-          "alt": [],
-          "chunks": [
-            "Yes, you'll get one",
-            "as soon",
-            "as we activate it."
-          ],
-          "skip": false
-        },
-        {
-          "id": "ln_011",
-          "speakerId": "S2",
-          "en": "One more thing. Will it work with my phone?",
-          "ja": "もう一つだけ。私のスマホで使えますか？",
-          "note": "One more thing. は追加で質問するときの前置き。丸暗記推奨。",
-          "alt": [],
-          "chunks": [
-            "One more thing.",
-            "Will it work",
-            "with my phone?"
-          ],
-          "skip": false
-        },
-        {
-          "id": "ln_012",
-          "speakerId": "S1",
-          "en": "Let me check. Is your phone unlocked?",
-          "ja": "確認しますね。SIMロックは解除されていますか？",
-          "note": "unlocked = SIMロック解除済み。Let me check. は確認の定番。",
-          "alt": [],
-          "chunks": [
-            "Let me check. Is",
-            "your phone unlocked?"
-          ],
-          "skip": false
-        },
-        {
-          "id": "ln_013",
-          "speakerId": "S2",
-          "en": "I think so. I bought it directly from the manufacturer.",
-          "ja": "たぶん大丈夫です。メーカーから直接買ったので。",
-          "note": "I think so. で断定を避ける。directly from 〜 = 〜から直接。",
-          "alt": [],
-          "chunks": [
-            "I think",
-            "so. I bought it directly",
-            "from the manufacturer."
-          ],
-          "skip": false
-        },
-        {
-          "id": "ln_014",
-          "speakerId": "S1",
-          "en": "Perfect. Could I borrow your phone for a second?",
-          "ja": "承知しました。少しスマホをお借りできますか？",
-          "note": "for a second = ちょっとの間。borrow は「借りる」で使用者が持ち帰らない場面。",
-          "alt": [],
-          "chunks": [
-            "Perfect. Could I",
-            "borrow your phone",
-            "for a second?"
-          ],
-          "skip": false
-        },
-        {
-          "id": "ln_015",
-          "speakerId": "S2",
-          "en": "Sure, here you go. Should I keep the old SIM?",
-          "ja": "はい、どうぞ。元のSIMは取っておいたほうがいいですか？",
-          "note": "Here you go. は物を手渡すときの定型。Should I 〜? で助言を求める。",
-          "alt": [],
-          "chunks": [
-            "Sure, here you go. Should I",
-            "keep the old SIM?"
-          ],
-          "skip": false
-        },
-        {
-          "id": "ln_016",
-          "speakerId": "S1",
-          "en": "Definitely. Put it somewhere safe so you don't lose it.",
-          "ja": "ぜひそうしてください。無くさないよう安全な場所に。",
-          "note": "Definitely. は強い肯定の相づち。so + 主語 + 動詞 で目的を表す。",
-          "alt": [],
-          "chunks": [
-            "Definitely. Put it somewhere safe",
-            "so you don't lose it."
-          ],
-          "skip": false
-        },
-        {
-          "id": "ln_017",
-          "speakerId": "S2",
-          "en": "Will do. Do I need to change any settings myself?",
-          "ja": "そうします。設定は自分で変える必要がありますか？",
-          "note": "Will do. = そうします。I will do it. の省略で、口語では非常によく使う。",
-          "alt": [],
-          "chunks": [
-            "Will do. Do I need",
-            "to change any settings myself?"
-          ],
-          "skip": false
-        },
-        {
-          "id": "ln_018",
-          "speakerId": "S1",
-          "en": "No, it's automatic. Just restart your phone if it doesn't connect.",
-          "ja": "いいえ、自動です。繋がらなければ再起動だけしてください。",
-          "note": "Just 〜 で「〜するだけ」。トラブル対応の説明で頻出。",
-          "alt": [],
-          "chunks": [
-            "No, it's automatic. Just",
-            "restart your phone",
-            "if it doesn't connect."
-          ],
-          "skip": false
-        },
-        {
-          "id": "ln_019",
-          "speakerId": "S2",
-          "en": "Got it. Can I pay by card?",
-          "ja": "わかりました。カードで払えますか？",
-          "note": "pay by card / pay in cash。前置詞が by と in で違う点に注意。",
-          "alt": [],
-          "chunks": [
-            "Got it. Can I pay",
-            "by card?"
-          ],
-          "skip": false
-        },
-        {
-          "id": "ln_020",
-          "speakerId": "S1",
-          "en": "Of course. Just tap here whenever you're ready.",
-          "ja": "もちろんです。準備ができたらこちらにタッチしてください。",
-          "note": "whenever you're ready = ご準備ができ次第。急かさない丁寧な言い方。",
-          "alt": [],
-          "chunks": [
-            "Of course. Just tap here",
-            "whenever you're ready."
-          ],
-          "skip": false
-        },
-        {
-          "id": "ln_021",
-          "speakerId": "S2",
-          "en": "Thanks a lot. You've been really helpful.",
-          "ja": "ありがとうございます。とても助かりました。",
-          "note": "You've been really helpful. は現在完了で「今までのやりとり全体」への感謝。",
-          "alt": [],
-          "chunks": [
-            "Thanks a lot. You've",
-            "been really helpful."
-          ],
-          "skip": false
-        },
-        {
-          "id": "ln_022",
-          "speakerId": "S1",
-          "en": "No problem at all. Enjoy your trip.",
-          "ja": "とんでもないです。良いご旅行を。",
-          "note": "No problem at all. は You're welcome. のカジュアルで温かい版。",
-          "alt": [],
-          "chunks": [
-            "No problem",
-            "at all. Enjoy your trip."
-          ],
+          "en": "Here you go. Thank you.",
+          "ja": "はい、どうぞ。ありがとう。",
+          "note": "Here you go. はお金や物を渡すときの定型。これ一つで済む。",
           "skip": false
         }
       ],
       "words": [
         {
           "id": "w_001",
-          "en": "travel around",
-          "ja": "あちこち回る、移動して回る",
+          "en": "What can I get you?",
+          "ja": "何にしますか",
+          "type": "phrase",
+          "lineIds": [
+            "ln_001"
+          ],
+          "note": "カフェで最初に言われる"
+        },
+        {
+          "id": "w_002",
+          "en": "small / medium / large",
+          "ja": "小 / 中 / 大",
+          "type": "word",
+          "lineIds": [
+            "ln_002"
+          ],
+          "note": "サイズはこの3つ"
+        },
+        {
+          "id": "w_003",
+          "en": "〜, please.",
+          "ja": "〜をお願いします",
+          "type": "phrase",
+          "lineIds": [
+            "ln_002"
+          ],
+          "note": "ほしいものに please を付けるだけで注文になる"
+        },
+        {
+          "id": "w_004",
+          "en": "for here",
+          "ja": "店内で（食べる）",
           "type": "phrase",
           "lineIds": [
             "ln_003"
@@ -692,199 +133,59 @@
           "note": ""
         },
         {
-          "id": "w_002",
-          "en": "Got it.",
-          "ja": "わかりました、承知しました",
+          "id": "w_005",
+          "en": "to go",
+          "ja": "持ち帰りで",
           "type": "phrase",
           "lineIds": [
-            "ln_004",
-            "ln_019"
+            "ln_003",
+            "ln_004"
           ],
-          "note": "客も店員も使える万能の相づち"
+          "note": "イギリスでは take away"
         },
         {
-          "id": "w_003",
-          "en": "gigs",
-          "ja": "ギガ（ギガバイト）",
-          "type": "word",
+          "id": "w_006",
+          "en": "Anything else?",
+          "ja": "他には？",
+          "type": "phrase",
+          "lineIds": [
+            "ln_005"
+          ],
+          "note": "2語だが必ず出てくる"
+        },
+        {
+          "id": "w_007",
+          "en": "That's all.",
+          "ja": "以上です",
+          "type": "phrase",
           "lineIds": [
             "ln_006"
           ],
-          "note": "gigabytes の口語。複数形で使う"
+          "note": "注文を締めるときの定型"
         },
         {
-          "id": "w_004",
-          "en": "run out of",
-          "ja": "使い切る、切らす",
+          "id": "w_008",
+          "en": "That'll be 〜",
+          "ja": "〜になります（金額）",
           "type": "phrase",
           "lineIds": [
             "ln_007"
           ],
-          "note": "旅行英語の最頻出表現のひとつ"
-        },
-        {
-          "id": "w_005",
-          "en": "slow down",
-          "ja": "速度が落ちる、遅くなる",
-          "type": "phrase",
-          "lineIds": [
-            "ln_008"
-          ],
-          "note": ""
-        },
-        {
-          "id": "w_006",
-          "en": "top up",
-          "ja": "チャージする、追加購入する",
-          "type": "phrase",
-          "lineIds": [
-            "ln_008"
-          ],
-          "note": "イギリス系英語圏で特によく使う"
-        },
-        {
-          "id": "w_007",
-          "en": "come with",
-          "ja": "〜が付いてくる、〜が含まれる",
-          "type": "phrase",
-          "lineIds": [
-            "ln_009"
-          ],
-          "note": "商品説明で頻出"
-        },
-        {
-          "id": "w_008",
-          "en": "activate",
-          "ja": "開通する、有効化する",
-          "type": "word",
-          "lineIds": [
-            "ln_010"
-          ],
-          "note": ""
+          "note": "会計で必ず聞く"
         },
         {
           "id": "w_009",
-          "en": "as soon as",
-          "ja": "〜したらすぐに",
-          "type": "phrase",
-          "lineIds": [
-            "ln_010"
-          ],
-          "note": ""
-        },
-        {
-          "id": "w_010",
-          "en": "One more thing.",
-          "ja": "もう一つだけ（質問が）",
-          "type": "phrase",
-          "lineIds": [
-            "ln_011"
-          ],
-          "note": "追加質問の前置き。丸暗記推奨"
-        },
-        {
-          "id": "w_011",
-          "en": "Let me check.",
-          "ja": "確認しますね",
-          "type": "phrase",
-          "lineIds": [
-            "ln_012"
-          ],
-          "note": ""
-        },
-        {
-          "id": "w_012",
-          "en": "unlocked",
-          "ja": "SIMロックが解除された",
-          "type": "word",
-          "lineIds": [
-            "ln_012"
-          ],
-          "note": "反対は locked"
-        },
-        {
-          "id": "w_013",
-          "en": "manufacturer",
-          "ja": "メーカー、製造元",
-          "type": "word",
-          "lineIds": [
-            "ln_013"
-          ],
-          "note": ""
-        },
-        {
-          "id": "w_014",
-          "en": "for a second",
-          "ja": "ちょっとの間",
-          "type": "phrase",
-          "lineIds": [
-            "ln_014"
-          ],
-          "note": ""
-        },
-        {
-          "id": "w_015",
           "en": "Here you go.",
           "ja": "はい、どうぞ",
           "type": "phrase",
           "lineIds": [
-            "ln_015"
+            "ln_008"
           ],
-          "note": "物を手渡すときの定型"
-        },
-        {
-          "id": "w_016",
-          "en": "Definitely.",
-          "ja": "ぜひ、もちろん",
-          "type": "phrase",
-          "lineIds": [
-            "ln_016"
-          ],
-          "note": "強い肯定の相づち"
-        },
-        {
-          "id": "w_017",
-          "en": "Will do.",
-          "ja": "そうします",
-          "type": "phrase",
-          "lineIds": [
-            "ln_017"
-          ],
-          "note": "I will do it. の省略。口語で頻出"
-        },
-        {
-          "id": "w_018",
-          "en": "restart",
-          "ja": "再起動する",
-          "type": "word",
-          "lineIds": [
-            "ln_018"
-          ],
-          "note": ""
-        },
-        {
-          "id": "w_019",
-          "en": "pay by card",
-          "ja": "カードで払う",
-          "type": "phrase",
-          "lineIds": [
-            "ln_019"
-          ],
-          "note": "現金なら pay in cash。前置詞が違う"
-        },
-        {
-          "id": "w_020",
-          "en": "whenever you're ready",
-          "ja": "ご準備ができ次第",
-          "type": "phrase",
-          "lineIds": [
-            "ln_020"
-          ],
-          "note": "急かさない丁寧な言い方"
+          "note": "物やお金を渡すとき"
         }
       ],
-      "createdAt": 1754179200000,
-      "updatedAt": 1786442250474,
+      "createdAt": 1785715200000,
+      "updatedAt": 1785715200000,
       "schemaVersion": 3
     },
     {
@@ -918,11 +219,6 @@
           "en": "Hi there. Do you have a reservation?",
           "ja": "いらっしゃいませ。ご予約はございますか？",
           "note": "Hi there. は店員が使う軽い呼びかけ。Hi よりわずかに親しみがある。",
-          "alt": [],
-          "chunks": [
-            "Hi there. Do you",
-            "have a reservation?"
-          ],
           "skip": false
         },
         {
@@ -931,12 +227,6 @@
           "en": "No, we don't. Do you have a table for two?",
           "ja": "いいえ。2人の席はありますか？",
           "note": "a table for two が丸ごと使える形。人数だけ差し替えれば済む。",
-          "alt": [],
-          "chunks": [
-            "No, we don't. Do you",
-            "have a table",
-            "for two?"
-          ],
           "skip": false
         },
         {
@@ -945,10 +235,6 @@
           "en": "We do. Right this way, please.",
           "ja": "ございます。こちらへどうぞ。",
           "note": "We do. は Do you 〜? への短い肯定。Yes より自然に響く。",
-          "alt": [],
-          "chunks": [
-            "We do. Right this way, please."
-          ],
           "skip": false
         },
         {
@@ -957,11 +243,6 @@
           "en": "Thank you. Could we sit by the window?",
           "ja": "ありがとうございます。窓際に座れますか？",
           "note": "Could we 〜? は頼みごとの基本形。Can we より柔らかい。",
-          "alt": [],
-          "chunks": [
-            "Thank you. Could we sit",
-            "by the window?"
-          ],
           "skip": false
         },
         {
@@ -970,11 +251,6 @@
           "en": "Of course. Here are your menus.",
           "ja": "もちろんです。メニューをどうぞ。",
           "note": "Here are 〜 は複数のものを差し出すとき。1つなら Here is 〜。",
-          "alt": [],
-          "chunks": [
-            "Of course. Here",
-            "are your menus."
-          ],
           "skip": false
         },
         {
@@ -983,10 +259,6 @@
           "en": "Thanks. What do you recommend?",
           "ja": "ありがとう。おすすめは何ですか？",
           "note": "この一文だけで会話が続く。旅行中もっとも使い回しが効く質問。",
-          "alt": [],
-          "chunks": [
-            "Thanks. What do you recommend?"
-          ],
           "skip": false
         },
         {
@@ -995,11 +267,6 @@
           "en": "The grilled salmon is very popular today.",
           "ja": "本日はグリルサーモンがとても人気です。",
           "note": "料理名は聞き取れなくてよい。popular が聞こえれば「おすすめ」と分かる。",
-          "alt": [],
-          "chunks": [
-            "The grilled salmon is",
-            "very popular today."
-          ],
           "skip": false
         },
         {
@@ -1008,10 +275,6 @@
           "en": "That sounds good. I'll have that.",
           "ja": "いいですね。それにします。",
           "note": "That sounds good. と I'll have 〜 の2つで注文が成立する。最重要。",
-          "alt": [],
-          "chunks": [
-            "That sounds good. I'll have that."
-          ],
           "skip": false
         },
         {
@@ -1020,11 +283,6 @@
           "en": "Great. Anything to drink?",
           "ja": "承知しました。お飲み物はいかがですか？",
           "note": "Anything to drink? は Would you like anything to drink? の短縮。実際はこう言われる。",
-          "alt": [],
-          "chunks": [
-            "Great. Anything",
-            "to drink?"
-          ],
           "skip": false
         },
         {
@@ -1033,10 +291,6 @@
           "en": "Just water, please.",
           "ja": "お水だけお願いします。",
           "note": "Just 〜, please. は「〜だけで」を丁寧に言う型。断りにも使える。",
-          "alt": [],
-          "chunks": [
-            "Just water, please."
-          ],
           "skip": false
         },
         {
@@ -1045,10 +299,6 @@
           "en": "Certainly. I'll be right back.",
           "ja": "かしこまりました。すぐに戻ります。",
           "note": "I'll be right back. は店員が離れるときの定型。聞けば「待てばいい」と分かる。",
-          "alt": [],
-          "chunks": [
-            "Certainly. I'll be right back."
-          ],
           "skip": false
         },
         {
@@ -1057,10 +307,6 @@
           "en": "Thanks. No rush.",
           "ja": "ありがとう。急がなくて大丈夫です。",
           "note": "No rush. は2語で「ゆっくりで大丈夫」。余裕のある印象を与える。",
-          "alt": [],
-          "chunks": [
-            "Thanks. No rush."
-          ],
           "skip": false
         }
       ],
@@ -1227,7 +473,7 @@
         }
       ],
       "createdAt": 1785715200000,
-      "updatedAt": 1786442261211,
+      "updatedAt": 1785715200000,
       "schemaVersion": 3
     }
   ]
