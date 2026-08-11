@@ -329,6 +329,20 @@
       onClick: function () { testing ? stopTest() : startTest(); }
     });
 
+    var ratioInput = h('input', {
+      type: 'number', step: '0.05', min: '0.1', max: '1',
+      value: String(s.countRatio || EST.stage.COUNT_RATIO_DEFAULT), style: { width: '5rem' },
+      onChange: function (e) {
+        var v = Number(e.target.value);
+        if (!isFinite(v) || v <= 0 || v > 1) {
+          e.target.value = String(s.countRatio || EST.stage.COUNT_RATIO_DEFAULT);
+          return;
+        }
+        s.countRatio = v;
+        EST.store.saveSettings(s);
+      }
+    });
+
     // §2.4 レイテンシを測るには t0 が要る。試験中に手で打てるようにしておく。
     var cueBtn = h('button', {
       class: 'btn btn--sm', text: 'キューを打つ',
@@ -363,8 +377,16 @@
       h('div', { class: 'mic-meter', style: { marginTop: '.5rem' } }, [meterFill]),
       logBox,
       h('div', { class: 'tiny muted', style: { marginTop: '.4rem' },
-        text: 'キューを打たずに喋っても「1回」は確定します（そのとき latencyMs は空欄）。'
-            + 'カウントするかどうかの判定は練習画面（F5）で行います。' })
+        text: 'キューを打たずに喋っても「1回」は確定します（そのとき latencyMs は空欄）。' }),
+      // §2.3 / §11 F5 カウント成立の比率。§1.2 の進級条件もこの1つだけを使う。
+      h('div', { class: 'setting-row' }, [
+        h('div', { class: 'setting-row__label' }, [
+          'カウント成立の比率',
+          h('div', { class: 'setting-row__sub',
+            text: '発話が想定の何割あれば1回と数えるか（既定0.55）。進級条件もこの値を使います' })
+        ]),
+        ratioInput
+      ])
     ]);
   }
 

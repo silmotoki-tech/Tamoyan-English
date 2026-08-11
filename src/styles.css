@@ -331,6 +331,33 @@ label.field > .field__label { display: block; font-size: .72rem; color: var(--mu
 .setting-row__sub { font-size: .72rem; color: var(--muted); }
 .setting-row select, .setting-row input { width: auto; min-width: 6rem; }
 
+/* ---- 練習画面（§3）------------------------------------------------
+   音読中の画面は極限まで削る。情報が多いと画面を見てしまう。 */
+.practice { display: flex; flex-direction: column; min-height: 70vh; gap: .6rem; }
+.pr-head { display: flex; justify-content: space-between; font-size: .78rem;
+  color: var(--muted); }
+.pr-main { flex: 1 1 auto; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; text-align: center;
+  padding: 1.5rem .5rem; border-radius: .6rem; transition: background .2s; }
+.pr-main.is-ok { background: color-mix(in srgb, var(--accent) 14%, transparent); }
+.pr-en { font-size: 1.35rem; line-height: 1.5; }
+.pr-ja { font-size: .9rem; color: var(--muted); margin-top: .6rem; }
+.pr-hint { font-size: .85rem; color: var(--muted); }
+
+/* S3の目標時間バー（§1.2） */
+.pr-bar { height: .4rem; background: var(--panel2); border-radius: .2rem; overflow: hidden; }
+.pr-bar__fill { height: 100%; width: 100%; background: var(--accent);
+  transition: width 50ms linear; }
+.pr-bar__fill.is-over { background: var(--danger); }
+
+/* 音量バー（§3 必須。検知されているのが見えないと手動タップに戻ってしまう） */
+.pr-level { height: .3rem; background: var(--panel2); border-radius: .2rem; overflow: hidden; }
+.pr-level__fill { height: 100%; width: 0%; background: var(--accent);
+  transition: width 60ms linear; }
+
+.pr-notice { min-height: 1.2rem; font-size: .82rem; color: var(--muted); text-align: center; }
+.pr-meter { font-size: .72rem; color: var(--muted); text-align: center; }
+
 /* マイク診断パネル（§2.1〜§2.5。設定画面のみ。練習画面の常時ボタンはF5） */
 .mic-meter { height: .55rem; border-radius: .3rem; background: var(--panel2);
   overflow: hidden; }

@@ -63,6 +63,7 @@
     if (parts[0] === 'settings') return { name: 'settings' };
     if (parts[0] === 'topic') return { name: 'topic', id: decodeURIComponent(parts[1] || '') };
     if (parts[0] === 'edit') return { name: 'edit', id: decodeURIComponent(parts[1] || '') };
+    if (parts[0] === 'practice') return { name: 'practice', id: decodeURIComponent(parts[1] || '') };
     if (parts[0] === 'list') return { name: 'list', id: decodeURIComponent(parts[1] || '') };
     if (parts[0] === 'search') return { name: 'search' };
     return { name: 'home' };
@@ -75,6 +76,9 @@
     // 通して再生はループなので、発話を止めるだけでは次の行へ進んでしまう。
     // ループごと止めてから cancel する。
     try { EST.uiHome.stopPlayback(); } catch (e) {}
+    // 練習セッションはタイマーで自走するので、画面を離れるときに必ず止める。
+    // 止めないと次の画面で行が進み続け、TTSもマイクも動いたままになる。
+    try { EST.uiPractice.stopSession(); } catch (e) {}
     try { EST.speech.cancel(); } catch (e) {}
     // マイクも画面をまたいで開いたままにしない。stop()は聞いていなければ何もしない。
     try { EST.mic.stop(); } catch (e) {}
@@ -83,6 +87,7 @@
       else if (r.name === 'import') EST.uiImport.renderImport(viewEl);
       else if (r.name === 'edit') EST.uiImport.renderEditor(viewEl, r.id);
       else if (r.name === 'topic') EST.uiHome.renderTopic(viewEl, r.id);
+      else if (r.name === 'practice') EST.uiPractice.renderPractice(viewEl, r.id);
       else if (r.name === 'list') EST.uiList.renderList(viewEl, r.id);
       else if (r.name === 'search') EST.uiSearch.renderSearch(viewEl);
       else if (r.name === 'settings') EST.uiSettings.render(viewEl);

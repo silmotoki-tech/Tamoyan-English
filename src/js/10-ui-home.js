@@ -268,7 +268,10 @@
 
     var actions = h('div', { class: 'card' }, [
       h('div', { class: 'row row--tight' }, [
-        h('button', { class: 'btn btn--primary', text: '続きから', disabled: true }),
+        h('button', {
+          class: 'btn btn--primary', text: '続きから',
+          onClick: function () { location.hash = '#/practice/' + encodeURIComponent(t.id); }
+        }),
         playBtn,
         h('button', {
           class: 'btn', text: '一覧を見る',
@@ -284,7 +287,7 @@
         }) : null
       ]),
       h('div', { class: 'tiny muted', style: { marginTop: '.35rem' },
-        text: '「続きから」は F5 で使えるようになります。' })
+        text: 'S5・S6 と積み上げドリルは F7 で追加します。' })
     ]);
 
     var body = h('div', { class: 'card' }, buildLineList(t));

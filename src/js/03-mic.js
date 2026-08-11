@@ -219,6 +219,16 @@
 
   function closeRep() {
     if (!rep) return;
+    // 発話中に閉じられたら、その区間をここまでの分だけ算入して閉じる。
+    // TTS駆動のステージ（§2.6）は再生終了から短い猶予で閉じるので、
+    // 語尾を追いかけている途中で呼ばれることがある。
+    if (voiced) {
+      var now = Date.now();
+      var seg = Math.max(0, now - segmentOnsetAt);
+      rep.spokenMs += seg;
+      rep.segments.push({ startedAt: segmentOnsetAt, durationMs: seg });
+      voiced = false; onsetStreak = 0; offsetStreak = 0;
+    }
     var payload = {
       spokenMs: rep.spokenMs,
       latencyMs: (rep.cueAt != null && rep.firstOnsetAt != null) ? (rep.firstOnsetAt - rep.cueAt) : null,
@@ -228,6 +238,16 @@
     lastRep = payload;
     rep = null;
     emit('rep', payload);
+  }
+
+  // §2.6 TTSが鳴るステージでは、回の区切りをTTSの終わりが決める。
+  // §2.2 の2500msを当てると1行ごとに2.5秒待たされ、シャドーイングが成立しない。
+  // ステージ側から明示的に閉じるための入口。進行中の回が無ければ
+  // 「発話が無かった1回」として空のrepを出す（S1のように声を出さない
+  // ステージでも、回の区切りだけは通知したいため）。
+  function closeRepNow() {
+    if (!rep) openRep(null);
+    closeRep();
   }
 
   // §2.2/§2.4 無音の経過を見て、詰まり・回の確定・発話なしの打ち切りを判断する。
@@ -437,6 +457,7 @@
     calibrate: calibrate,
     gate: gate,
     markCue: markCue,
+    closeRep: closeRepNow,
     cancelLast: cancelLast,
     on: on,
     off: off,
