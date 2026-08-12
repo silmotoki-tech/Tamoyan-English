@@ -12,6 +12,9 @@
 
   /* ---- 調整用の定数 ------------------------------------------------------- */
   var NEXT_LINE_DELAY_MS = 400;    // 1行終わってから次の行を出すまでの間
+  // §7.2 行が進む最短間隔の下限。何が壊れても画面が流れ去らないようにする。
+  // TTSが握り潰されて即endが返るような事態でも、これ以上速くは進まない。
+  var MIN_LINE_INTERVAL_MS = 1200;
 
   var S = null;        // 進行中のセッション
   var wakeLock = null;
@@ -107,10 +110,14 @@
     if (S.barTimer) { clearInterval(S.barTimer); S.barTimer = null; }
   }
 
+  // 発火し終えたタイマーは配列から外す。放っておくと1周ごとに積み上がり、
+  // 長い練習で clearTimers() の走査対象が際限なく増える。
   function later(fn, ms) {
     if (!S) return null;
     var t = setTimeout(function () {
       if (!S || S.closing) return;
+      var i = S.timers.indexOf(t);
+      if (i >= 0) S.timers.splice(i, 1);
       fn();
     }, ms);
     S.timers.push(t);
@@ -239,6 +246,7 @@
     S.lastLineId = line.id;
     S.repDone = false;      // この行の確定はまだ
     S.timeLimitMs = 0;
+    S.lineStartedAt = Date.now();   // §7.2 行送りの下限を測るため
     el.notice.textContent = S.tapMode ? tapHintText() : '';
 
     // 画面表示（§1.1 ステージに応じて手がかりを減らす）
@@ -272,8 +280,17 @@
       var gender = genderOf(line.speakerId);
       EST.speech.speak(line.en, {
         gender: gender, topicId: S.topic.id, lineId: line.id
-      }).then(function () {
+      }).then(function (r) {
         if (!S || S.closing) return;
+
+        // §7.2 鳴らなかった（想定より極端に短いendを鳴らし直しても駄目だった）
+        // 場合は、行を進めずに止める。音が出ていないのに回数だけ積み上がると
+        // 学習の記録そのものが信用できなくなる。
+        if (r && r.spoken === false) {
+          haltForSilentTts();
+          return;
+        }
+
         // §2.6 再生が終わったら短い猶予だけ置いて回を閉じる。
         // 2500msの自動確定に任せると1行ごとに待たされ、S4が成立しない。
         later(function () {
@@ -284,6 +301,33 @@
       });
     }
     // TTSが鳴らないステージ（S3）は §2.2 の2500ms自動確定に任せる
+  }
+
+  /* §7.2 音が鳴らなかったときに行送りを止める。黙って進むと、聞こえて
+     いないのに回数だけが積み上がる。自動で再試行し続けると同じことなので、
+     ここで止めて本人に判断してもらう。 */
+  function haltForSilentTts() {
+    if (!S || S.closing) return;
+    S.halted = true;
+    clearTimers();
+    el.notice.textContent = '音声が鳴りませんでした。';
+    ui().dialog({
+      title: '音声が鳴りませんでした',
+      body: h('div', { class: 'small' }, [
+        h('div', { text: '端末の音量とマナーモードを確認してください。' }),
+        h('div', { style: { marginTop: '.4rem' },
+          text: '記録が狂わないよう、ここで止めています。この行から再開できます。' })
+      ]),
+      buttons: [
+        { label: '中断する', value: 'quit' },
+        { label: 'この行からやり直す', value: 'retry', kind: 'primary' }
+      ]
+    }).then(function (v) {
+      if (!S || S.closing) return;
+      if (v === 'quit') { quitToHome(); return; }
+      S.halted = false;
+      runLine();
+    });
   }
 
   function genderOf(speakerId) {
@@ -378,7 +422,10 @@
       .then(function () { refreshMeter(lineId); });
     if (result.ok && !result.listenOnly) flash();
 
-    later(nextLine, NEXT_LINE_DELAY_MS);
+    // §7.2 行が進む最短間隔に下限を置く。何かが壊れて即座に確定が返っても、
+    // これ以上速くは流れない（画面が流れ去るのを防ぐ最後の砦）。
+    var elapsed = Date.now() - (S.lineStartedAt || 0);
+    later(nextLine, Math.max(NEXT_LINE_DELAY_MS, MIN_LINE_INTERVAL_MS - elapsed));
   }
 
   function flash() {

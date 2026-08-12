@@ -14,6 +14,14 @@
   var KEEPALIVE_MS     = 10000;  // §7.2 Chromeは15秒以上で止まる。10秒ごとに突く
   var TIMEOUT_FACTOR   = 2;      // §7.2 end が来ない場合の保険。想定所要の何倍で打ち切るか
   var TIMEOUT_MIN_MS   = 3000;   // 短文で早すぎる打ち切りをしないための下限
+  // §7.2 iOS Safari では cancel() の直後に speak() を呼ぶと、その発話が
+  // 握り潰されて end だけが即座に返る。cancel後はこれだけ空けてから speak する。
+  var CANCEL_SETTLE_MS   = 200;
+  var CANCEL_WAIT_MAX_MS = 800;  // speaking が false になるのを待つ上限
+  // §7.2 想定より極端に短い end は信用しない。実測が想定のこの割合に
+  // 満たなければ鳴らなかったものとして扱い、1回だけ鳴らし直す。
+  var SHORT_END_RATIO    = 0.3;
+  var SHORT_END_RETRY    = 1;    // 鳴らし直す回数
   var WORD_MS          = 400;    // §2.3 内蔵TTS想定の1語あたり（タイムアウト見積り用）
   var PITCH_SHIFT      = 0.15;   // §7.2 片方の性別しか取れないときのpitchのずらし幅
   var PITCH_MIN        = 0.5;
@@ -68,10 +76,39 @@
     prepare: function () { return Promise.resolve(null); },
 
     speak: function (text, opts) {
-      return loadVoices().then(function () {
-        return new Promise(function (resolve) {
-          stopCurrent();
+      // §7.2 想定より極端に短い end は信用しない。鳴らなかったものとして
+      // 1回だけ鳴らし直し、それでも短ければ spoken:false で返す。
+      // 音が出ていないのに回数だけ積み上がるのが最悪の結果なので、
+      // 呼び出し側（F5）はこの spoken を見て行を進めるか決める。
+      var expectMs = estimateMs(text, opts.rate != null ? opts.rate : currentRate);
+      var minAcceptMs = expectMs * SHORT_END_RATIO;
 
+      function attempt(triesLeft) {
+        return localEngine._speakOnce(text, opts).then(function (r) {
+          if (!r.spoken) return r;
+          // onstart が来ずに終わった場合も durationMs は 0 になる
+          if (r.durationMs >= minAcceptMs || minAcceptMs <= 0) return r;
+          if (triesLeft > 0) {
+            console.warn('[speech] 発話が短すぎます（' + Math.round(r.durationMs) + 'ms / 想定' +
+                         Math.round(expectMs) + 'ms）。鳴らし直します。');
+            return attempt(triesLeft - 1);
+          }
+          console.warn('[speech] 鳴らし直しても短いままでした。鳴らなかったものとして扱います。');
+          return { durationMs: r.durationMs, rate: r.rate, voiceId: r.voiceId,
+                   pitch: r.pitch, spoken: false, tooShort: true };
+        });
+      }
+      return attempt(SHORT_END_RETRY);
+    },
+
+    _speakOnce: function (text, opts) {
+      return loadVoices().then(function () {
+        // §7.2 cancel() の直後に speak() を呼ばない。取り消しの処理が終わる前に
+        // 次を投げると、その発話が握り潰されて end だけが即座に返り、
+        // 行送りが暴走する。cancel してから間を置く。
+        return settleAfterCancel();
+      }).then(function () {
+        return new Promise(function (resolve) {
           var rate = clampRate(opts.rate != null ? opts.rate : currentRate);
           var pick = resolveVoice(opts);
           var u = new SpeechSynthesisUtterance(text);
@@ -123,6 +160,26 @@
       });
     }
   };
+
+  /* §7.2 cancel() のあと、エンジンが落ち着くのを待ってから speak する。
+     iOS Safari は取り消し処理中に speak を受けると発話を握り潰し、
+     end だけを即座に返す。speaking が false になるのを待ち、
+     それでも下がらなければ上限で諦めて最低限の間隔だけ空ける。 */
+  function settleAfterCancel() {
+    stopCurrent();
+    return new Promise(function (resolve) {
+      var startedAt = Date.now();
+      (function poll() {
+        var quiet = false;
+        try { quiet = !(syn() && (syn().speaking || syn().pending)); } catch (e) { quiet = true; }
+        var waited = Date.now() - startedAt;
+        // 静かになっても、最低 CANCEL_SETTLE_MS は空ける
+        if (quiet && waited >= CANCEL_SETTLE_MS) { resolve(); return; }
+        if (waited >= CANCEL_WAIT_MAX_MS) { resolve(); return; }
+        setTimeout(poll, 40);
+      })();
+    });
+  }
 
   var engines = { local: localEngine };
 
