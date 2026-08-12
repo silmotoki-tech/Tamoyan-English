@@ -1,0 +1,272 @@
+{
+  "id": "tpc_mari_hotel",
+  "title": "ホテルでチェックインする",
+  "titleEn": "Checking In at a Hotel",
+  "level": "A1",
+  "tags": [
+    "旅行",
+    "ホテル"
+  ],
+  "audience": "mari",
+  "myRole": "S2",
+  "speakers": [
+    {
+      "id": "S1",
+      "label": "Front Desk",
+      "gender": "female"
+    },
+    {
+      "id": "S2",
+      "label": "You",
+      "gender": "female"
+    }
+  ],
+  "blocks": [],
+  "lines": [
+    {
+      "id": "ln_001",
+      "speakerId": "S1",
+      "en": "Good evening. Checking in?",
+      "ja": "こんばんは。チェックインですか？",
+      "note": "Are you checking in? の省略。実際のフロントではこの短い形で聞かれることが多い。",
+      "skip": false
+    },
+    {
+      "id": "ln_002",
+      "speakerId": "S2",
+      "en": "Yes. I have a reservation.",
+      "ja": "はい。予約しています。",
+      "note": "I have a reservation. が言えれば話が進む。予約は reservation（英国では booking）。",
+      "skip": false
+    },
+    {
+      "id": "ln_003",
+      "speakerId": "S1",
+      "en": "Can I have your name, please?",
+      "ja": "お名前をいただけますか？",
+      "note": "May I have 〜 も同じ。name が聞こえたら名前を言えばよい。",
+      "skip": false
+    },
+    {
+      "id": "ln_004",
+      "speakerId": "S2",
+      "en": "It's Motoki. M-O-T-O-K-I.",
+      "ja": "モトキです。M-O-T-O-K-I。",
+      "note": "名前は必ず綴りを聞き返される。先に言ってしまうと速い。声に出して綴る練習は実用度が高い。",
+      "skip": false
+    },
+    {
+      "id": "ln_005",
+      "speakerId": "S1",
+      "en": "Thank you. May I see your passport?",
+      "ja": "ありがとうございます。パスポートを拝見できますか？",
+      "note": "May I see 〜? は「見せてください」の丁寧な形。",
+      "skip": false
+    },
+    {
+      "id": "ln_006",
+      "speakerId": "S2",
+      "en": "Sure. Here you go.",
+      "ja": "はい、どうぞ。",
+      "note": "物を渡すときは Here you go. の一言で足りる。",
+      "skip": false
+    },
+    {
+      "id": "ln_007",
+      "speakerId": "S1",
+      "en": "You're in room 305, on the third floor.",
+      "ja": "305号室、3階です。",
+      "note": "部屋番号は three oh five と読む。zero ではなく oh。",
+      "skip": false
+    },
+    {
+      "id": "ln_008",
+      "speakerId": "S2",
+      "en": "Thank you. What time is breakfast?",
+      "ja": "ありがとう。朝食は何時からですか？",
+      "note": "What time is 〜? は時間を聞く基本形。そのまま使い回せる。",
+      "skip": false
+    },
+    {
+      "id": "ln_009",
+      "speakerId": "S1",
+      "en": "From seven to ten, on the second floor.",
+      "ja": "7時から10時まで、2階です。",
+      "note": "from 〜 to 〜 で時間の範囲。数字だけ聞き取れれば足りる。",
+      "skip": false
+    },
+    {
+      "id": "ln_010",
+      "speakerId": "S2",
+      "en": "Great. Thank you very much.",
+      "ja": "よかった。ありがとうございます。",
+      "note": "Great. は「よかった」「助かります」の軽い相づち。締めに使える。",
+      "skip": false
+    }
+  ],
+  "words": [
+    {
+      "id": "w_001",
+      "en": "Checking in?",
+      "ja": "チェックインですか？",
+      "type": "phrase",
+      "lineIds": [
+        "ln_001"
+      ],
+      "note": "フロントで最初に言われる"
+    },
+    {
+      "id": "w_002",
+      "en": "I have a reservation.",
+      "ja": "予約しています",
+      "type": "phrase",
+      "lineIds": [
+        "ln_002"
+      ],
+      "note": "これが言えれば話が進む"
+    },
+    {
+      "id": "w_003",
+      "en": "Can I have your name?",
+      "ja": "お名前をいただけますか",
+      "type": "phrase",
+      "lineIds": [
+        "ln_003"
+      ],
+      "note": ""
+    },
+    {
+      "id": "w_004",
+      "en": "It's 〜.",
+      "ja": "〜です（名前を名乗る）",
+      "type": "phrase",
+      "lineIds": [
+        "ln_004"
+      ],
+      "note": "My name is 〜 より自然で短い"
+    },
+    {
+      "id": "w_005",
+      "en": "May I see 〜?",
+      "ja": "〜を拝見できますか",
+      "type": "phrase",
+      "lineIds": [
+        "ln_005"
+      ],
+      "note": "見せてほしいときの丁寧な形"
+    },
+    {
+      "id": "w_006",
+      "en": "passport",
+      "ja": "パスポート",
+      "type": "word",
+      "lineIds": [
+        "ln_005"
+      ],
+      "note": ""
+    },
+    {
+      "id": "w_007",
+      "en": "Here you go.",
+      "ja": "はい、どうぞ",
+      "type": "phrase",
+      "lineIds": [
+        "ln_006"
+      ],
+      "note": "物を渡すとき"
+    },
+    {
+      "id": "w_008",
+      "en": "room 305",
+      "ja": "305号室",
+      "type": "phrase",
+      "lineIds": [
+        "ln_007"
+      ],
+      "note": "three oh five と読む。zeroではなくoh"
+    },
+    {
+      "id": "w_009",
+      "en": "on the third floor",
+      "ja": "3階に",
+      "type": "phrase",
+      "lineIds": [
+        "ln_007"
+      ],
+      "note": "階は序数（first / second / third）"
+    },
+    {
+      "id": "w_010",
+      "en": "What time is 〜?",
+      "ja": "〜は何時からですか",
+      "type": "phrase",
+      "lineIds": [
+        "ln_008"
+      ],
+      "note": "時間を聞く基本形"
+    },
+    {
+      "id": "w_011",
+      "en": "breakfast",
+      "ja": "朝食",
+      "type": "word",
+      "lineIds": [
+        "ln_008"
+      ],
+      "note": ""
+    },
+    {
+      "id": "w_012",
+      "en": "from 〜 to 〜",
+      "ja": "〜から〜まで",
+      "type": "phrase",
+      "lineIds": [
+        "ln_009"
+      ],
+      "note": ""
+    },
+    {
+      "id": "w_013",
+      "en": "Great.",
+      "ja": "よかった、助かります",
+      "type": "phrase",
+      "lineIds": [
+        "ln_010"
+      ],
+      "note": "軽い相づち。締めにも使える"
+    },
+    {
+      "id": "w_014",
+      "en": "What time is 〜? に入るもの",
+      "ja": "breakfast（朝食）/ checkout（チェックアウト）/ the last train（終電）/ the shuttle bus（送迎バス）",
+      "type": "phrase",
+      "lineIds": [
+        "ln_008"
+      ],
+      "note": "型は同じで中身だけ差し替える。時間を聞くのはこれ一つで足りる"
+    },
+    {
+      "id": "w_015",
+      "en": "Where is 〜? に入るもの",
+      "ja": "the elevator（エレベーター）/ the restaurant（レストラン）/ the front desk（フロント）/ my room（私の部屋）",
+      "type": "phrase",
+      "lineIds": [
+        "ln_007"
+      ],
+      "note": "場所を聞く型。指をさして言えば通じる"
+    },
+    {
+      "id": "w_016",
+      "en": "ホテルで耳にする言葉",
+      "ja": "key card（カードキー）/ elevator（エレベーター）/ floor（階）/ towel（タオル）/ blanket（毛布）",
+      "type": "word",
+      "lineIds": [
+        "ln_007"
+      ],
+      "note": "今回の会話には出ないが、聞こえたら分かるようにしておく"
+    }
+  ],
+  "createdAt": 1786550000000,
+  "updatedAt": 1786550000000,
+  "schemaVersion": 3
+}
