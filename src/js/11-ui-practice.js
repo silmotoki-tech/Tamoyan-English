@@ -238,9 +238,14 @@
      1行の進行
      ===================================================================== */
   function runLine() {
-    if (!S || S.closing) return;
+    if (!S || S.closing || S.halted) return;
+    // 再入防止。行送りのタイマーと、TTS完了やrepからの経路が重なると
+    // 同じ行で二重に走り、片方が他方をcancelして音が切れる。
+    if (S.runningLine) return;
+    S.runningLine = true;
+
     var line = S.lines[S.idx];
-    if (!line) return;
+    if (!line) { S.runningLine = false; return; }
 
     var mode = EST.stage.stageMode(S.tp.stage);
     S.lastLineId = line.id;
@@ -272,7 +277,19 @@
   function beginLine(line, mode) {
     if (!S || S.closing) return;
     S.cueAt = Date.now();
-    if (S.micOn) EST.mic.markCue();
+
+    if (S.micOn) {
+      // §2.6 TTSが鳴るステージでは2500msの自動確定を止める。
+      // 止めないと、言い終わって黙った時点からマイク側の2500msが走り、
+      // お手本がまだ鳴っている最中に回が閉じて次の行へ進んでしまう。
+      // そこで speak() が cancel され、音が途中で切れる。
+      EST.mic.setAutoClose(!mode.tts);
+      // この行で受け付ける rep の経路を決めておく（§2.8）
+      S.expectRepSource = mode.tts ? 'closeRep' : 'auto';
+      EST.mic.markCue();
+    } else {
+      S.expectRepSource = null;   // マイクを使わないステージ
+    }
 
     if (mode.tts) {
       // §2.6 TTSが鳴るステージ。窓は開けたまま（S2・S4）。
@@ -309,6 +326,7 @@
   function haltForSilentTts() {
     if (!S || S.closing) return;
     S.halted = true;
+    S.runningLine = false;   // 再開できるように解除しておく
     clearTimers();
     el.notice.textContent = '音声が鳴りませんでした。';
     ui().dialog({
@@ -369,7 +387,14 @@
   }
 
   function onRep(e) {
-    if (!S || S.closing) return;
+    if (!S || S.closing || S.halted) return;
+    // §2.8 期待しない経路から来た rep は無視する。経路が増えたときに
+    // 同じ事故（お手本の再生中にマイク側が回を閉じる）を繰り返さないための保険。
+    if (S.expectRepSource && e.source && e.source !== S.expectRepSource) {
+      console.warn('[practice] 想定外の経路の rep を無視しました: ' + e.source +
+                   '（期待は ' + S.expectRepSource + '）');
+      return;
+    }
     // §2.3 カウント判定はここ（ステージ層）で行う
     var withinTime = true;
     if (S.timeLimitMs) withinTime = (Date.now() - S.timeStartedAt) <= S.timeLimitMs;
@@ -408,6 +433,7 @@
     // タップの連打などが重なると、同じ行が何度も数えられてしまう。
     if (S.repDone) return;
     S.repDone = true;
+    S.runningLine = false;   // この行は終わった。次の runLine() を通す
     stopTimeBar();
 
     var lineId = S.lastLineId;

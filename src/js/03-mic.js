@@ -54,6 +54,12 @@
   var offsetThreshold = UNCALIBRATED_ONSET * OFFSET_RATIO;
   var calibrated = false;
 
+  // §2.6 2500msの自動確定を使うか。TTS駆動のステージ（S1・S2・S4）では
+  // 行の開始で false にし、回を閉じるのは closeRep() だけにする。
+  // 止めないと rep を出す経路が2つになり、お手本がまだ鳴っている最中に
+  // マイク側が勝手に回を閉じて、次の行へ進んでしまう。
+  var autoClose = true;
+
   var voiced = false;        // 現在「発話中」state か（§2.2）
   var onsetStreak = 0, offsetStreak = 0;
   var segmentOnsetAt = 0;
@@ -217,7 +223,10 @@
     };
   }
 
-  function closeRep() {
+  // source: §2.8 rep の出どころ。'auto'（2500msの自動確定）/
+  // 'closeRep'（ステージ側から明示的に）/ 'tap'（タップモード）。
+  // ステージ側が期待しない経路の rep を無視できるようにするため。
+  function closeRep(source) {
     if (!rep) return;
     // 発話中に閉じられたら、その区間をここまでの分だけ算入して閉じる。
     // TTS駆動のステージ（§2.6）は再生終了から短い猶予で閉じるので、
@@ -233,7 +242,8 @@
       spokenMs: rep.spokenMs,
       latencyMs: (rep.cueAt != null && rep.firstOnsetAt != null) ? (rep.firstOnsetAt - rep.cueAt) : null,
       stalls: rep.stalls.slice(),
-      segments: rep.segments.slice()
+      segments: rep.segments.slice(),
+      source: source || 'auto'
     };
     lastRep = payload;
     rep = null;
@@ -245,10 +255,15 @@
   // ステージ側から明示的に閉じるための入口。進行中の回が無ければ
   // 「発話が無かった1回」として空のrepを出す（S1のように声を出さない
   // ステージでも、回の区切りだけは通知したいため）。
-  function closeRepNow() {
+  function closeRepNow(source) {
     if (!rep) openRep(null);
-    closeRep();
+    closeRep(source || 'closeRep');
   }
+
+  // §2.6 2500msの自動確定を止める／再開する。
+  // TTS駆動のステージ（S1・S2・S4）は行の開始で false にする。
+  function setAutoClose(on) { autoClose = (on !== false); }
+  function isAutoClose() { return autoClose; }
 
   // §2.2/§2.4 無音の経過を見て、詰まり・回の確定・発話なしの打ち切りを判断する。
   // 解析ループから毎フレーム呼ばれる。
@@ -266,8 +281,10 @@
     }
 
     var since = now - rep.lastOffsetAt;
-    // §2.2 2500ms 新しいonsetが来なければ「1回」を確定する
-    if (since >= REP_GAP_MS) { closeRep(); return; }
+    // §2.2 2500ms 新しいonsetが来なければ「1回」を確定する。
+    // §2.6 TTS駆動のステージでは autoClose が false になっていて、
+    // ここを通らない。回を閉じるのは closeRep() だけになる。
+    if (autoClose && since >= REP_GAP_MS) { closeRep('auto'); return; }
 
     // §2.5 発話開始後の1.5秒以上の無音は「詰まり」。回は継続する。
     // ただし詰まりは回の内側で起きる出来事なので、無音が続いたまま
@@ -357,6 +374,7 @@
       .then(function () {
         listening = true;
         gateOpen = true;
+        autoClose = true;   // 既定は2500msの自動確定。止めるのはステージ側の判断
         voiced = false; onsetStreak = 0; offsetStreak = 0;
         rep = null; lastRep = null;
         installVisibilityHandling();
@@ -371,6 +389,7 @@
   // 引き続き聞きたい呼び出し側は、次に start() したあと改めて on() する。
   function stop() {
     listening = false;
+    autoClose = true;   // 次に start() したとき前のステージの設定を持ち越さない
     voiced = false; onsetStreak = 0; offsetStreak = 0;
     rep = null;
     if (loopTimer) { clearInterval(loopTimer); loopTimer = null; }
@@ -393,7 +412,7 @@
 
   // §2.4 レイテンシの t0 を打つ。進行中の回があれば先に確定させる。
   function markCue() {
-    if (rep) closeRep();
+    if (rep) closeRep('markCue');
     openRep(Date.now());
     return rep.cueAt;
   }
@@ -458,6 +477,8 @@
     gate: gate,
     markCue: markCue,
     closeRep: closeRepNow,
+    setAutoClose: setAutoClose,
+    isAutoClose: isAutoClose,
     cancelLast: cancelLast,
     on: on,
     off: off,
