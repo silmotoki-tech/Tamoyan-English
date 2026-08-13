@@ -14,7 +14,7 @@
   /* ---- 調整用の定数（実機で必ず調整する。SPEC §12） ------------------ */
   var COUNT_RATIO_DEFAULT = 0.55;   // §2.3 spokenMs/expectedMs がこれ以上で成立
   // §1.2 各ステージの最低回数
-  var MIN_REPS = { S1: 3, S2: 10, S3: 15, S4: 15 };
+  var MIN_REPS = { S1: 3, S2: 10, S3: 15, S4: 15, S5: 10, S6: 10 };
   // §1.2 S2・S4 は「カウント成立が3回連続」、S3 は「各係数で3回連続」
   var STREAK_NEEDED = 3;
   // §1.2 S3 の目標時間の係数。各係数で3回連続成功したら次の段階へ。
@@ -34,15 +34,19 @@
     S5: 'S5 和訳から出す',
     S6: 'S6 相手に返す'
   };
-  // F5 の対象。S5・S6 は F7。
-  var IMPLEMENTED = { S1: true, S2: true, S3: true, S4: true };
+  var IMPLEMENTED = { S1: true, S2: true, S3: true, S4: true, S5: true, S6: true };
 
   // §2.6 ステージごとのTTS・マイクの扱い
   var STAGE_MODE = {
     S1: { tts: true,  mic: false, showEn: true,  showJa: true,  timeBar: false },
     S2: { tts: true,  mic: true,  showEn: true,  showJa: false, timeBar: false },
     S3: { tts: false, mic: true,  showEn: true,  showJa: false, timeBar: true },
-    S4: { tts: true,  mic: true,  showEn: false, showJa: false, timeBar: false }
+    S4: { tts: true,  mic: true,  showEn: false, showJa: false, timeBar: false },
+    // §1.1 S5・S6 は自分の役だけをシャッフルして出す。
+    // §2.6 S5 はTTSが鳴らない。S6 は相手の台詞だけ鳴らし、
+    // 相手の台詞が終わってから測定を開始する。
+    S5: { tts: false, mic: true,  showEn: false, showJa: true,  timeBar: false, shuffled: true, myRoleOnly: true },
+    S6: { tts: true,  mic: true,  showEn: false, showJa: false, timeBar: false, shuffled: true, myRoleOnly: true, cueIsPartner: true }
   };
 
   function stageLabel(st) { return STAGE_LABELS[st] || st; }
@@ -66,8 +70,15 @@
       topicId: EST.store.topicProgressKey(topicId),
       profileId: profileId,
       realTopicId: topicId,
-      stage: 'S1',
-      blockIndex: 0,          // §1.5 ブロックごとにステージが独立して進む
+      // §5.6 ステージはブロックごとに独立して進む
+      currentBlockId: null,
+      blocks: {},             // { b1: { stage:'S1', done:false } }
+      // §5.6 S5・S6 のみ役に依存する。S1〜S4 は両役を音読するので共通。
+      byRole: {},             // { S2: { blocks: { b1: 'S6' } } }
+      // §5.6 いま演じている役。Topic.myRole は書き換えない（配信で戻される）
+      activeRole: null,
+      fullRun: { unlocked: false, stage: null },   // §1.5 通しモード
+      roleSwapOffered: false, // §1.1 役交代の提案は S6 完了ごとに1回だけ
       streak: 0,              // 連続でカウント成立した回数
       s3FactorIndex: 0,       // §1.2 S3 の係数段階
       s3Streak: 0,            // 現在の係数での連続成功数
@@ -78,12 +89,98 @@
     };
   }
 
-  function loadTopicProgress(topicId) {
+  // F5 で作った旧形式（stage / blockIndex を直に持つ）を §5.6 の形に移す。
+  // 既存の進捗を壊さないための処理で、変換済みなら何もしない。
+  function migrateTopicProgress(tp, topic) {
+    if (!tp) return tp;
+    if (!tp.blocks) tp.blocks = {};
+    if (!tp.byRole) tp.byRole = {};
+    if (!tp.fullRun) tp.fullRun = { unlocked: false, stage: null };
+    if (tp.activeRole === undefined) tp.activeRole = null;
+    if (tp.roleSwapOffered === undefined) tp.roleSwapOffered = false;
+
+    // 旧形式の stage / blockIndex を blocks[] へ移す
+    if (tp.stage && !Object.keys(tp.blocks).length) {
+      var blocks = blocksOf(topic);
+      var idx = tp.blockIndex || 0;
+      var bid = (blocks[idx] && blocks[idx].id) || 'all';
+      tp.blocks[bid] = { stage: tp.stage, done: false };
+      tp.currentBlockId = bid;
+    }
+    if (!tp.currentBlockId) {
+      var bs = blocksOf(topic);
+      tp.currentBlockId = (bs[0] && bs[0].id) || 'all';
+    }
+    if (!tp.blocks[tp.currentBlockId]) {
+      tp.blocks[tp.currentBlockId] = { stage: 'S1', done: false };
+    }
+    // 旧フィールドは残しておく（読み手が無くなるまで壊さない）
+    return tp;
+  }
+
+  function loadTopicProgress(topicId, topic) {
     var key = EST.store.topicProgressKey(topicId);
     return EST.store.get('topicProgress', key).then(function (rec) {
-      if (rec) return rec;
-      return defaultTopicProgress(EST.profile.get(), topicId);
+      var tp = rec || defaultTopicProgress(EST.profile.get(), topicId);
+      return topic ? migrateTopicProgress(tp, topic) : tp;
     });
+  }
+
+  /* ---- 役（§5.6） ---------------------------------------------------------
+     Topic.myRole は配信で配られる初期値で、読むだけ。書き込むのは
+     TopicProgress.activeRole。書き戻すと次の配信で役が勝手に戻り、
+     audience:"both" の台本では相手の役まで変わる。 */
+  /* 現在ブロックのステージ。§5.6 の blocks[] を読む窓口。
+     S5・S6 は役ごとに分かれるので、役の進捗があればそちらを優先する。 */
+  function currentStage(tp, topic) {
+    var bid = tp.currentBlockId;
+    if (!bid || !tp.blocks || !tp.blocks[bid]) return 'S1';
+    var st = tp.blocks[bid].stage || 'S1';
+    if (st === 'S5' || st === 'S6') {
+      var role = activeRole(tp, topic);
+      var rs = roleStage(tp, role, bid);
+      if (rs) return rs;
+    }
+    return st;
+  }
+
+  function setCurrentStage(tp, topic, stage) {
+    var bid = tp.currentBlockId;
+    if (!bid) return tp;
+    tp.blocks = tp.blocks || {};
+    tp.blocks[bid] = tp.blocks[bid] || { stage: 'S1', done: false };
+    tp.blocks[bid].stage = stage;
+    // §5.6 S5・S6 は役ごとにも記録する
+    if (stage === 'S5' || stage === 'S6') {
+      setRoleStage(tp, activeRole(tp, topic), bid, stage);
+    }
+    return tp;
+  }
+
+  function activeRole(tp, topic) {
+    if (tp && tp.activeRole) return tp.activeRole;
+    return (topic && topic.myRole) || null;
+  }
+
+  function otherRole(topic, role) {
+    var ids = (topic.speakers || []).map(function (s) { return s.id; });
+    var hit = null;
+    ids.forEach(function (id) { if (id !== role && !hit) hit = id; });
+    return hit;
+  }
+
+  // §5.6 S5・S6 のステージは役ごとに持つ
+  function roleStage(tp, role, blockId) {
+    var r = tp.byRole && tp.byRole[role];
+    return (r && r.blocks && r.blocks[blockId]) || null;
+  }
+
+  function setRoleStage(tp, role, blockId, stage) {
+    tp.byRole = tp.byRole || {};
+    tp.byRole[role] = tp.byRole[role] || { blocks: {} };
+    tp.byRole[role].blocks = tp.byRole[role].blocks || {};
+    tp.byRole[role].blocks[blockId] = stage;
+    return tp;
   }
 
   function saveTopicProgress(tp) {
@@ -104,7 +201,19 @@
       // 0.9（最後の係数）で3回連続できたら進級条件を満たす
       return tp.s3FactorIndex >= S3_TIME_FACTORS.length - 1 && tp.s3Streak >= STREAK_NEEDED;
     }
+    // §1.2 S5・S6 は「全行が定着基準を満たす」。判定は非同期なので
+    // canAdvanceMastery() を使う。ここでは false を返す。
     return false;
+  }
+
+  // §1.2 S5・S6 用。全行が定着したかを見る（非同期）。
+  function canAdvanceMastery(tp, topic, lines, role) {
+    var st = tp.blocks && tp.currentBlockId && tp.blocks[tp.currentBlockId]
+      ? tp.blocks[tp.currentBlockId].stage : null;
+    if (st !== 'S5' && st !== 'S6') return Promise.resolve(false);
+    var reps = (tp.stageReps && tp.stageReps[st]) || 0;
+    if (reps < minReps(st)) return Promise.resolve(false);
+    return allMastered(topic, lines, role);
   }
 
   function nextStage(st) {
@@ -157,7 +266,7 @@
 
   /* ---- Progress（§5.5）の更新 ---------------------------------------------
      行ごとの累計回数・レイテンシ・詰まりを記録する。 */
-  function recordLineProgress(topicId, lineId, stage, result) {
+  function recordLineProgress(topicId, lineId, stage, result, line, opts) {
     var key = EST.store.progressKey(topicId, lineId);
     return EST.store.get('progress', key).then(function (rec) {
       var p = rec || EST.schema.defaultProgress(EST.profile.get(), topicId, lineId);
@@ -174,6 +283,16 @@
       }
       if (result.stalls && result.stalls.length) {
         p.stalls = (p.stalls || 0) + result.stalls.length;
+      }
+      // §1.4 定着判定は「直近3回に詰まりが無いこと」を見るので、
+      // 回ごとの詰まり件数を並びとして持っておく（合計値では判定できない）。
+      p.recentStalls = (p.recentStalls || []).concat([(result.stalls || []).length]).slice(-10);
+
+      // §1.4 定着はシャッフル状態（S5以降）での測定でのみ判定する
+      if (opts && opts.shuffled && line) {
+        if (!p.mastered && EST.mastery.isMastered(p, line.en, { shuffled: true })) {
+          EST.mastery.markMastered(p);
+        }
       }
       p.updatedAt = Date.now();
       return EST.store.put('progress', p).then(function () { return p; });
@@ -231,6 +350,72 @@
     return all.slice(fromIdx, toIdx + 1);
   }
 
+  /* ---- シャッフル（§1.3） -------------------------------------------------
+     完全ランダムではなく、直前に出たものが連続しないようにする程度の制約。 */
+  function shuffle(items, lastKey, keyOf) {
+    var arr = items.slice();
+    for (var i = arr.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var t = arr[i]; arr[i] = arr[j]; arr[j] = t;
+    }
+    // 直前に出たものが先頭に来たら、2番目と入れ替える
+    if (lastKey && arr.length > 1 && keyOf(arr[0]) === lastKey) {
+      var tmp = arr[0]; arr[0] = arr[1]; arr[1] = tmp;
+    }
+    return arr;
+  }
+
+  /* ---- S5 の出題（§1.1）--------------------------------------------------
+     自分の役の行だけを、和訳をキューにして出す。 */
+  function s5Items(topic, lines, role) {
+    return lines.filter(function (l) { return l.speakerId === role; })
+      .map(function (l) { return { kind: 'line', line: l, cueJa: l.ja || '' }; });
+  }
+
+  /* ---- S6 の組（§1.3）----------------------------------------------------
+     行ではなく「相手の台詞＋自分の返し」の組をシャッフルする。行だけを
+     ばらすと、どの台詞に返しているのか分からなくなる。
+
+     組の作り方:
+       自分の台詞について、その直前にある相手の台詞を探して対にする
+       直前も自分の台詞なら、さらに前へ遡って最初に見つかる相手の台詞を使う
+       1行目が自分の台詞なら相手の台詞が無いので、和訳をキューにする（S5と同じ形）
+  --------------------------------------------------------------------- */
+  function s6Pairs(topic, lines, role) {
+    var out = [];
+    lines.forEach(function (l, i) {
+      if (l.speakerId !== role) return;
+      var cue = null;
+      for (var j = i - 1; j >= 0; j--) {
+        if (lines[j].speakerId !== role) { cue = lines[j]; break; }
+      }
+      out.push(cue
+        ? { kind: 'pair', line: l, cueLine: cue }
+        // 相手の台詞が見つからない（台本の頭が自分の台詞）→ S5と同じ形にする
+        : { kind: 'line', line: l, cueJa: l.ja || '' });
+    });
+    return out;
+  }
+
+  // ステージに応じた出題の並び。S5・S6 は必ずシャッフルする（§1.3）
+  function buildQueue(stage, topic, lines, role, lastKey) {
+    var items = (stage === 'S6') ? s6Pairs(topic, lines, role) : s5Items(topic, lines, role);
+    return shuffle(items, lastKey, function (it) { return it.line.id; });
+  }
+
+  /* ---- S5・S6 の進級（§1.2） ----------------------------------------------
+     「全行が定着基準を満たす」。S5・S6 は自分の役だけを扱うので、
+     判定の対象もそのブロックの自分の役の行に限る。 */
+  function allMastered(topic, lines, role) {
+    var targets = lines.filter(function (l) { return l.speakerId === role; });
+    if (!targets.length) return Promise.resolve(false);
+    return Promise.all(targets.map(function (l) {
+      return EST.store.get('progress', EST.store.progressKey(topic.id, l.id));
+    })).then(function (recs) {
+      return recs.every(function (p) { return p && p.mastered; });
+    });
+  }
+
   EST.stage = {
     STAGES: STAGES,
     STAGE_LABELS: STAGE_LABELS,
@@ -248,10 +433,23 @@
     judgeCount: judgeCount,
 
     defaultTopicProgress: defaultTopicProgress,
+    migrateTopicProgress: migrateTopicProgress,
     loadTopicProgress: loadTopicProgress,
     saveTopicProgress: saveTopicProgress,
+    currentStage: currentStage,
+    setCurrentStage: setCurrentStage,
+    activeRole: activeRole,
+    otherRole: otherRole,
+    roleStage: roleStage,
+    setRoleStage: setRoleStage,
+    shuffle: shuffle,
+    s5Items: s5Items,
+    s6Pairs: s6Pairs,
+    buildQueue: buildQueue,
+    allMastered: allMastered,
 
     canAdvance: canAdvance,
+    canAdvanceMastery: canAdvanceMastery,
     nextStage: nextStage,
     advance: advance,
     currentS3Factor: currentS3Factor,

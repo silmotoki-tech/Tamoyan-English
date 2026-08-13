@@ -37,7 +37,7 @@
         location.hash = EST.profile.canEdit() ? ('#/edit/' + encodeURIComponent(topic.id)) : '#/';
         return;
       }
-      return EST.stage.loadTopicProgress(topic.id).then(function (tp) {
+      return EST.stage.loadTopicProgress(topic.id, topic).then(function (tp) {
         return EST.store.loadSettings().then(function (settings) {
           startSession(view, topic, tp, settings);
         });
@@ -48,28 +48,26 @@
   function startSession(view, topic, tp, settings) {
     var U = ui();
 
-    // F7 未実装のステージに来ていたら、その旨だけ出して止める
-    if (!EST.stage.IMPLEMENTED[tp.stage]) {
-      EST.app.setBar(topic.title || '(無題)', []);
-      U.mount(view, h('div', { class: 'card' }, [
-        h('h2', { class: 'card__title', text: EST.stage.stageLabel(tp.stage) + ' はまだ使えません' }),
-        h('div', { class: 'small muted', text: 'S5・S6 と積み上げドリルは F7 で追加します。' }),
-        h('button', {
-          class: 'btn', style: { marginTop: '.6rem' }, text: 'トピックへ戻る',
-          onClick: function () { location.hash = '#/topic/' + encodeURIComponent(topic.id); }
-        })
-      ]));
-      return;
-    }
+    var stage = EST.stage.currentStage(tp, topic);
+    var role = EST.stage.activeRole(tp, topic);
+    var mode = EST.stage.stageMode(stage);
+    var blockLines = linesOfCurrentBlock(topic, tp);
 
     S = {
       view: view,
       topic: topic,
       tp: tp,
+      stage: stage,
+      role: role,
       settings: settings,
       countRatio: (typeof settings.countRatio === 'number' && settings.countRatio > 0)
         ? settings.countRatio : EST.stage.COUNT_RATIO_DEFAULT,
-      lines: EST.stage.linesOfBlock(topic, tp.blockIndex || 0),
+      blockLines: blockLines,
+      // §1.3 S5・S6 はシャッフルした出題（S6は組）、S1〜S4は台本の順
+      queue: mode.shuffled
+        ? EST.stage.buildQueue(stage, topic, blockLines, role, null)
+        : blockLines.map(function (l) { return { kind: 'line', line: l }; }),
+      lines: blockLines,
       idx: 0,
       lastResult: null,     // 「今のはナシ」用
       lastLineId: null,
@@ -83,14 +81,24 @@
       cueAt: 0,
       finished: false
     };
-    if (!S.lines.length) {
-      U.mount(view, h('div', { class: 'empty', text: '練習できる行がありません。' }));
+    if (!S.queue.length) {
+      U.mount(view, h('div', { class: 'empty', text: mode.myRoleOnly
+        ? 'このブロックに自分の役の行がありません。'
+        : '練習できる行がありません。' }));
       return;
     }
 
     buildScreen();
     requestWakeLock();
     prepareMic().then(function () { runLine(); });
+  }
+
+  // §1.5 現在ブロックの行。ブロックを使わない台本なら全行。
+  function linesOfCurrentBlock(topic, tp) {
+    var blocks = EST.stage.blocksOf(topic);
+    var idx = 0;
+    blocks.forEach(function (b, i) { if (b.id === tp.currentBlockId) idx = i; });
+    return EST.stage.linesOfBlock(topic, idx);
   }
 
   function stopSession() {
@@ -126,7 +134,7 @@
 
   /* ---- マイク（§2.7 使えなければ黙ってタップモード） ---------------------- */
   function prepareMic() {
-    var mode = EST.stage.stageMode(S.tp.stage);
+    var mode = EST.stage.stageMode(S.stage);
     // §1.2 S1は聞くだけ。マイクを使わないので権限も要求しない。
     if (!mode.mic) return Promise.resolve();
 
@@ -164,7 +172,7 @@
       })
     ]);
 
-    el.stageName = h('span', { class: 'pr-head__stage', text: EST.stage.stageLabel(S.tp.stage) });
+    el.stageName = h('span', { class: 'pr-head__stage', text: EST.stage.stageLabel(S.stage) });
     el.stageCount = h('span', { class: 'pr-head__count' });
     el.main = h('div', { class: 'pr-main' });
     el.timeBar = h('div', { class: 'pr-bar__fill' });
@@ -216,7 +224,7 @@
   // lineId を渡すとその行の回数を出す。省略時は現在の行。
   function refreshMeter(lineId) {
     if (!S) return;
-    var reps = (S.tp.stageReps && S.tp.stageReps[S.tp.stage]) || 0;
+    var reps = (S.tp.stageReps && S.tp.stageReps[S.stage]) || 0;
     el.stageCount.textContent = reps + '回';
 
     var id = lineId || (S.lines[S.idx] && S.lines[S.idx].id);
@@ -244,10 +252,12 @@
     if (S.runningLine) return;
     S.runningLine = true;
 
-    var line = S.lines[S.idx];
-    if (!line) { S.runningLine = false; return; }
+    var item = S.queue[S.idx];
+    if (!item) { S.runningLine = false; return; }
+    var line = item.line;
 
-    var mode = EST.stage.stageMode(S.tp.stage);
+    var mode = EST.stage.stageMode(S.stage);
+    S.item = item;
     S.lastLineId = line.id;
     S.repDone = false;      // この行の確定はまだ
     S.timeLimitMs = 0;
@@ -258,8 +268,21 @@
     var U = ui();
     var parts = [];
     if (mode.showEn) parts.push(h('div', { class: 'pr-en en', text: line.en }));
-    if (mode.showJa && line.ja) parts.push(h('div', { class: 'pr-ja', text: line.ja }));
-    if (!mode.showEn) parts.push(h('div', { class: 'pr-hint', text: '音だけを追いかけてください' }));
+
+    if (S.stage === 'S5') {
+      // §1.1 S5 は和訳のみ。ここから英語を言う。
+      parts.push(h('div', { class: 'pr-ja pr-ja--cue', text: line.ja || '（和訳がありません）' }));
+    } else if (S.stage === 'S6') {
+      // §1.3 S6 のキューは相手の台詞。組が作れなかった行は和訳を出す。
+      if (item.kind === 'pair') {
+        parts.push(h('div', { class: 'pr-hint', text: '相手の台詞に返してください' }));
+      } else {
+        parts.push(h('div', { class: 'pr-ja pr-ja--cue', text: line.ja || '（和訳がありません）' }));
+      }
+    } else {
+      if (mode.showJa && line.ja) parts.push(h('div', { class: 'pr-ja', text: line.ja }));
+      if (!mode.showEn) parts.push(h('div', { class: 'pr-hint', text: '音だけを追いかけてください' }));
+    }
     U.mount(el.main, parts);
 
     refreshMeter();
@@ -277,6 +300,13 @@
   function beginLine(line, mode) {
     if (!S || S.closing) return;
     S.cueAt = Date.now();
+
+    // §2.6 S6 は相手の台詞だけを鳴らし、それが終わってから測定を開始する。
+    // 自分が喋るのは相手の後なので、ここでは自分の台詞を鳴らさない。
+    if (S.stage === 'S6') {
+      beginS6(line, mode);
+      return;
+    }
 
     if (S.micOn) {
       // §2.6 TTSが鳴るステージでは2500msの自動確定を止める。
@@ -345,6 +375,39 @@
       if (v === 'quit') { quitToHome(); return; }
       S.halted = false;
       runLine();
+    });
+  }
+
+  /* §2.6 S6「相手に返す」。相手の台詞を鳴らし終えてから測定を開始する。
+     相手の台詞が無い組（台本の頭が自分の台詞）は和訳をキューにするので、
+     TTSを鳴らさず S5 と同じ扱いにする（§1.3）。 */
+  function beginS6(line, mode) {
+    var item = S.item;
+    var cue = (item && item.kind === 'pair') ? item.cueLine : null;
+
+    function startListening() {
+      if (!S || S.closing) return;
+      if (S.micOn) {
+        // 自分が喋るのを待つので、確定は2500msの自動確定に任せる
+        EST.mic.setAutoClose(true);
+        S.expectRepSource = 'auto';
+        EST.mic.markCue();   // 相手の台詞が終わった時点が t0
+      } else {
+        S.expectRepSource = null;
+      }
+    }
+
+    if (!cue) { startListening(); return; }
+
+    // 相手の台詞を鳴らしているあいだは窓を閉じる（自分はまだ喋らない）
+    if (S.micOn) EST.mic.gate(false);
+    EST.speech.speak(cue.en, {
+      gender: genderOf(cue.speakerId), topicId: S.topic.id, lineId: cue.id
+    }).then(function (r) {
+      if (!S || S.closing) return;
+      if (S.micOn) EST.mic.gate(true);
+      if (r && r.spoken === false) { haltForSilentTts(); return; }
+      startListening();
     });
   }
 
@@ -437,15 +500,24 @@
     stopTimeBar();
 
     var lineId = S.lastLineId;
-    var stage = S.tp.stage;
+    var stage = S.stage;
     S.lastResult = { result: result, lineId: lineId, stage: stage };
 
     EST.stage.recordRep(S.tp, lineId, S.topic.id, result);
     EST.stage.saveTopicProgress(S.tp);
     // 保存が終わってからメーターを描き直す。先に描くと、いま数えた1回が
     // 反映される前の値（この文 0回）が出てしまう。
-    EST.stage.recordLineProgress(S.topic.id, lineId, stage, result)
-      .then(function () { refreshMeter(lineId); });
+    // §1.4 定着判定はシャッフル状態（S5以降）での測定でのみ行う
+    var mode = EST.stage.stageMode(stage);
+    var line = S.item && S.item.line;
+    EST.stage.recordLineProgress(S.topic.id, lineId, stage, result, line, { shuffled: !!mode.shuffled })
+      .then(function (p) {
+        refreshMeter(lineId);
+        if (p && p.mastered && !S.masteredShown) {
+          // 定着した瞬間だけ控えめに出す
+          el.notice.textContent = '定着しました';
+        }
+      });
     if (result.ok && !result.listenOnly) flash();
 
     // §7.2 行が進む最短間隔に下限を置く。何かが壊れて即座に確定が返っても、
@@ -464,30 +536,144 @@
   function nextLine() {
     if (!S || S.closing) return;
     S.idx++;
-    if (S.idx < S.lines.length) { runLine(); return; }
+    if (S.idx < S.queue.length) { runLine(); return; }
 
-    // 最終行まで行った → 1周
+    // 最後まで行った → 1周
     S.idx = 0;
     S.tp.laps = S.tp.laps || { total: 0, byStage: {} };
     S.tp.laps.total = (S.tp.laps.total || 0) + 1;
-    S.tp.laps.byStage[S.tp.stage] = (S.tp.laps.byStage[S.tp.stage] || 0) + 1;
+    S.tp.laps.byStage[S.stage] = (S.tp.laps.byStage[S.stage] || 0) + 1;
     EST.stage.saveTopicProgress(S.tp);
+
+    var mode = EST.stage.stageMode(S.stage);
+    // §1.3 S5・S6 は周ごとに並べ替え直す。直前に出た行が続かないようにする。
+    if (mode.shuffled) {
+      var lastKey = S.queue.length ? S.queue[S.queue.length - 1].line.id : null;
+      S.queue = EST.stage.buildQueue(S.stage, S.topic, S.blockLines, S.role, lastKey);
+    }
+
+    // §1.2 S5・S6 の進級は「全行が定着基準を満たす」ので非同期に判定する
+    if (S.stage === 'S5' || S.stage === 'S6') {
+      EST.stage.canAdvanceMastery(S.tp, S.topic, S.blockLines, S.role).then(function (ok) {
+        if (!S || S.closing) return;
+        if (ok) onStageCleared();
+        else runLine();
+      });
+      return;
+    }
 
     // §1.2 条件を満たしたら控えめに知らせる。進級は強制しない。
     if (EST.stage.canAdvance(S.tp)) showAdvanceOffer();
     else runLine();
   }
 
+  /* S5・S6 をクリアしたとき。S6 の後は役交代を提案する（§1.1）。 */
+  function onStageCleared() {
+    if (S.stage === 'S6') { offerRoleSwapOrAdvance(); return; }
+    showAdvanceOffer();
+  }
+
+  /* §1.1 役交代。S6を終えたら「相手の役でもやりますか」を出す。
+     §5.6 Topic.myRole は書き換えず TopicProgress.activeRole に持つ。
+     Topic は配信で配られる共有データなので、書き戻すと次の配信で
+     元に戻され、audience:"both" の台本では相手の役まで変わる。 */
+  function offerRoleSwapOrAdvance() {
+    var U = ui();
+    var other = EST.stage.otherRole(S.topic, S.role);
+    // 相手役が無い（1人しか話者がいない）場合は交代の余地がない
+    if (!other || S.tp.roleSwapOffered) { markBlockDone(); return; }
+
+    S.tp.roleSwapOffered = true;
+    EST.stage.saveTopicProgress(S.tp);
+
+    var otherLabel = other;
+    (S.topic.speakers || []).forEach(function (s) { if (s.id === other) otherLabel = s.label || other; });
+
+    U.dialog({
+      title: 'このブロックは仕上がりました',
+      body: h('div', { class: 'small' }, [
+        h('div', { text: '相手の役（' + otherLabel + '）でもやりますか。' }),
+        h('div', { style: { marginTop: '.4rem' }, class: 'muted',
+          text: '相手の台詞は S1〜S4 で何度も音読しているので、2周目は速く仕上がります。S1〜S4 はやり直しません。' })
+      ]),
+      buttons: [
+        { label: 'あとで', value: 'later' },
+        { label: '相手の役でやる', value: 'swap', kind: 'primary' }
+      ]
+    }).then(function (v) {
+      if (!S || S.closing) return;
+      if (v === 'swap') {
+        // activeRole だけを書き換える。Topic には触らない。
+        S.tp.activeRole = other;
+        S.tp.roleSwapOffered = false;
+        // 相手役の S5 から始める。S1〜S4 はやり直さない（§5.6）
+        EST.stage.setCurrentStage(S.tp, S.topic, 'S5');
+        S.tp.stageReps = S.tp.stageReps || {};
+        S.tp.stageReps.S5 = 0;
+        S.tp.stageReps.S6 = 0;
+        EST.stage.saveTopicProgress(S.tp).then(function () {
+          var topicId = S.topic.id;
+          stopSession();
+          renderPractice(document.getElementById('view'), topicId);
+        });
+        return;
+      }
+      markBlockDone();
+    });
+  }
+
+  /* §1.5 ブロックを終えて次へ。全ブロック完了なら通しモードを解放する。 */
+  function markBlockDone() {
+    var U = ui();
+    var bid = S.tp.currentBlockId;
+    S.tp.blocks[bid] = S.tp.blocks[bid] || {};
+    S.tp.blocks[bid].done = true;
+
+    var blocks = EST.stage.blocksOf(S.topic);
+    var idx = 0;
+    blocks.forEach(function (b, i) { if (b.id === bid) idx = i; });
+
+    if (idx + 1 < blocks.length) {
+      // 次のブロックへ。ステージは S1 から。
+      S.tp.currentBlockId = blocks[idx + 1].id;
+      S.tp.blocks[S.tp.currentBlockId] = S.tp.blocks[S.tp.currentBlockId] || { stage: 'S1', done: false };
+      S.tp.stageReps = {};
+      S.tp.streak = 0; S.tp.s3FactorIndex = 0; S.tp.s3Streak = 0;
+      S.tp.roleSwapOffered = false;
+      EST.stage.saveTopicProgress(S.tp).then(function () {
+        var topicId = S.topic.id;
+        stopSession();
+        renderPractice(document.getElementById('view'), topicId);
+      });
+      return;
+    }
+
+    // 全ブロック完了 → 通しモードを解放（§1.5）
+    S.tp.fullRun = S.tp.fullRun || {};
+    S.tp.fullRun.unlocked = true;
+    EST.stage.saveTopicProgress(S.tp).then(function () {
+      U.dialog({
+        title: 'この台本は仕上がりました',
+        body: h('div', { class: 'small', text: '全ブロックが S6 まで終わりました。通しモードが使えます。' }),
+        buttons: [{ label: 'トピックへ戻る', value: 'ok', kind: 'primary' }]
+      }).then(function () {
+        var topicId = S.topic ? S.topic.id : null;
+        stopSession();
+        location.hash = topicId ? ('#/topic/' + encodeURIComponent(topicId)) : '#/';
+      });
+    });
+  }
+
   function showAdvanceOffer() {
     var U = ui();
-    var nx = EST.stage.nextStage(S.tp.stage);
+    var nx = EST.stage.nextStage(S.stage);
     if (!nx) { runLine(); return; }
     el.notice.textContent = '';
 
     U.dialog({
       title: EST.stage.stageLabel(nx) + ' に進めます',
       body: h('div', { class: 'small' }, [
-        h('div', { text: '押さなければ ' + EST.stage.stageLabel(S.tp.stage) + ' を続けられます。回数は積み上がります。' })
+        h('div', { text: '押さなければ ' + EST.stage.stageLabel(S.stage) + ' を続けられます。回数は積み上がります。' })
       ]),
       buttons: [
         { label: '続ける', value: 'stay' },
@@ -496,12 +682,17 @@
     }).then(function (v) {
       if (!S || S.closing) return;
       if (v === 'go') {
-        EST.stage.advance(S.tp);
-        EST.stage.saveTopicProgress(S.tp);
-        // ステージが変わるとTTS・マイクの扱いも変わるので入り直す
-        var topicId = S.topic.id;
-        stopSession();
-        renderPractice(document.getElementById('view'), topicId);
+        // §5.6 blocks[] に書く。S5・S6 なら byRole にも記録される。
+        EST.stage.setCurrentStage(S.tp, S.topic, nx);
+        S.tp.streak = 0; S.tp.s3FactorIndex = 0; S.tp.s3Streak = 0;
+        S.tp.stageReps = S.tp.stageReps || {};
+        S.tp.stageReps[nx] = 0;
+        EST.stage.saveTopicProgress(S.tp).then(function () {
+          // ステージが変わるとTTS・マイクの扱いも変わるので入り直す
+          var topicId = S.topic.id;
+          stopSession();
+          renderPractice(document.getElementById('view'), topicId);
+        });
         return;
       }
       runLine();
