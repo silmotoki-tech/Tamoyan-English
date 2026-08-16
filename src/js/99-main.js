@@ -184,6 +184,34 @@
     document.addEventListener('touchend', once, true);
   }
 
+  // §6.4 / F7 TopicProgress を §5.6 の形へ移すのは EST.stage.loadTopicProgress()
+  // が読むたびにメモリ上で行う（migrateTopicProgress）。実際にIndexedDBへ
+  // 書き込まれるのは次の saveTopicProgress() が呼ばれた時点で、そこで
+  // 旧形式は上書きされて消える。書き込みが起きる前に一度だけ自動バックアップを
+  // 取っておけば、想定外のレコードに当たっても旧形式へ戻せる地点ができる。
+  var MIGRATION_BACKUP_FLAG = 'backupBeforeStageMigrationV315';
+  function backupBeforeMigrationIfNeeded() {
+    return EST.store.loadSettings().then(function (s) {
+      if (s[MIGRATION_BACKUP_FLAG]) return;   // 既に取った
+      return EST.store.getAll('topicProgress').then(function (rows) {
+        var hasOld = rows.some(function (tp) {
+          return tp && tp.stage && (!tp.blocks || !Object.keys(tp.blocks).length);
+        });
+        var mark = function () {
+          return EST.store.loadSettings().then(function (s2) {
+            s2[MIGRATION_BACKUP_FLAG] = true;
+            return EST.store.saveSettings(s2);
+          });
+        };
+        if (!hasOld) return mark();   // 移行対象が無ければ以降は毎回スキップしてよい
+        return EST.backup.snapshot('v3.14 TopicProgress 移行前の自動保存').then(mark);
+      });
+    }).catch(function (e) {
+      // バックアップの失敗で起動そのものを止めない
+      console.warn('[boot] 移行前バックアップに失敗しました', e);
+    });
+  }
+
   function start() {
     EST.store.loadSettings()
       .then(function (s) {
@@ -191,6 +219,9 @@
         EST.speech.applySettings(s);   // §7.5 速度と§7.2 ボイス指定を反映する
         EST.mic.applySettings(s);      // §2.1 較正値を反映する（countRatioはF5が使う）
         return seedSamples(false);
+      })
+      .then(function () {
+        return backupBeforeMigrationIfNeeded();
       })
       .then(function () {
         // 配信を取りに行く前に、由来の無い既存レコードを埋めておく
