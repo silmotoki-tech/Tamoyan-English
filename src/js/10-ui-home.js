@@ -50,10 +50,35 @@
           h('div', { class: 'home-item__sub', text: '日本語でも英語でも引けます' })
         ])
       ]),
-      pending('📅', '今日の練習', 'F5'),
-      pending('🔁', '再確認', 'F7'),
-      pending('📇', '語彙をまわす', 'F6')
+      pending('📅', '今日の練習', 'F5')
     ]);
+
+    // §1.4・§1.6 F6: 定着から7日経過した文・語をまとめたキュー。
+    // 件数は非同期で取りに行くので、先に枠だけ出して後から埋める。
+    var reviewSub = h('div', { class: 'home-item__sub', text: '確認しています…' });
+    U.append(wrap, [
+      h('button', { class: 'home-item', onClick: function () { location.hash = '#/review'; } }, [
+        h('span', { class: 'home-item__icon', text: '🔁' }),
+        h('span', { class: 'home-item__body' }, [
+          h('div', { text: '再確認' }),
+          reviewSub
+        ])
+      ]),
+      h('button', { class: 'home-item', onClick: function () { location.hash = '#/vocab-review'; } }, [
+        h('span', { class: 'home-item__icon', text: '📇' }),
+        h('span', { class: 'home-item__body' }, [
+          h('div', { text: '語彙をまわす' }),
+          h('div', { class: 'home-item__sub', text: 'トピックを横断して語彙だけを練習します' })
+        ])
+      ])
+    ]);
+    EST.mastery.buildReviewQueue().then(function (q) {
+      if (!reviewSub.isConnected) return;
+      if (!q.length) { reviewSub.textContent = 'いまはありません'; return; }
+      var lines = q.filter(function (i) { return i.kind === 'line'; }).length;
+      var words = q.filter(function (i) { return i.kind === 'word'; }).length;
+      reviewSub.textContent = q.length + '件（文' + lines + '・語' + words + '）';
+    }).catch(function () { reviewSub.textContent = '再確認'; });
 
     U.append(wrap, h('div', { class: 'section-title', text: 'トピック' }));
 

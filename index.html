@@ -360,6 +360,9 @@ label.field > .field__label { display: block; font-size: .72rem; color: var(--mu
 .pr-en { font-size: 1.35rem; line-height: 1.5; }
 .pr-ja { font-size: .9rem; color: var(--muted); margin-top: .6rem; }
 .pr-hint { font-size: .85rem; color: var(--muted); }
+/* §5.3 長押しで語彙に追加（F6）。下線だけで押せることをそっと示す。 */
+.pr-word { border-bottom: 1px dotted var(--muted); -webkit-touch-callout: none;
+  -webkit-user-select: none; user-select: none; }
 
 /* S3の目標時間バー（§1.2） */
 .pr-bar { height: .4rem; background: var(--panel2); border-radius: .2rem; overflow: hidden; }
@@ -696,6 +699,20 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
     'unless','whether','or','nor','yet','as','than','once','whenever']);
   var REL  = set(['who','which','that','whom','whose','where','why']);
 
+  // §5.3 語彙の自動抽出（経路②）で除く語。PREP/CONJ/REL に加えて
+  // 冠詞・be動詞・代名詞など、場面を問わず出てくる基本語をまとめて除く。
+  var WORD_EXTRACT_STOP = set(['the','a','an','is','am','are','was','were','be','been','being',
+    'i','you','he','she','it','we','they','me','him','her','us','them',
+    'my','your','his','its','our','their','mine','yours','ours','theirs',
+    'this','that','these','those','there','here',
+    'do','does','did','done','doing','have','has','had','having',
+    'will','would','can','could','shall','should','may','might','must',
+    'not','no','yes','so','too','very','just','also','well','ok','okay',
+    'please','thank','thanks','sure','right','good','great',
+    'what','who','which','how','why','when','where',
+    'and','but','or','if','because']);
+  var WORD_EXTRACT_MAX = 8;   // 低頻度語からの追加はこの件数まで（実機で調整）
+
   var SEP_MARK = '@@EST_SEP@@';   // 英文/和文ブロックの区切りを退避する内部マーカー
 
   /* ---- 小道具 -------------------------------------------------------- */
@@ -705,6 +722,63 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
     var t = String(en == null ? '' : en).trim();
     if (!t) return 0;
     return t.split(/\s+/).length;
+  }
+
+  function tokenizeEn(en) {
+    return String(en == null ? '' : en)
+      .replace(/[.,!?;:"“”'’()]/g, ' ')
+      .split(/\s+/)
+      .filter(function (w) { return w.length > 0; });
+  }
+
+  /* ---- 語彙の自動抽出（§5.3 経路②。F6） -----------------------------
+     words[] が与えられなかった台本のためのフォールバック。①（台本JSONの
+     words[]）③（アプリ内での追加）が本流で、これは最後の救済策なので、
+     精度より「無いよりまし」を狙う軽いヒューリスティックにとどめる。
+
+     1. 各行の note に「X = 意味」「X＝意味」の形があれば拾う
+     2. 台本全体で1回しか出てこない内容語（ストップワードを除く）を
+        低頻度＝重要語とみなして拾う。上限 WORD_EXTRACT_MAX 件。 */
+  function extractWords(lines) {
+    var out = [];
+    var seen = {};
+
+    var noteRe = /([A-Za-z][A-Za-z '-]{1,30}?)\s*[=＝]\s*([^、。\n]{1,24})/g;
+    (lines || []).forEach(function (l) {
+      if (!l || !l.note) return;
+      var m;
+      noteRe.lastIndex = 0;
+      while ((m = noteRe.exec(l.note))) {
+        var en = m[1].trim();
+        var ja = m[2].trim();
+        var key = en.toLowerCase();
+        if (!en || !ja || seen[key]) continue;
+        seen[key] = true;
+        out.push({ en: en, ja: ja, lineIds: [l.id] });
+      }
+    });
+
+    var freq = {}, firstHit = {};
+    (lines || []).forEach(function (l) {
+      if (!l || !l.en) return;
+      tokenizeEn(l.en).forEach(function (w) {
+        var key = w.toLowerCase();
+        if (key.length < 3) return;
+        if (WORD_EXTRACT_STOP[key] || PREP[key] || CONJ[key] || REL[key]) return;
+        freq[key] = (freq[key] || 0) + 1;
+        if (!firstHit[key]) firstHit[key] = { id: l.id, surface: w };
+      });
+    });
+    Object.keys(freq).forEach(function (key) {
+      if (out.length >= WORD_EXTRACT_MAX) return;
+      if (freq[key] !== 1) return;   // 1回しか出てこない語＝その場面の低頻度語
+      if (seen[key]) return;
+      seen[key] = true;
+      var hit = firstHit[key];
+      out.push({ en: hit.surface, ja: '', lineIds: [hit.id] });
+    });
+
+    return out;
   }
 
   function jaRatio(s) {
@@ -1175,10 +1249,12 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
     if (!starts.length) { starts = autoBlockStarts(lines.length); labels = []; }
     var blocks = startsToBlocks(starts, lines, labels);
 
-    // 手順7: words の自動抽出は F6 の担当。F1 では与えられたものを保持するだけ。
+    // 手順7: words[] が与えられていなければ自動抽出で埋める（§5.3 経路②）。
     var lineIdSet = {};
     lines.forEach(function (l) { lineIdSet[l.id] = true; });
-    var words = (Array.isArray(src.words) ? src.words : []).map(function (w, i) {
+    var srcWords = Array.isArray(src.words) ? src.words : [];
+    if (!srcWords.length) srcWords = extractWords(lines);
+    var words = srcWords.map(function (w, i) {
       w = w || {};
       return {
         id: w.id ? String(w.id) : 'w_' + pad3(i + 1),
@@ -1243,6 +1319,27 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
     };
   }
 
+  /* ---- WordProgress の既定形（§5.4。F6） ------------------------------
+     判定は Progress と共通の関数を使う（EST.mastery、isWord opt で係数だけ
+     差し替える）ので、latency/mastered まわりの形は Progress と揃えてある。
+     recentStalls は語では「詰まり」を検出しないので常に空のまま置く
+     （isMastered の noStall 判定が常に真になる＝閾値だけで見る）。 */
+  function defaultWordProgress(profileId, topicId, wordId) {
+    return {
+      key: EST.store.wordProgressKey(topicId, wordId),
+      profileId: profileId,
+      topicId: topicId,
+      wordId: wordId,
+      counts: { recognize: 0, produce: 0 },
+      latency: { history: [], median5: null, best: null },
+      recentStalls: [],
+      mastered: false,
+      masteredAt: null,
+      reviewAt: null,
+      updatedAt: 0
+    };
+  }
+
   /* ---- 見積り（§6.2 の「1周 約◯秒」） -------------------------------- */
   function lapSeconds(lines, rate) {
     rate = Number(rate) || DEFAULT_RATE;
@@ -1301,6 +1398,8 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
     validateTopic: validateTopic,
     normalizeTopic: normalizeTopic,
     defaultProgress: defaultProgress,
+    defaultWordProgress: defaultWordProgress,
+    extractWords: extractWords,
     lapSeconds: lapSeconds,
     newTopicId: newTopicId,
     pad3: pad3,
@@ -2363,6 +2462,8 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
       stageReps: {},          // ステージごとの実施回数（S1は再生回数）
       laps: { total: 0, byStage: {} },
       sessions: [],
+      // §1.6 F6: S0（語彙の下ごしらえ）を済ませたか。
+      s0: { done: false, doneAt: null },
       updatedAt: 0
     };
   }
@@ -2376,6 +2477,7 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
     if (!tp.fullRun) tp.fullRun = { unlocked: false, stage: null };
     if (tp.activeRole === undefined) tp.activeRole = null;
     if (tp.roleSwapOffered === undefined) tp.roleSwapOffered = false;
+    if (!tp.s0) tp.s0 = { done: false, doneAt: null };   // F6より前に作られた進捗を補う
 
     // 旧形式の stage / blockIndex を blocks[] へ移す
     if (tp.stage && !Object.keys(tp.blocks).length) {
@@ -2464,6 +2566,20 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
   function saveTopicProgress(tp) {
     tp.updatedAt = Date.now();
     return EST.store.put('topicProgress', tp);
+  }
+
+  /* ---- S0 下ごしらえ（§1.6。F6） -------------------------------------
+     §8「そのトピックで S0 が未完了なら、最初に語彙の下ごしらえへ回す」。
+     語彙が1つも無い台本ではそもそも下ごしらえる対象が無いので、
+     未完了のままでも回さない（s0.done を立てなくても素通りしてよい）。 */
+  function s0Needed(tp, topic) {
+    if (!topic || !(topic.words || []).length) return false;
+    return !(tp && tp.s0 && tp.s0.done);
+  }
+
+  function markS0Done(tp) {
+    tp.s0 = { done: true, doneAt: Date.now() };
+    return tp;
   }
 
   /* ---- 進級判定（§1.2） ---------------------------------------------------
@@ -2628,6 +2744,29 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
     return all.slice(fromIdx, toIdx + 1);
   }
 
+  // その行がどのブロックに属するか（F6の再確認ランナーが使う）。
+  // ブロックを使わない台本は先頭ブロックの id をそのまま返す。
+  function blockIdOfLine(topic, lineId) {
+    var blocks = blocksOf(topic);
+    if (!usesBlocks(topic)) return blocks[0].id;
+    var all = (topic.lines || []).filter(function (l) { return !l.skip && String(l.en || '').trim(); });
+    var idx = -1;
+    all.forEach(function (l, i) { if (l.id === lineId) idx = i; });
+    if (idx < 0) return blocks[0].id;
+    var found = blocks[0].id;
+    blocks.forEach(function (b) {
+      var fromIdx = -1, toIdx = -1;
+      all.forEach(function (l, i) {
+        if (l.id === b.from) fromIdx = i;
+        if (l.id === b.to) toIdx = i;
+      });
+      if (fromIdx < 0) fromIdx = 0;
+      if (toIdx < 0) toIdx = all.length - 1;
+      if (idx >= fromIdx && idx <= toIdx) found = b.id;
+    });
+    return found;
+  }
+
   /* ---- シャッフル（§1.3） -------------------------------------------------
      完全ランダムではなく、直前に出たものが連続しないようにする程度の制約。 */
   function shuffle(items, lastKey, keyOf) {
@@ -2720,6 +2859,8 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
     otherRole: otherRole,
     roleStage: roleStage,
     setRoleStage: setRoleStage,
+    s0Needed: s0Needed,
+    markS0Done: markS0Done,
     shuffle: shuffle,
     s5Items: s5Items,
     s6Pairs: s6Pairs,
@@ -2737,7 +2878,8 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
 
     blocksOf: blocksOf,
     usesBlocks: usesBlocks,
-    linesOfBlock: linesOfBlock
+    linesOfBlock: linesOfBlock,
+    blockIdOfLine: blockIdOfLine
   };
 })(window.EST = window.EST || {});
 
@@ -2813,9 +2955,10 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
     return progress;
   }
 
-  /* ---- 再確認（§1.4） -----------------------------------------------------
-     定着から7日経過した行が対象。トピックをまたいで1つのキューにまとめる。
-     語彙（wordProgress）は F6 の担当で、ここでは文だけを見る。 */
+  /* ---- 再確認（§1.4 / §1.6） ------------------------------------------
+     定着から7日経過した行・語が対象。トピックをまたいで1つのキューにまとめる。
+     isDue 自体は Progress / WordProgress どちらも同じ形（mastered / reviewAt）
+     なので共通で使える。 */
   function isDue(progress, now) {
     if (!progress || !progress.mastered) return false;
     var at = progress.reviewAt || (progress.masteredAt ? progress.masteredAt + REVIEW_AFTER_MS : null);
@@ -2823,14 +2966,17 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
     return (now || Date.now()) >= at;
   }
 
-  // 戻り値: [{ progress, topic, line }] を古い順に
+  // 戻り値: [{ kind:'line', progress, topic, line } | { kind:'word', progress, topic, word }] を古い順に
+  // §1.6「再確認への合流」。ユーザーから見れば1つの復習キューで、
+  // 中身が文だったり語だったりするだけ。別々のキューにすると片方が放置される。
   function buildReviewQueue(now) {
     now = now || Date.now();
     return Promise.all([
       EST.store.getAll('progress'),
+      EST.store.getAll('wordProgress'),
       EST.store.getAll('topics')
     ]).then(function (res) {
-      var progs = res[0], topics = res[1];
+      var progs = res[0], wprogs = res[1], topics = res[2];
       var byId = {};
       topics.forEach(function (t) { byId[t.id] = t; });
       var me = EST.profile.get();
@@ -2845,7 +2991,17 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
         var line = null;
         (topic.lines || []).forEach(function (l) { if (l.id === p.lineId) line = l; });
         if (!line || line.skip) return;
-        out.push({ progress: p, topic: topic, line: line });
+        out.push({ kind: 'line', progress: p, topic: topic, line: line });
+      });
+      wprogs.forEach(function (p) {
+        if (p.profileId && p.profileId !== me) return;
+        if (!isDue(p, now)) return;
+        var topic = byId[p.topicId];
+        if (!topic || !EST.profile.canSee(topic)) return;
+        var word = null;
+        (topic.words || []).forEach(function (w) { if (w.id === p.wordId) word = w; });
+        if (!word) return;
+        out.push({ kind: 'word', progress: p, topic: topic, word: word });
       });
 
       out.sort(function (a, b) {
@@ -2861,10 +3017,18 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
 
   /* ---- 再確認1回ぶんの判定（§1.4） -----------------------------------------
      閾値未満 かつ 詰まりなし → 定着を維持し、次の再確認を7日後に置き直す
-     それ以外               → 定着を外し、そのトピックの S5 に戻す
-     1回の失敗で外す。猶予を入れると崩れに気づくのが遅れる。 */
-  function judgeReview(progress, line, result) {
-    var limit = thresholdMs(line.en);
+     それ以外               → 定着を外す
+     1回の失敗で外す。猶予を入れると崩れに気づくのが遅れる。
+
+     text は判定対象の英文（文なら line.en、語なら word.en）。opts.isWord を
+     立てると語の係数で閾値を取る（thresholdMs と同じ約束）。
+
+     文が外れた場合に「そのトピックのS5に戻す」（§1.4）のはUI側
+     （16-ui-vocab.js）の仕事にする。TopicProgress は現在のブロック進行や
+     役交代など状態が絡み合っていて、ここ（判定だけを持つ層）から
+     直接書き換えると壊れたときに追いにくい。 */
+  function judgeReview(progress, text, result, opts) {
+    var limit = thresholdMs(text, opts);
     var fast = result.latencyMs != null && result.latencyMs < limit;
     var noStall = !(result.stalls && result.stalls.length);
     var kept = fast && noStall;
@@ -3631,10 +3795,35 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
           h('div', { class: 'home-item__sub', text: '日本語でも英語でも引けます' })
         ])
       ]),
-      pending('📅', '今日の練習', 'F5'),
-      pending('🔁', '再確認', 'F7'),
-      pending('📇', '語彙をまわす', 'F6')
+      pending('📅', '今日の練習', 'F5')
     ]);
+
+    // §1.4・§1.6 F6: 定着から7日経過した文・語をまとめたキュー。
+    // 件数は非同期で取りに行くので、先に枠だけ出して後から埋める。
+    var reviewSub = h('div', { class: 'home-item__sub', text: '確認しています…' });
+    U.append(wrap, [
+      h('button', { class: 'home-item', onClick: function () { location.hash = '#/review'; } }, [
+        h('span', { class: 'home-item__icon', text: '🔁' }),
+        h('span', { class: 'home-item__body' }, [
+          h('div', { text: '再確認' }),
+          reviewSub
+        ])
+      ]),
+      h('button', { class: 'home-item', onClick: function () { location.hash = '#/vocab-review'; } }, [
+        h('span', { class: 'home-item__icon', text: '📇' }),
+        h('span', { class: 'home-item__body' }, [
+          h('div', { text: '語彙をまわす' }),
+          h('div', { class: 'home-item__sub', text: 'トピックを横断して語彙だけを練習します' })
+        ])
+      ])
+    ]);
+    EST.mastery.buildReviewQueue().then(function (q) {
+      if (!reviewSub.isConnected) return;
+      if (!q.length) { reviewSub.textContent = 'いまはありません'; return; }
+      var lines = q.filter(function (i) { return i.kind === 'line'; }).length;
+      var words = q.filter(function (i) { return i.kind === 'word'; }).length;
+      reviewSub.textContent = q.length + '件（文' + lines + '・語' + words + '）';
+    }).catch(function () { reviewSub.textContent = '再確認'; });
 
     U.append(wrap, h('div', { class: 'section-title', text: 'トピック' }));
 
@@ -4057,6 +4246,11 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
         return;
       }
       return EST.stage.loadTopicProgress(topic.id, topic).then(function (tp) {
+        // §8「そのトピックでS0が未完了なら、最初に語彙の下ごしらえへ回す」（F6）
+        if (EST.stage.s0Needed(tp, topic)) {
+          location.hash = '#/vocab-prep/' + encodeURIComponent(topic.id);
+          return;
+        }
         return EST.store.loadSettings().then(function (settings) {
           startSession(view, topic, tp, settings);
         });
@@ -4286,7 +4480,8 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
     // 画面表示（§1.1 ステージに応じて手がかりを減らす）
     var U = ui();
     var parts = [];
-    if (mode.showEn) parts.push(h('div', { class: 'pr-en en', text: line.en }));
+    // §5.3 英文が出ているステージ（S1〜S3）だけ、語を長押しで拾えるようにする。
+    if (mode.showEn) parts.push(buildEnLine(line));
 
     if (S.stage === 'S5') {
       // §1.1 S5 は和訳のみ。ここから英語を言う。
@@ -4427,6 +4622,87 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
       if (S.micOn) EST.mic.gate(true);
       if (r && r.spoken === false) { haltForSilentTts(); return; }
       startListening();
+    });
+  }
+
+  /* ---- 英文の長押しで語彙に追加（SPEC §5.3。F6） -------------------------
+     「音読していて引っかかった語をその場で拾えないと、結局あとで
+     拾い直さなくなる」ので、行の英文を語ごとに span へ分けて長押しを
+     受け付ける。和訳は付けずに登録し、あとで編集画面から埋める前提にする
+     （その場で聞くと入力のために止まってしまい、音読の流れが切れるため）。 */
+  function buildEnLine(line) {
+    var container = h('div', { class: 'pr-en en' });
+    var text = String(line.en || '');
+    text.split(/(\s+)/).forEach(function (tok) {
+      if (!tok) return;
+      if (/^\s+$/.test(tok)) { container.appendChild(document.createTextNode(tok)); return; }
+      var span = h('span', { class: 'pr-word', text: tok });
+      attachLongPress(span, tok, line.id);
+      container.appendChild(span);
+    });
+    return container;
+  }
+
+  // 引数名を el にすると練習画面全体で使っている DOM キャッシュ（モジュール
+  // 先頭の el.main 等）を覆い隠して紛らわしいので、ここだけ span と呼ぶ。
+  function attachLongPress(span, rawToken, lineId) {
+    var timer = null;
+    function begin() {
+      if (timer) return;
+      timer = setTimeout(function () {
+        timer = null;
+        onWordLongPress(rawToken, lineId);
+      }, (EST.uiVocab && EST.uiVocab.LONG_PRESS_MS) || 550);
+    }
+    function cancelPress() { if (timer) { clearTimeout(timer); timer = null; } }
+    span.addEventListener('pointerdown', begin);
+    span.addEventListener('pointerup', cancelPress);
+    span.addEventListener('pointerleave', cancelPress);
+    span.addEventListener('pointercancel', cancelPress);
+    // iOSのコールアウト（コピー/検索）が長押しと競合するので出さない
+    span.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+  }
+
+  function onWordLongPress(rawToken, lineId) {
+    if (!S) return;
+    var clean = String(rawToken).replace(/^[^A-Za-z']+|[^A-Za-z']+$/g, '');
+    if (!clean) return;
+    var topic = S.topic;
+    var exists = (topic.words || []).some(function (w) {
+      return String(w.en || '').toLowerCase() === clean.toLowerCase();
+    });
+    if (exists) { ui().toast('すでに語彙にあります: ' + clean); return; }
+
+    ui().confirm('語彙に追加', '「' + clean + '」を語彙に追加しますか？和訳はあとで編集できます。', '追加する')
+      .then(function (ok) {
+        if (!ok || !S) return;
+        addWordToTopic(topic.id, clean, lineId);
+      });
+  }
+
+  function addWordToTopic(topicId, en, lineId) {
+    return EST.store.get('topics', topicId).then(function (topic) {
+      if (!topic) return;
+      // 長押しのあいだに他の変更が入っていた場合に備え、直前の値を読み直す
+      if ((topic.words || []).some(function (w) { return String(w.en || '').toLowerCase() === en.toLowerCase(); })) {
+        ui().toast('すでに語彙にあります: ' + en);
+        return;
+      }
+      var words = (topic.words || []).slice();
+      var n = words.length + 1;
+      var id = 'w_' + EST.schema.pad3(n);
+      while (words.some(function (w) { return w.id === id; })) { n++; id = 'w_' + EST.schema.pad3(n); }
+      words.push({
+        id: id, en: en, ja: '',
+        type: EST.schema.countWords(en) > 1 ? 'phrase' : 'word',
+        lineIds: lineId ? [lineId] : [], note: ''
+      });
+      topic.words = words;
+      topic.updatedAt = Date.now();
+      return EST.store.put('topics', topic).then(function () {
+        if (S && S.topic && S.topic.id === topicId) S.topic = topic;
+        ui().toast('語彙に追加しました');
+      });
     });
   }
 
@@ -6399,9 +6675,11 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
         h('h2', { class: 'card__title', text: '書き出し' }),
         h('div', { class: 'row row--tight' }, [
           h('button', { class: 'btn btn--sm', text: 'テキストで書き出す', onClick: function () { exportAs('text'); } }),
-          h('button', { class: 'btn btn--sm', text: 'Markdownで書き出す', onClick: function () { exportAs('md'); } })
-        ]),
-        h('div', { class: 'tiny muted', style: { marginTop: '.3rem' }, text: '語彙一覧の書き出しはF6で追加します。' })
+          h('button', { class: 'btn btn--sm', text: 'Markdownで書き出す', onClick: function () { exportAs('md'); } }),
+          (t.words || []).length
+            ? h('button', { class: 'btn btn--sm', text: 'Anki用TSVで書き出す（語彙）', onClick: function () { exportAnki(); } })
+            : null
+        ])
       ])
     ]);
 
@@ -6576,7 +6854,7 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
     }
   }
 
-  /* ---- 書き出し（§4.3。テキスト／Markdownのみ。Anki TSVはF6） ------------- */
+  /* ---- 書き出し（§4.3・§1.6） ---------------------------------------- */
   function exportAs(kind) {
     var U = ui();
     var t = view.topic;
@@ -6603,6 +6881,28 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
       text = txtParts.join('\n');
       U.download(name + '.txt', text, 'text/plain');
     }
+    U.toast('書き出しました');
+  }
+
+  /* ---- Anki用TSV書き出し（§1.6「表\t裏\tタグ」） -------------------------
+     アプリ内の語彙復習は「そのトピックをやっている期間の集中復習」、
+     Ankiは「長期の保守」と役割を分ける（§1.6）ので、深追いせず
+     表（英語）・裏（和訳）・タグ（トピック名）の3列だけにする。 */
+  function exportAnki() {
+    var U = ui();
+    var t = view.topic;
+    var words = t.words || [];
+    if (!words.length) { U.toast('語彙がありません'); return; }
+
+    var tag = String(t.title || 'topic').trim().replace(/\s+/g, '_');
+    function cell(s) { return String(s == null ? '' : s).replace(/[\t\n\r]+/g, ' '); }
+
+    var rows = words.map(function (w) {
+      return [cell(w.en), cell(w.ja), tag].join('\t');
+    });
+
+    var name = (t.title || 'topic').replace(/[\\/:*?"<>|]/g, '_');
+    U.download(name + '_vocab.tsv', rows.join('\n'), 'text/tab-separated-values');
     U.toast('書き出しました');
   }
 
@@ -6714,6 +7014,502 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
 
 </script>
 <script>
+/* ---- 16-ui-vocab.js ---- */
+/* =====================================================================
+   16-ui-vocab.js — S0（語彙の下ごしらえ）・語彙復習モード・再確認（SPEC §1.6 / §1.4）
+
+   3つの画面はどれも「和訳を出す→マイク（無ければタップ）でレイテンシを
+   測る→次へ」という同じ形をしている（§1.6）。判定・記録の中身だけが
+   違うので、進行そのものは runCueQueue() 1つにまとめ、各画面は
+   items（出題）と onResult（1回ぶんの記録）を渡すだけにする。
+
+   判定ロジックは EST.mastery（F4・F5・F7）をそのまま使い回す。ここで
+   閾値やレイテンシの計算をやり直さない（SPEC §5.4「文と語で別々の
+   判定コードを書かないこと」）。
+   ===================================================================== */
+;(function (EST) {
+  'use strict';
+
+  var h = null;
+  function ui() { h = EST.ui.h; return EST.ui; }
+
+  /* ---- 調整用の定数（実機で必ず調整する。SPEC §12） ------------------ */
+  var S0_PRODUCE_REPS      = 3;      // §1.6 和→英を1語につき何回言うか
+  var NEXT_CARD_DELAY_MS   = 450;    // 1枚終わってから次を出すまでの間
+  var MIN_CARD_INTERVAL_MS = 900;    // カードが進む最短間隔の下限（§7.2と同じ考え方）
+  var LONG_PRESS_MS        = 550;    // §5.3 長押しで語彙に追加するまでの保持時間
+
+  var S = null;          // 進行中のカードキュー（runCueQueue）
+  var wakeLock = null;
+  var el = {};
+
+  /* =====================================================================
+     共通エンジン：カードキューを1枚ずつ進める
+     ===================================================================== */
+  function stopSession() {
+    if (!S) return;
+    S.closing = true;
+    clearTimers();
+    try { EST.mic.stop(); } catch (e) {}
+    try { EST.speech.cancel(); } catch (e) {}
+    releaseWakeLock();
+    S = null;
+  }
+
+  function clearTimers() {
+    if (!S) return;
+    S.timers.forEach(function (t) { clearTimeout(t); });
+    S.timers = [];
+  }
+
+  function later(fn, ms) {
+    if (!S) return null;
+    var t = setTimeout(function () {
+      if (!S || S.closing) return;
+      var i = S.timers.indexOf(t);
+      if (i >= 0) S.timers.splice(i, 1);
+      fn();
+    }, ms);
+    S.timers.push(t);
+    return t;
+  }
+
+  function requestWakeLock() {
+    if (!navigator.wakeLock || !navigator.wakeLock.request) return;
+    navigator.wakeLock.request('screen').then(function (w) { wakeLock = w; }).catch(function () {});
+  }
+  function releaseWakeLock() {
+    if (wakeLock) { try { wakeLock.release(); } catch (e) {} wakeLock = null; }
+  }
+
+  /* opts:
+       title       画面タイトル
+       items       出題の配列。各要素は自由形式で cueOf/onResult に渡すだけ
+       onQuit()    「中断」を押したときの遷移先
+       cueOf(item)          -> { en?, ja, hint? }
+       onListen(item)       -> クリックで再生する関数、無ければ null/undefined
+       onResult(item, result) -> Promise<string|null>（次のカードに出す一言。無ければnull）
+       onFinish(doneCount)  全部終わったとき
+       onEmpty()             items が空のとき（省略時は0件のonFinishを呼ぶ）
+     item.simple === true のカードはマイクを使わず「次へ」タップだけで進む
+     （§1.6 S0の認識パス＝英→和は意味を入れるだけでよい）。 */
+  function runCueQueue(view, opts) {
+    stopSession();
+    if (!opts.items || !opts.items.length) {
+      if (opts.onEmpty) opts.onEmpty(); else if (opts.onFinish) opts.onFinish(0);
+      return;
+    }
+    S = {
+      view: view,
+      opts: opts,
+      idx: 0,
+      done: 0,
+      closing: false,
+      timers: [],
+      micOn: false,
+      tapMode: false,
+      awaitingTapAdvance: false,
+      repDone: false,
+      startedAt: 0,
+      item: null
+    };
+    buildScreen(opts.title, opts.onQuit);
+    requestWakeLock();
+    prepareMic().then(function () { runItem(); });
+  }
+
+  function prepareMic() {
+    return EST.mic.start().then(function () {
+      if (!S) return;
+      S.micOn = true;
+      EST.mic.setAutoClose(true);
+      EST.mic.on('level', onLevel);
+      EST.mic.on('rep', onRep);
+      EST.mic.on('timeout', onTimeout);
+    }).catch(function () {
+      // §2.7 と同じ考え方。エラーは出さず黙ってタップ判定に切り替える。
+      if (!S) return;
+      S.tapMode = true;
+    });
+  }
+
+  function buildScreen(title, onQuit) {
+    var U = ui();
+    EST.app.setBar(title, [
+      h('button', { class: 'btn btn--sm', text: '中断', onClick: function () { stopSession(); onQuit(); } })
+    ]);
+
+    el.count = h('div', { class: 'pr-meter' });
+    el.main = h('div', { class: 'pr-main' });
+    el.actions = h('div', { class: 'row row--tight', style: { justifyContent: 'center', marginTop: '.5rem' } });
+    el.levelBar = h('div', { class: 'pr-level__fill' });
+    el.notice = h('div', { class: 'pr-notice' });
+
+    var body = h('div', { class: 'practice' }, [
+      el.count,
+      el.main,
+      h('div', { class: 'pr-level' }, [el.levelBar]),
+      el.notice,
+      el.actions
+    ]);
+
+    // §2.7 タップ判定のときは画面中央のタップで1回とする（練習画面と同じ操作感）
+    body.addEventListener('click', function (e) {
+      if (!S || !S.tapMode || S.awaitingTapAdvance) return;
+      if (e.target.closest('button')) return;
+      onTapCapture();
+    });
+
+    U.mount(view_(), body);
+  }
+
+  function view_() { return S.view; }
+
+  function runItem() {
+    if (!S || S.closing) return;
+    var item = S.opts.items[S.idx];
+    if (!item) { finishQueue(); return; }
+    S.item = item;
+    S.repDone = false;
+    S.startedAt = Date.now();
+    el.count.textContent = (S.idx + 1) + ' / ' + S.opts.items.length;
+    el.notice.textContent = S.tapMode ? 'マイクが使えないのでタップします（画面をタップで1回）' : '';
+
+    var cue = S.opts.cueOf(item);
+    var parts = [];
+    if (cue.en) parts.push(h('div', { class: 'pr-en en', text: cue.en }));
+    parts.push(h('div', { class: 'pr-ja pr-ja--cue', text: cue.ja || '（訳がありません）' }));
+    if (cue.hint) parts.push(h('div', { class: 'pr-hint', text: cue.hint }));
+    ui().mount(el.main, parts);
+
+    var actions = [];
+    var listen = S.opts.onListen && S.opts.onListen(item);
+    if (listen) {
+      actions.push(h('button', { class: 'btn btn--sm', text: '🔊 文を聞く', onClick: listen }));
+    }
+
+    S.awaitingTapAdvance = !!item.simple;
+    if (item.simple) {
+      // §1.6 S0の認識パス。マイクは使わずタップで進む。
+      actions.push(h('button', {
+        class: 'btn btn--primary', text: '次へ',
+        onClick: function () { advanceSimple(item); }
+      }));
+    } else if (S.micOn) {
+      EST.mic.markCue();
+    }
+    ui().mount(el.actions, actions);
+  }
+
+  function advanceSimple(item) {
+    if (!S || S.closing || S.repDone) return;
+    S.repDone = true;
+    Promise.resolve(S.opts.onResult(item, { simple: true })).then(afterResult);
+  }
+
+  function onLevel(e) {
+    if (!S || !el.levelBar) return;
+    el.levelBar.style.width = Math.min(100, Math.round(e.rms * 300)) + '%';
+  }
+
+  function onRep(e) {
+    if (!S || S.closing || S.repDone || S.awaitingTapAdvance) return;
+    S.repDone = true;
+    Promise.resolve(S.opts.onResult(S.item, {
+      latencyMs: e.latencyMs, spokenMs: e.spokenMs, stalls: e.stalls || []
+    })).then(afterResult);
+  }
+
+  // §2.4 10秒待って発話が無かった。責める文言にしない。
+  function onTimeout() {
+    if (!S || S.closing || S.repDone || S.awaitingTapAdvance) return;
+    S.repDone = true;
+    Promise.resolve(S.opts.onResult(S.item, { latencyMs: null, spokenMs: 0, stalls: [], noSpeech: true }))
+      .then(afterResult);
+  }
+
+  function onTapCapture() {
+    if (!S || S.closing || S.repDone || S.awaitingTapAdvance) return;
+    S.repDone = true;
+    Promise.resolve(S.opts.onResult(S.item, { tapped: true, latencyMs: null }))
+      .then(afterResult);
+  }
+
+  function afterResult(feedback) {
+    if (!S || S.closing) return;
+    if (feedback) el.notice.textContent = feedback;
+    var elapsed = Date.now() - S.startedAt;
+    later(nextItem, Math.max(NEXT_CARD_DELAY_MS, MIN_CARD_INTERVAL_MS - elapsed));
+  }
+
+  function nextItem() {
+    if (!S || S.closing) return;
+    S.idx++;
+    S.done++;
+    runItem();
+  }
+
+  function finishQueue() {
+    if (!S) return;
+    var opts = S.opts;
+    var doneCount = S.done;
+    stopSession();
+    if (opts.onFinish) opts.onFinish(doneCount);
+  }
+
+  function doneScreen(view, title, count, doneLabel) {
+    EST.app.setBar(title, []);
+    ui().mount(view, h('div', { class: 'card' }, [
+      h('div', { class: 'section-title', text: 'お疲れさまでした' }),
+      h('div', { text: count + doneLabel }),
+      h('button', {
+        class: 'btn btn--primary btn--block', style: { marginTop: '.6rem' }, text: 'ホームへ',
+        onClick: function () { location.hash = '#/'; }
+      })
+    ]));
+  }
+
+  /* =====================================================================
+     WordProgress の読み書き（§5.4）
+     ===================================================================== */
+  function loadWordProgress(topicId, wordId) {
+    var key = EST.store.wordProgressKey(topicId, wordId);
+    return EST.store.get('wordProgress', key).then(function (rec) {
+      return rec || EST.schema.defaultWordProgress(EST.profile.get(), topicId, wordId);
+    });
+  }
+  function saveWordProgress(p) {
+    p.updatedAt = Date.now();
+    return EST.store.put('wordProgress', p);
+  }
+  function pushLatency(p, ms) {
+    if (ms == null) return;
+    p.latency = p.latency || { history: [], median5: null, best: null };
+    p.latency.history = (p.latency.history || []).concat([ms]).slice(-20);
+    p.latency.median5 = EST.mic.medianOfLastN(p.latency.history, 5);
+    p.latency.best = p.latency.history.reduce(function (a, b) { return Math.min(a, b); }, Infinity);
+  }
+
+  /* ---- 文脈を聞く（§1.6「文脈から切り離さない」） ------------------------
+     語彙カードに紐づく行（word.lineIds[0]）の英文を再生する。行が
+     見つからない・TTSが使えない場合はボタンごと出さない（null を返す）。 */
+  function wordContextListener(topic, word) {
+    if (!EST.speech.isAvailable()) return null;
+    var lineId = (word.lineIds || [])[0];
+    if (!lineId) return null;
+    var line = null;
+    (topic.lines || []).forEach(function (l) { if (l.id === lineId) line = l; });
+    if (!line) return null;
+    return lineContextListener(topic, line);
+  }
+
+  function lineContextListener(topic, line) {
+    if (!EST.speech.isAvailable() || !line) return null;
+    var gender = '';
+    (topic.speakers || []).forEach(function (s) { if (s.id === line.speakerId) gender = s.gender || ''; });
+    return function () {
+      EST.speech.speak(line.en, { gender: gender, topicId: topic.id, lineId: line.id });
+    };
+  }
+
+  /* =====================================================================
+     S0 下ごしらえ（§1.6・§8）
+     ===================================================================== */
+  function renderVocabPrep(view, topicId) {
+    stopSession();
+    var U = ui();
+    EST.store.get('topics', topicId).then(function (topic) {
+      if (!topic) {
+        EST.app.setBar('語彙の下ごしらえ', []);
+        U.mount(view, h('div', { class: 'empty', text: 'このトピックは見つかりませんでした。' }));
+        return;
+      }
+      if (!EST.profile.canSee(topic)) {
+        location.hash = EST.profile.canEdit() ? ('#/edit/' + encodeURIComponent(topic.id)) : '#/';
+        return;
+      }
+      return EST.stage.loadTopicProgress(topic.id, topic).then(function (tp) {
+        var words = topic.words || [];
+        if (!words.length) {
+          // §1.6 語彙が無い台本には下ごしらえる対象が無い。素通りする。
+          EST.stage.markS0Done(tp);
+          return EST.stage.saveTopicProgress(tp).then(function () {
+            location.hash = '#/practice/' + encodeURIComponent(topic.id);
+          });
+        }
+        startPrepPhase1(view, topic, tp, words);
+      });
+    });
+  }
+
+  function startPrepPhase1(view, topic, tp, words) {
+    var backHref = '#/topic/' + encodeURIComponent(topic.id);
+    var items = words.map(function (w) { return { simple: true, topic: topic, word: w }; });
+
+    runCueQueue(view, {
+      title: 'S0 意味を入れる（' + words.length + '語）',
+      items: items,
+      onQuit: function () { location.hash = backHref; },
+      cueOf: function (item) { return { en: item.word.en, ja: item.word.ja }; },
+      onListen: function (item) {
+        if (!EST.speech.isAvailable()) return null;
+        return function () { EST.speech.speak(item.word.en, {}); };
+      },
+      onResult: function (item) {
+        return loadWordProgress(item.topic.id, item.word.id).then(function (p) {
+          p.counts.recognize = (p.counts.recognize || 0) + 1;
+          return saveWordProgress(p);
+        }).then(function () { return null; });
+      },
+      onFinish: function () { startPrepPhase2(view, topic, tp, words); }
+    });
+  }
+
+  function startPrepPhase2(view, topic, tp, words) {
+    var backHref = '#/topic/' + encodeURIComponent(topic.id);
+    var items = [];
+    words.forEach(function (w) {
+      for (var i = 0; i < S0_PRODUCE_REPS; i++) {
+        items.push({ topic: topic, word: w, rep: i + 1 });
+      }
+    });
+
+    runCueQueue(view, {
+      title: 'S0 口に出す（' + words.length + '語 × ' + S0_PRODUCE_REPS + '回）',
+      items: items,
+      onQuit: function () { location.hash = backHref; },
+      cueOf: function (item) {
+        return { ja: item.word.ja, hint: item.rep + ' / ' + S0_PRODUCE_REPS + '回目' };
+      },
+      onListen: function (item) { return wordContextListener(item.topic, item.word); },
+      onResult: function (item, result) {
+        return loadWordProgress(item.topic.id, item.word.id).then(function (p) {
+          p.counts.produce = (p.counts.produce || 0) + 1;
+          pushLatency(p, result.latencyMs);
+          return saveWordProgress(p);
+        }).then(function () { return null; });
+      },
+      onFinish: function () {
+        EST.stage.markS0Done(tp);
+        EST.stage.saveTopicProgress(tp).then(function () {
+          ui().toast('下ごしらえが終わりました');
+          location.hash = '#/practice/' + encodeURIComponent(topic.id);
+        });
+      }
+    });
+  }
+
+  /* =====================================================================
+     語彙復習モード（§1.6「いつでも単独で使える」。ホームの「語彙をまわす」）
+     定着済みの語はここでは出さない。7日後の再確認（§1.4）へ回る。
+     ===================================================================== */
+  function renderVocabReview(view) {
+    stopSession();
+    Promise.all([EST.store.getAll('topics'), EST.store.getAll('wordProgress')]).then(function (res) {
+      var topics = res[0].filter(function (t) { return EST.profile.canSee(t) && (t.words || []).length; });
+      var me = EST.profile.get();
+      var progByKey = {};
+      res[1].forEach(function (p) { progByKey[p.key] = p; });
+
+      var candidates = [];
+      topics.forEach(function (t) {
+        (t.words || []).forEach(function (w) {
+          var key = EST.store.wordProgressKey(t.id, w.id);
+          var p = progByKey[key];
+          if (p && p.profileId === me && p.mastered) return;   // 定着済みは再確認へ
+          candidates.push({ topic: t, word: w });
+        });
+      });
+
+      if (!candidates.length) {
+        EST.app.setBar('語彙をまわす', []);
+        ui().mount(view, h('div', { class: 'empty',
+          text: '練習できる語彙がありません。定着した語は「再確認」に回ります。' }));
+        return;
+      }
+
+      var items = EST.stage.shuffle(candidates, null, function (it) { return it.word.id; });
+
+      runCueQueue(view, {
+        title: '語彙をまわす（' + items.length + '語）',
+        items: items,
+        onQuit: function () { location.hash = '#/'; },
+        cueOf: function (item) { return { ja: item.word.ja }; },
+        onListen: function (item) { return wordContextListener(item.topic, item.word); },
+        onResult: function (item, result) {
+          return loadWordProgress(item.topic.id, item.word.id).then(function (p) {
+            p.counts.produce = (p.counts.produce || 0) + 1;
+            pushLatency(p, result.latencyMs);
+            var justMastered = false;
+            if (!p.mastered && EST.mastery.isMastered(p, item.word.en, { isWord: true, shuffled: true })) {
+              EST.mastery.markMastered(p);
+              justMastered = true;
+            }
+            return saveWordProgress(p).then(function () { return justMastered; });
+          }).then(function (justMastered) { return justMastered ? '定着しました' : null; });
+        },
+        onFinish: function (count) { doneScreen(view, '語彙をまわす', count, '語をまわしました'); }
+      });
+    });
+  }
+
+  /* =====================================================================
+     再確認（§1.4・§1.6。ホームの「再確認」。文と語を混ぜて出す）
+     ===================================================================== */
+  function renderReview(view) {
+    stopSession();
+    EST.mastery.buildReviewQueue().then(function (queue) {
+      if (!queue.length) {
+        EST.app.setBar('再確認', []);
+        ui().mount(view, h('div', { class: 'empty', text: '再確認はありません。' }));
+        return;
+      }
+
+      runCueQueue(view, {
+        title: '再確認（' + queue.length + '件）',
+        items: queue,
+        onQuit: function () { location.hash = '#/'; },
+        cueOf: function (item) {
+          return item.kind === 'word' ? { ja: item.word.ja } : { ja: item.line.ja };
+        },
+        onListen: function (item) {
+          return item.kind === 'word'
+            ? wordContextListener(item.topic, item.word)
+            : lineContextListener(item.topic, item.line);
+        },
+        onResult: function (item, result) {
+          var isWord = item.kind === 'word';
+          var text = isWord ? item.word.en : item.line.en;
+          var judged = EST.mastery.judgeReview(item.progress, text, result, { isWord: isWord });
+          var storeName = isWord ? 'wordProgress' : 'progress';
+          return EST.store.put(storeName, item.progress).then(function () {
+            // §1.4「それ以外は定着を外し、そのトピックのS5に戻す」。
+            // 「外す」（定着フラグを消す）のはjudgeReviewが確実にやる。
+            // ブロックの進行位置を戻す方は、現在のブロック・役・通しモードが
+            // 複雑に絡み合うため、この再確認の1回だけから安全に書き換える
+            // 手立てが無く、今回は見送っている（外れた行は次にそのブロックを
+            // 開いたときに改めて音読すれば、そこでまた定着を狙い直せる）。
+            return judged.kept ? null : '定着から外れました';
+          });
+        },
+        onFinish: function (count) { doneScreen(view, '再確認', count, '件を確認しました'); }
+      });
+    });
+  }
+
+  EST.uiVocab = {
+    stopSession: stopSession,
+    renderVocabPrep: renderVocabPrep,
+    renderVocabReview: renderVocabReview,
+    renderReview: renderReview,
+    // 練習画面の長押し（§5.3）から使う
+    wordContextListener: wordContextListener,
+    LONG_PRESS_MS: LONG_PRESS_MS
+  };
+})(window.EST = window.EST || {});
+
+</script>
+<script>
 /* ---- 99-main.js ---- */
 /* =====================================================================
    99-main.js — 起動とハッシュルーティング
@@ -6783,6 +7579,9 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
     if (parts[0] === 'practice') return { name: 'practice', id: decodeURIComponent(parts[1] || '') };
     if (parts[0] === 'list') return { name: 'list', id: decodeURIComponent(parts[1] || '') };
     if (parts[0] === 'search') return { name: 'search' };
+    if (parts[0] === 'vocab-prep') return { name: 'vocab-prep', id: decodeURIComponent(parts[1] || '') };
+    if (parts[0] === 'vocab-review') return { name: 'vocab-review' };
+    if (parts[0] === 'review') return { name: 'review' };
     return { name: 'home' };
   }
 
@@ -6796,6 +7595,8 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
     // 練習セッションはタイマーで自走するので、画面を離れるときに必ず止める。
     // 止めないと次の画面で行が進み続け、TTSもマイクも動いたままになる。
     try { EST.uiPractice.stopSession(); } catch (e) {}
+    // F6のS0・語彙復習・再確認も同じくタイマーで自走する（16-ui-vocab.js）。
+    try { EST.uiVocab.stopSession(); } catch (e) {}
     try { EST.speech.cancel(); } catch (e) {}
     // マイクも画面をまたいで開いたままにしない。stop()は聞いていなければ何もしない。
     try { EST.mic.stop(); } catch (e) {}
@@ -6808,6 +7609,9 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
       else if (r.name === 'list') EST.uiList.renderList(viewEl, r.id);
       else if (r.name === 'search') EST.uiSearch.renderSearch(viewEl);
       else if (r.name === 'settings') EST.uiSettings.render(viewEl);
+      else if (r.name === 'vocab-prep') EST.uiVocab.renderVocabPrep(viewEl, r.id);
+      else if (r.name === 'vocab-review') EST.uiVocab.renderVocabReview(viewEl);
+      else if (r.name === 'review') EST.uiVocab.renderReview(viewEl);
     } catch (e) {
       console.error('[route]', e);
       EST.ui.mount(viewEl, EST.ui.h('div', { class: 'note-box note-box--err',

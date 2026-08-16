@@ -67,9 +67,10 @@
     return progress;
   }
 
-  /* ---- 再確認（§1.4） -----------------------------------------------------
-     定着から7日経過した行が対象。トピックをまたいで1つのキューにまとめる。
-     語彙（wordProgress）は F6 の担当で、ここでは文だけを見る。 */
+  /* ---- 再確認（§1.4 / §1.6） ------------------------------------------
+     定着から7日経過した行・語が対象。トピックをまたいで1つのキューにまとめる。
+     isDue 自体は Progress / WordProgress どちらも同じ形（mastered / reviewAt）
+     なので共通で使える。 */
   function isDue(progress, now) {
     if (!progress || !progress.mastered) return false;
     var at = progress.reviewAt || (progress.masteredAt ? progress.masteredAt + REVIEW_AFTER_MS : null);
@@ -77,14 +78,17 @@
     return (now || Date.now()) >= at;
   }
 
-  // 戻り値: [{ progress, topic, line }] を古い順に
+  // 戻り値: [{ kind:'line', progress, topic, line } | { kind:'word', progress, topic, word }] を古い順に
+  // §1.6「再確認への合流」。ユーザーから見れば1つの復習キューで、
+  // 中身が文だったり語だったりするだけ。別々のキューにすると片方が放置される。
   function buildReviewQueue(now) {
     now = now || Date.now();
     return Promise.all([
       EST.store.getAll('progress'),
+      EST.store.getAll('wordProgress'),
       EST.store.getAll('topics')
     ]).then(function (res) {
-      var progs = res[0], topics = res[1];
+      var progs = res[0], wprogs = res[1], topics = res[2];
       var byId = {};
       topics.forEach(function (t) { byId[t.id] = t; });
       var me = EST.profile.get();
@@ -99,7 +103,17 @@
         var line = null;
         (topic.lines || []).forEach(function (l) { if (l.id === p.lineId) line = l; });
         if (!line || line.skip) return;
-        out.push({ progress: p, topic: topic, line: line });
+        out.push({ kind: 'line', progress: p, topic: topic, line: line });
+      });
+      wprogs.forEach(function (p) {
+        if (p.profileId && p.profileId !== me) return;
+        if (!isDue(p, now)) return;
+        var topic = byId[p.topicId];
+        if (!topic || !EST.profile.canSee(topic)) return;
+        var word = null;
+        (topic.words || []).forEach(function (w) { if (w.id === p.wordId) word = w; });
+        if (!word) return;
+        out.push({ kind: 'word', progress: p, topic: topic, word: word });
       });
 
       out.sort(function (a, b) {
@@ -115,10 +129,18 @@
 
   /* ---- 再確認1回ぶんの判定（§1.4） -----------------------------------------
      閾値未満 かつ 詰まりなし → 定着を維持し、次の再確認を7日後に置き直す
-     それ以外               → 定着を外し、そのトピックの S5 に戻す
-     1回の失敗で外す。猶予を入れると崩れに気づくのが遅れる。 */
-  function judgeReview(progress, line, result) {
-    var limit = thresholdMs(line.en);
+     それ以外               → 定着を外す
+     1回の失敗で外す。猶予を入れると崩れに気づくのが遅れる。
+
+     text は判定対象の英文（文なら line.en、語なら word.en）。opts.isWord を
+     立てると語の係数で閾値を取る（thresholdMs と同じ約束）。
+
+     文が外れた場合に「そのトピックのS5に戻す」（§1.4）のはUI側
+     （16-ui-vocab.js）の仕事にする。TopicProgress は現在のブロック進行や
+     役交代など状態が絡み合っていて、ここ（判定だけを持つ層）から
+     直接書き換えると壊れたときに追いにくい。 */
+  function judgeReview(progress, text, result, opts) {
+    var limit = thresholdMs(text, opts);
     var fast = result.latencyMs != null && result.latencyMs < limit;
     var noStall = !(result.stalls && result.stalls.length);
     var kept = fast && noStall;

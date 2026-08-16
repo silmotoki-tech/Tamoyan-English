@@ -85,6 +85,8 @@
       stageReps: {},          // ステージごとの実施回数（S1は再生回数）
       laps: { total: 0, byStage: {} },
       sessions: [],
+      // §1.6 F6: S0（語彙の下ごしらえ）を済ませたか。
+      s0: { done: false, doneAt: null },
       updatedAt: 0
     };
   }
@@ -98,6 +100,7 @@
     if (!tp.fullRun) tp.fullRun = { unlocked: false, stage: null };
     if (tp.activeRole === undefined) tp.activeRole = null;
     if (tp.roleSwapOffered === undefined) tp.roleSwapOffered = false;
+    if (!tp.s0) tp.s0 = { done: false, doneAt: null };   // F6より前に作られた進捗を補う
 
     // 旧形式の stage / blockIndex を blocks[] へ移す
     if (tp.stage && !Object.keys(tp.blocks).length) {
@@ -186,6 +189,20 @@
   function saveTopicProgress(tp) {
     tp.updatedAt = Date.now();
     return EST.store.put('topicProgress', tp);
+  }
+
+  /* ---- S0 下ごしらえ（§1.6。F6） -------------------------------------
+     §8「そのトピックで S0 が未完了なら、最初に語彙の下ごしらえへ回す」。
+     語彙が1つも無い台本ではそもそも下ごしらえる対象が無いので、
+     未完了のままでも回さない（s0.done を立てなくても素通りしてよい）。 */
+  function s0Needed(tp, topic) {
+    if (!topic || !(topic.words || []).length) return false;
+    return !(tp && tp.s0 && tp.s0.done);
+  }
+
+  function markS0Done(tp) {
+    tp.s0 = { done: true, doneAt: Date.now() };
+    return tp;
   }
 
   /* ---- 進級判定（§1.2） ---------------------------------------------------
@@ -350,6 +367,29 @@
     return all.slice(fromIdx, toIdx + 1);
   }
 
+  // その行がどのブロックに属するか（F6の再確認ランナーが使う）。
+  // ブロックを使わない台本は先頭ブロックの id をそのまま返す。
+  function blockIdOfLine(topic, lineId) {
+    var blocks = blocksOf(topic);
+    if (!usesBlocks(topic)) return blocks[0].id;
+    var all = (topic.lines || []).filter(function (l) { return !l.skip && String(l.en || '').trim(); });
+    var idx = -1;
+    all.forEach(function (l, i) { if (l.id === lineId) idx = i; });
+    if (idx < 0) return blocks[0].id;
+    var found = blocks[0].id;
+    blocks.forEach(function (b) {
+      var fromIdx = -1, toIdx = -1;
+      all.forEach(function (l, i) {
+        if (l.id === b.from) fromIdx = i;
+        if (l.id === b.to) toIdx = i;
+      });
+      if (fromIdx < 0) fromIdx = 0;
+      if (toIdx < 0) toIdx = all.length - 1;
+      if (idx >= fromIdx && idx <= toIdx) found = b.id;
+    });
+    return found;
+  }
+
   /* ---- シャッフル（§1.3） -------------------------------------------------
      完全ランダムではなく、直前に出たものが連続しないようにする程度の制約。 */
   function shuffle(items, lastKey, keyOf) {
@@ -442,6 +482,8 @@
     otherRole: otherRole,
     roleStage: roleStage,
     setRoleStage: setRoleStage,
+    s0Needed: s0Needed,
+    markS0Done: markS0Done,
     shuffle: shuffle,
     s5Items: s5Items,
     s6Pairs: s6Pairs,
@@ -459,6 +501,7 @@
 
     blocksOf: blocksOf,
     usesBlocks: usesBlocks,
-    linesOfBlock: linesOfBlock
+    linesOfBlock: linesOfBlock,
+    blockIdOfLine: blockIdOfLine
   };
 })(window.EST = window.EST || {});

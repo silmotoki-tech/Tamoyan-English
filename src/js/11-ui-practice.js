@@ -38,6 +38,11 @@
         return;
       }
       return EST.stage.loadTopicProgress(topic.id, topic).then(function (tp) {
+        // §8「そのトピックでS0が未完了なら、最初に語彙の下ごしらえへ回す」（F6）
+        if (EST.stage.s0Needed(tp, topic)) {
+          location.hash = '#/vocab-prep/' + encodeURIComponent(topic.id);
+          return;
+        }
         return EST.store.loadSettings().then(function (settings) {
           startSession(view, topic, tp, settings);
         });
@@ -267,7 +272,8 @@
     // 画面表示（§1.1 ステージに応じて手がかりを減らす）
     var U = ui();
     var parts = [];
-    if (mode.showEn) parts.push(h('div', { class: 'pr-en en', text: line.en }));
+    // §5.3 英文が出ているステージ（S1〜S3）だけ、語を長押しで拾えるようにする。
+    if (mode.showEn) parts.push(buildEnLine(line));
 
     if (S.stage === 'S5') {
       // §1.1 S5 は和訳のみ。ここから英語を言う。
@@ -408,6 +414,87 @@
       if (S.micOn) EST.mic.gate(true);
       if (r && r.spoken === false) { haltForSilentTts(); return; }
       startListening();
+    });
+  }
+
+  /* ---- 英文の長押しで語彙に追加（SPEC §5.3。F6） -------------------------
+     「音読していて引っかかった語をその場で拾えないと、結局あとで
+     拾い直さなくなる」ので、行の英文を語ごとに span へ分けて長押しを
+     受け付ける。和訳は付けずに登録し、あとで編集画面から埋める前提にする
+     （その場で聞くと入力のために止まってしまい、音読の流れが切れるため）。 */
+  function buildEnLine(line) {
+    var container = h('div', { class: 'pr-en en' });
+    var text = String(line.en || '');
+    text.split(/(\s+)/).forEach(function (tok) {
+      if (!tok) return;
+      if (/^\s+$/.test(tok)) { container.appendChild(document.createTextNode(tok)); return; }
+      var span = h('span', { class: 'pr-word', text: tok });
+      attachLongPress(span, tok, line.id);
+      container.appendChild(span);
+    });
+    return container;
+  }
+
+  // 引数名を el にすると練習画面全体で使っている DOM キャッシュ（モジュール
+  // 先頭の el.main 等）を覆い隠して紛らわしいので、ここだけ span と呼ぶ。
+  function attachLongPress(span, rawToken, lineId) {
+    var timer = null;
+    function begin() {
+      if (timer) return;
+      timer = setTimeout(function () {
+        timer = null;
+        onWordLongPress(rawToken, lineId);
+      }, (EST.uiVocab && EST.uiVocab.LONG_PRESS_MS) || 550);
+    }
+    function cancelPress() { if (timer) { clearTimeout(timer); timer = null; } }
+    span.addEventListener('pointerdown', begin);
+    span.addEventListener('pointerup', cancelPress);
+    span.addEventListener('pointerleave', cancelPress);
+    span.addEventListener('pointercancel', cancelPress);
+    // iOSのコールアウト（コピー/検索）が長押しと競合するので出さない
+    span.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+  }
+
+  function onWordLongPress(rawToken, lineId) {
+    if (!S) return;
+    var clean = String(rawToken).replace(/^[^A-Za-z']+|[^A-Za-z']+$/g, '');
+    if (!clean) return;
+    var topic = S.topic;
+    var exists = (topic.words || []).some(function (w) {
+      return String(w.en || '').toLowerCase() === clean.toLowerCase();
+    });
+    if (exists) { ui().toast('すでに語彙にあります: ' + clean); return; }
+
+    ui().confirm('語彙に追加', '「' + clean + '」を語彙に追加しますか？和訳はあとで編集できます。', '追加する')
+      .then(function (ok) {
+        if (!ok || !S) return;
+        addWordToTopic(topic.id, clean, lineId);
+      });
+  }
+
+  function addWordToTopic(topicId, en, lineId) {
+    return EST.store.get('topics', topicId).then(function (topic) {
+      if (!topic) return;
+      // 長押しのあいだに他の変更が入っていた場合に備え、直前の値を読み直す
+      if ((topic.words || []).some(function (w) { return String(w.en || '').toLowerCase() === en.toLowerCase(); })) {
+        ui().toast('すでに語彙にあります: ' + en);
+        return;
+      }
+      var words = (topic.words || []).slice();
+      var n = words.length + 1;
+      var id = 'w_' + EST.schema.pad3(n);
+      while (words.some(function (w) { return w.id === id; })) { n++; id = 'w_' + EST.schema.pad3(n); }
+      words.push({
+        id: id, en: en, ja: '',
+        type: EST.schema.countWords(en) > 1 ? 'phrase' : 'word',
+        lineIds: lineId ? [lineId] : [], note: ''
+      });
+      topic.words = words;
+      topic.updatedAt = Date.now();
+      return EST.store.put('topics', topic).then(function () {
+        if (S && S.topic && S.topic.id === topicId) S.topic = topic;
+        ui().toast('語彙に追加しました');
+      });
     });
   }
 

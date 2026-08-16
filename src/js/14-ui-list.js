@@ -68,9 +68,11 @@
         h('h2', { class: 'card__title', text: '書き出し' }),
         h('div', { class: 'row row--tight' }, [
           h('button', { class: 'btn btn--sm', text: 'テキストで書き出す', onClick: function () { exportAs('text'); } }),
-          h('button', { class: 'btn btn--sm', text: 'Markdownで書き出す', onClick: function () { exportAs('md'); } })
-        ]),
-        h('div', { class: 'tiny muted', style: { marginTop: '.3rem' }, text: '語彙一覧の書き出しはF6で追加します。' })
+          h('button', { class: 'btn btn--sm', text: 'Markdownで書き出す', onClick: function () { exportAs('md'); } }),
+          (t.words || []).length
+            ? h('button', { class: 'btn btn--sm', text: 'Anki用TSVで書き出す（語彙）', onClick: function () { exportAnki(); } })
+            : null
+        ])
       ])
     ]);
 
@@ -245,7 +247,7 @@
     }
   }
 
-  /* ---- 書き出し（§4.3。テキスト／Markdownのみ。Anki TSVはF6） ------------- */
+  /* ---- 書き出し（§4.3・§1.6） ---------------------------------------- */
   function exportAs(kind) {
     var U = ui();
     var t = view.topic;
@@ -272,6 +274,28 @@
       text = txtParts.join('\n');
       U.download(name + '.txt', text, 'text/plain');
     }
+    U.toast('書き出しました');
+  }
+
+  /* ---- Anki用TSV書き出し（§1.6「表\t裏\tタグ」） -------------------------
+     アプリ内の語彙復習は「そのトピックをやっている期間の集中復習」、
+     Ankiは「長期の保守」と役割を分ける（§1.6）ので、深追いせず
+     表（英語）・裏（和訳）・タグ（トピック名）の3列だけにする。 */
+  function exportAnki() {
+    var U = ui();
+    var t = view.topic;
+    var words = t.words || [];
+    if (!words.length) { U.toast('語彙がありません'); return; }
+
+    var tag = String(t.title || 'topic').trim().replace(/\s+/g, '_');
+    function cell(s) { return String(s == null ? '' : s).replace(/[\t\n\r]+/g, ' '); }
+
+    var rows = words.map(function (w) {
+      return [cell(w.en), cell(w.ja), tag].join('\t');
+    });
+
+    var name = (t.title || 'topic').replace(/[\\/:*?"<>|]/g, '_');
+    U.download(name + '_vocab.tsv', rows.join('\n'), 'text/tab-separated-values');
     U.toast('書き出しました');
   }
 

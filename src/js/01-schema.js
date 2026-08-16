@@ -44,6 +44,20 @@
     'unless','whether','or','nor','yet','as','than','once','whenever']);
   var REL  = set(['who','which','that','whom','whose','where','why']);
 
+  // §5.3 語彙の自動抽出（経路②）で除く語。PREP/CONJ/REL に加えて
+  // 冠詞・be動詞・代名詞など、場面を問わず出てくる基本語をまとめて除く。
+  var WORD_EXTRACT_STOP = set(['the','a','an','is','am','are','was','were','be','been','being',
+    'i','you','he','she','it','we','they','me','him','her','us','them',
+    'my','your','his','its','our','their','mine','yours','ours','theirs',
+    'this','that','these','those','there','here',
+    'do','does','did','done','doing','have','has','had','having',
+    'will','would','can','could','shall','should','may','might','must',
+    'not','no','yes','so','too','very','just','also','well','ok','okay',
+    'please','thank','thanks','sure','right','good','great',
+    'what','who','which','how','why','when','where',
+    'and','but','or','if','because']);
+  var WORD_EXTRACT_MAX = 8;   // 低頻度語からの追加はこの件数まで（実機で調整）
+
   var SEP_MARK = '@@EST_SEP@@';   // 英文/和文ブロックの区切りを退避する内部マーカー
 
   /* ---- 小道具 -------------------------------------------------------- */
@@ -53,6 +67,63 @@
     var t = String(en == null ? '' : en).trim();
     if (!t) return 0;
     return t.split(/\s+/).length;
+  }
+
+  function tokenizeEn(en) {
+    return String(en == null ? '' : en)
+      .replace(/[.,!?;:"“”'’()]/g, ' ')
+      .split(/\s+/)
+      .filter(function (w) { return w.length > 0; });
+  }
+
+  /* ---- 語彙の自動抽出（§5.3 経路②。F6） -----------------------------
+     words[] が与えられなかった台本のためのフォールバック。①（台本JSONの
+     words[]）③（アプリ内での追加）が本流で、これは最後の救済策なので、
+     精度より「無いよりまし」を狙う軽いヒューリスティックにとどめる。
+
+     1. 各行の note に「X = 意味」「X＝意味」の形があれば拾う
+     2. 台本全体で1回しか出てこない内容語（ストップワードを除く）を
+        低頻度＝重要語とみなして拾う。上限 WORD_EXTRACT_MAX 件。 */
+  function extractWords(lines) {
+    var out = [];
+    var seen = {};
+
+    var noteRe = /([A-Za-z][A-Za-z '-]{1,30}?)\s*[=＝]\s*([^、。\n]{1,24})/g;
+    (lines || []).forEach(function (l) {
+      if (!l || !l.note) return;
+      var m;
+      noteRe.lastIndex = 0;
+      while ((m = noteRe.exec(l.note))) {
+        var en = m[1].trim();
+        var ja = m[2].trim();
+        var key = en.toLowerCase();
+        if (!en || !ja || seen[key]) continue;
+        seen[key] = true;
+        out.push({ en: en, ja: ja, lineIds: [l.id] });
+      }
+    });
+
+    var freq = {}, firstHit = {};
+    (lines || []).forEach(function (l) {
+      if (!l || !l.en) return;
+      tokenizeEn(l.en).forEach(function (w) {
+        var key = w.toLowerCase();
+        if (key.length < 3) return;
+        if (WORD_EXTRACT_STOP[key] || PREP[key] || CONJ[key] || REL[key]) return;
+        freq[key] = (freq[key] || 0) + 1;
+        if (!firstHit[key]) firstHit[key] = { id: l.id, surface: w };
+      });
+    });
+    Object.keys(freq).forEach(function (key) {
+      if (out.length >= WORD_EXTRACT_MAX) return;
+      if (freq[key] !== 1) return;   // 1回しか出てこない語＝その場面の低頻度語
+      if (seen[key]) return;
+      seen[key] = true;
+      var hit = firstHit[key];
+      out.push({ en: hit.surface, ja: '', lineIds: [hit.id] });
+    });
+
+    return out;
   }
 
   function jaRatio(s) {
@@ -523,10 +594,12 @@
     if (!starts.length) { starts = autoBlockStarts(lines.length); labels = []; }
     var blocks = startsToBlocks(starts, lines, labels);
 
-    // 手順7: words の自動抽出は F6 の担当。F1 では与えられたものを保持するだけ。
+    // 手順7: words[] が与えられていなければ自動抽出で埋める（§5.3 経路②）。
     var lineIdSet = {};
     lines.forEach(function (l) { lineIdSet[l.id] = true; });
-    var words = (Array.isArray(src.words) ? src.words : []).map(function (w, i) {
+    var srcWords = Array.isArray(src.words) ? src.words : [];
+    if (!srcWords.length) srcWords = extractWords(lines);
+    var words = srcWords.map(function (w, i) {
       w = w || {};
       return {
         id: w.id ? String(w.id) : 'w_' + pad3(i + 1),
@@ -591,6 +664,27 @@
     };
   }
 
+  /* ---- WordProgress の既定形（§5.4。F6） ------------------------------
+     判定は Progress と共通の関数を使う（EST.mastery、isWord opt で係数だけ
+     差し替える）ので、latency/mastered まわりの形は Progress と揃えてある。
+     recentStalls は語では「詰まり」を検出しないので常に空のまま置く
+     （isMastered の noStall 判定が常に真になる＝閾値だけで見る）。 */
+  function defaultWordProgress(profileId, topicId, wordId) {
+    return {
+      key: EST.store.wordProgressKey(topicId, wordId),
+      profileId: profileId,
+      topicId: topicId,
+      wordId: wordId,
+      counts: { recognize: 0, produce: 0 },
+      latency: { history: [], median5: null, best: null },
+      recentStalls: [],
+      mastered: false,
+      masteredAt: null,
+      reviewAt: null,
+      updatedAt: 0
+    };
+  }
+
   /* ---- 見積り（§6.2 の「1周 約◯秒」） -------------------------------- */
   function lapSeconds(lines, rate) {
     rate = Number(rate) || DEFAULT_RATE;
@@ -649,6 +743,8 @@
     validateTopic: validateTopic,
     normalizeTopic: normalizeTopic,
     defaultProgress: defaultProgress,
+    defaultWordProgress: defaultWordProgress,
+    extractWords: extractWords,
     lapSeconds: lapSeconds,
     newTopicId: newTopicId,
     pad3: pad3,

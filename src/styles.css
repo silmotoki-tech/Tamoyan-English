@@ -343,6 +343,9 @@ label.field > .field__label { display: block; font-size: .72rem; color: var(--mu
 .pr-en { font-size: 1.35rem; line-height: 1.5; }
 .pr-ja { font-size: .9rem; color: var(--muted); margin-top: .6rem; }
 .pr-hint { font-size: .85rem; color: var(--muted); }
+/* §5.3 長押しで語彙に追加（F6）。下線だけで押せることをそっと示す。 */
+.pr-word { border-bottom: 1px dotted var(--muted); -webkit-touch-callout: none;
+  -webkit-user-select: none; user-select: none; }
 
 /* S3の目標時間バー（§1.2） */
 .pr-bar { height: .4rem; background: var(--panel2); border-radius: .2rem; overflow: hidden; }

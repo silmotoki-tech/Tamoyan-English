@@ -66,6 +66,9 @@
     if (parts[0] === 'practice') return { name: 'practice', id: decodeURIComponent(parts[1] || '') };
     if (parts[0] === 'list') return { name: 'list', id: decodeURIComponent(parts[1] || '') };
     if (parts[0] === 'search') return { name: 'search' };
+    if (parts[0] === 'vocab-prep') return { name: 'vocab-prep', id: decodeURIComponent(parts[1] || '') };
+    if (parts[0] === 'vocab-review') return { name: 'vocab-review' };
+    if (parts[0] === 'review') return { name: 'review' };
     return { name: 'home' };
   }
 
@@ -79,6 +82,8 @@
     // 練習セッションはタイマーで自走するので、画面を離れるときに必ず止める。
     // 止めないと次の画面で行が進み続け、TTSもマイクも動いたままになる。
     try { EST.uiPractice.stopSession(); } catch (e) {}
+    // F6のS0・語彙復習・再確認も同じくタイマーで自走する（16-ui-vocab.js）。
+    try { EST.uiVocab.stopSession(); } catch (e) {}
     try { EST.speech.cancel(); } catch (e) {}
     // マイクも画面をまたいで開いたままにしない。stop()は聞いていなければ何もしない。
     try { EST.mic.stop(); } catch (e) {}
@@ -91,6 +96,9 @@
       else if (r.name === 'list') EST.uiList.renderList(viewEl, r.id);
       else if (r.name === 'search') EST.uiSearch.renderSearch(viewEl);
       else if (r.name === 'settings') EST.uiSettings.render(viewEl);
+      else if (r.name === 'vocab-prep') EST.uiVocab.renderVocabPrep(viewEl, r.id);
+      else if (r.name === 'vocab-review') EST.uiVocab.renderVocabReview(viewEl);
+      else if (r.name === 'review') EST.uiVocab.renderReview(viewEl);
     } catch (e) {
       console.error('[route]', e);
       EST.ui.mount(viewEl, EST.ui.h('div', { class: 'note-box note-box--err',
