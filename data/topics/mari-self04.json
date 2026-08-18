@@ -1,0 +1,186 @@
+{
+  "id": "tpc_mari_self04",
+  "title": "自分ごと｜仕事の手ごたえと業界",
+  "titleEn": "Challenges and My Industry",
+  "level": "A2",
+  "tags": [
+    "自分ごと",
+    "一問一答"
+  ],
+  "audience": "mari",
+  "myRole": "S2",
+  "speakers": [
+    {
+      "id": "S1",
+      "label": "相手",
+      "gender": "male"
+    },
+    {
+      "id": "S2",
+      "label": "自分",
+      "gender": "female"
+    }
+  ],
+  "blocks": [
+    {
+      "id": "b1",
+      "label": "質問1・2",
+      "from": "ln_001",
+      "to": "ln_006"
+    },
+    {
+      "id": "b2",
+      "label": "質問3・4",
+      "from": "ln_007",
+      "to": "ln_012"
+    }
+  ],
+  "lines": [
+    {
+      "id": "ln_001",
+      "speakerId": "S1",
+      "en": "What's the most challenging part of your work?",
+      "ja": "仕事で一番大変なことは何ですか？",
+      "note": ""
+    },
+    {
+      "id": "ln_002",
+      "speakerId": "S2",
+      "en": "The most challenging part of my job is having to give staff feedback when they need guidance.",
+      "ja": "仕事で一番大変なのは、指導が必要なときにスタッフに伝えなければいけないことです。",
+      "note": ""
+    },
+    {
+      "id": "ln_003",
+      "speakerId": "S2",
+      "en": "I know it's important, but it's not always easy.",
+      "ja": "大事なことだとは分かっていますが、いつも簡単というわけではありません。",
+      "note": ""
+    },
+    {
+      "id": "ln_004",
+      "speakerId": "S1",
+      "en": "What skills do you use most in your job?",
+      "ja": "仕事で一番よく使うスキルは何ですか？",
+      "note": ""
+    },
+    {
+      "id": "ln_005",
+      "speakerId": "S2",
+      "en": "The skills I use most are communication skills and the ability to understand how people feel.",
+      "ja": "一番よく使うのは、コミュニケーション力と、人の気持ちを汲み取る力です。",
+      "note": ""
+    },
+    {
+      "id": "ln_006",
+      "speakerId": "S2",
+      "en": "I try to listen carefully and see things from other people's point of view.",
+      "ja": "よく聞いて、相手の立場から物事を見るようにしています。",
+      "note": ""
+    },
+    {
+      "id": "ln_007",
+      "speakerId": "S1",
+      "en": "What's changing in your industry right now?",
+      "ja": "今、あなたの業界ではどんな変化が起きていますか？",
+      "note": ""
+    },
+    {
+      "id": "ln_008",
+      "speakerId": "S2",
+      "en": "One big change in my industry is that it's becoming harder to hire people.",
+      "ja": "業界の大きな変化のひとつは、人を雇うのが難しくなってきていることです。",
+      "note": ""
+    },
+    {
+      "id": "ln_009",
+      "speakerId": "S2",
+      "en": "Finding and keeping good staff has become more challenging than before.",
+      "ja": "いいスタッフを見つけて、続けてもらうのが、以前より難しくなりました。",
+      "note": ""
+    },
+    {
+      "id": "ln_010",
+      "speakerId": "S1",
+      "en": "Where do you think your industry is heading in the next few years?",
+      "ja": "今後数年で、あなたの業界はどのような方向に進むと思いますか？",
+      "note": ""
+    },
+    {
+      "id": "ln_011",
+      "speakerId": "S2",
+      "en": "I think corporate-owned animal hospitals will become more common in the next few years.",
+      "ja": "今後数年で、企業が経営する動物病院が増えていくと思います。",
+      "note": ""
+    },
+    {
+      "id": "ln_012",
+      "speakerId": "S2",
+      "en": "As a result, it will be much harder for people to start and run their own animal hospitals.",
+      "ja": "その結果、自分で動物病院を開いて続けていくのは、ずっと難しくなるでしょう。",
+      "note": ""
+    }
+  ],
+  "words": [
+    {
+      "id": "w_001",
+      "en": "the most challenging part of ~",
+      "ja": "〜で一番大変なこと",
+      "type": "phrase",
+      "lineIds": [
+        "ln_002"
+      ],
+      "note": ""
+    },
+    {
+      "id": "w_002",
+      "en": "give feedback",
+      "ja": "指摘や助言をする",
+      "type": "phrase",
+      "lineIds": [
+        "ln_002"
+      ],
+      "note": ""
+    },
+    {
+      "id": "w_003",
+      "en": "it's not always easy",
+      "ja": "いつも簡単なわけではない",
+      "type": "phrase",
+      "lineIds": [
+        "ln_003"
+      ],
+      "note": ""
+    },
+    {
+      "id": "w_004",
+      "en": "see things from ~'s point of view",
+      "ja": "〜の立場から物事を見る",
+      "type": "phrase",
+      "lineIds": [
+        "ln_006"
+      ],
+      "note": ""
+    },
+    {
+      "id": "w_005",
+      "en": "it's becoming harder to ~",
+      "ja": "〜するのが難しくなってきている",
+      "type": "phrase",
+      "lineIds": [
+        "ln_008"
+      ],
+      "note": ""
+    },
+    {
+      "id": "w_006",
+      "en": "as a result",
+      "ja": "その結果",
+      "type": "phrase",
+      "lineIds": [
+        "ln_012"
+      ],
+      "note": ""
+    }
+  ]
+}

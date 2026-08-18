@@ -1,0 +1,165 @@
+{
+  "id": "tpc_mari_self07",
+  "title": "自分ごと｜大事にしていること",
+  "titleEn": "What Matters to Me",
+  "level": "A2",
+  "tags": [
+    "自分ごと",
+    "一問一答"
+  ],
+  "audience": "mari",
+  "myRole": "S2",
+  "speakers": [
+    {
+      "id": "S1",
+      "label": "相手",
+      "gender": "male"
+    },
+    {
+      "id": "S2",
+      "label": "自分",
+      "gender": "female"
+    }
+  ],
+  "blocks": [
+    {
+      "id": "b1",
+      "label": "質問1・2",
+      "from": "ln_001",
+      "to": "ln_004"
+    },
+    {
+      "id": "b2",
+      "label": "質問3・4",
+      "from": "ln_005",
+      "to": "ln_009"
+    }
+  ],
+  "lines": [
+    {
+      "id": "ln_001",
+      "speakerId": "S1",
+      "en": "What values matter most to you?",
+      "ja": "あなたにとって最も大切な価値観は何ですか？",
+      "note": ""
+    },
+    {
+      "id": "ln_002",
+      "speakerId": "S2",
+      "en": "The value that matters most to me is sincerity. I believe that being honest and genuine is the foundation of trust.",
+      "ja": "私が一番大切にしている価値観は誠実さです。正直で、嘘のないことが、信頼の土台だと思っています。",
+      "note": ""
+    },
+    {
+      "id": "ln_003",
+      "speakerId": "S1",
+      "en": "What's been on your mind lately?",
+      "ja": "最近、気になっていることは何ですか？",
+      "note": ""
+    },
+    {
+      "id": "ln_004",
+      "speakerId": "S2",
+      "en": "Lately, I've been thinking a lot about losing weight. I want to lose seven kilograms, but I haven't started working on it yet.",
+      "ja": "最近は体重を減らすことをよく考えています。7キロ減らしたいのですが、まだ何も始めていません。",
+      "note": ""
+    },
+    {
+      "id": "ln_005",
+      "speakerId": "S1",
+      "en": "What's something you're dealing with these days?",
+      "ja": "最近、対応していることや向き合っていることは何ですか？",
+      "note": ""
+    },
+    {
+      "id": "ln_006",
+      "speakerId": "S2",
+      "en": "To be honest, there's nothing in particular I'm dealing with right now. Things are going pretty smoothly these days.",
+      "ja": "正直なところ、今は特に抱えていることはありません。最近は順調にいっています。",
+      "note": ""
+    },
+    {
+      "id": "ln_007",
+      "speakerId": "S1",
+      "en": "What are you trying to improve right now?",
+      "ja": "今、改善しようとしていることは何ですか？",
+      "note": ""
+    },
+    {
+      "id": "ln_008",
+      "speakerId": "S2",
+      "en": "I'm trying to improve the quality of my diet and sleep.",
+      "ja": "食事と睡眠の質を上げようとしています。",
+      "note": ""
+    },
+    {
+      "id": "ln_009",
+      "speakerId": "S2",
+      "en": "I know those two things are important if I want to lose weight and stay healthy.",
+      "ja": "体重を減らして健康でいたいなら、この2つが大事だと分かっているので。",
+      "note": ""
+    }
+  ],
+  "words": [
+    {
+      "id": "w_001",
+      "en": "the value that matters most to me",
+      "ja": "一番大切にしている価値観",
+      "type": "phrase",
+      "lineIds": [
+        "ln_002"
+      ],
+      "note": ""
+    },
+    {
+      "id": "w_002",
+      "en": "the foundation of trust",
+      "ja": "信頼の土台",
+      "type": "phrase",
+      "lineIds": [
+        "ln_002"
+      ],
+      "note": ""
+    },
+    {
+      "id": "w_003",
+      "en": "to be honest",
+      "ja": "正直なところ",
+      "type": "phrase",
+      "lineIds": [
+        "ln_006"
+      ],
+      "note": ""
+    },
+    {
+      "id": "w_004",
+      "en": "nothing in particular",
+      "ja": "特に何もない",
+      "type": "phrase",
+      "lineIds": [
+        "ln_006"
+      ],
+      "note": ""
+    },
+    {
+      "id": "w_005",
+      "en": "go smoothly",
+      "ja": "順調にいく",
+      "type": "phrase",
+      "lineIds": [
+        "ln_006"
+      ],
+      "note": ""
+    },
+    {
+      "id": "w_006",
+      "en": "improve the quality of ~",
+      "ja": "〜の質を上げる",
+      "type": "phrase",
+      "lineIds": [
+        "ln_008"
+      ],
+      "note": ""
+    }
+  ]
+}

@@ -1,0 +1,138 @@
+{
+  "id": "tpc_mari_self10",
+  "title": "自分ごと｜食べものと旅",
+  "titleEn": "Food and Travel",
+  "level": "A2",
+  "tags": [
+    "自分ごと",
+    "一問一答"
+  ],
+  "audience": "mari",
+  "myRole": "S2",
+  "speakers": [
+    {
+      "id": "S1",
+      "label": "相手",
+      "gender": "male"
+    },
+    {
+      "id": "S2",
+      "label": "自分",
+      "gender": "female"
+    }
+  ],
+  "blocks": [],
+  "lines": [
+    {
+      "id": "ln_001",
+      "speakerId": "S1",
+      "en": "What kind of food do you like, and what's your go-to dish?",
+      "ja": "どんな食べ物が好きですか？また、よく選ぶ定番料理は何ですか？",
+      "note": ""
+    },
+    {
+      "id": "ln_002",
+      "speakerId": "S2",
+      "en": "I tend to go for ramen, Italian food, sushi, or yakiniku. Those are my favorite choices when I eat out.",
+      "ja": "ラーメン、イタリアン、寿司、焼肉を選びがちです。外食のときは、だいたいこの中から選びます。",
+      "note": ""
+    },
+    {
+      "id": "ln_003",
+      "speakerId": "S1",
+      "en": "What kind of travel do you enjoy?",
+      "ja": "どんな旅行が好きですか？",
+      "note": ""
+    },
+    {
+      "id": "ln_004",
+      "speakerId": "S2",
+      "en": "I enjoy trips centered around saunas and relaxing with no particular plan.",
+      "ja": "サウナを中心にした旅や、特に予定を決めずにのんびりする旅が好きです。",
+      "note": ""
+    },
+    {
+      "id": "ln_005",
+      "speakerId": "S2",
+      "en": "One of my favorite things is eating great local food and having a few drinks while taking it easy.",
+      "ja": "一番の楽しみは、その土地のおいしいものを食べて、のんびりお酒を飲むことです。",
+      "note": ""
+    },
+    {
+      "id": "ln_006",
+      "speakerId": "S1",
+      "en": "What's a place you love and would recommend to others?",
+      "ja": "おすすめしたい場所はどこですか？",
+      "note": ""
+    },
+    {
+      "id": "ln_007",
+      "speakerId": "S2",
+      "en": "I'd definitely recommend Vietnam. The cost of living is low, the food is delicious, and I feel safe traveling there.",
+      "ja": "ベトナムがおすすめです。物価が安くて、ご飯もおいしくて、旅していて安全だと感じます。",
+      "note": ""
+    }
+  ],
+  "words": [
+    {
+      "id": "w_001",
+      "en": "tend to ~",
+      "ja": "〜しがちだ",
+      "type": "phrase",
+      "lineIds": [
+        "ln_002"
+      ],
+      "note": ""
+    },
+    {
+      "id": "w_002",
+      "en": "when I eat out",
+      "ja": "外食のとき",
+      "type": "phrase",
+      "lineIds": [
+        "ln_002"
+      ],
+      "note": ""
+    },
+    {
+      "id": "w_003",
+      "en": "centered around ~",
+      "ja": "〜を中心にした",
+      "type": "phrase",
+      "lineIds": [
+        "ln_004"
+      ],
+      "note": ""
+    },
+    {
+      "id": "w_004",
+      "en": "with no particular plan",
+      "ja": "特に予定を決めずに",
+      "type": "phrase",
+      "lineIds": [
+        "ln_004"
+      ],
+      "note": ""
+    },
+    {
+      "id": "w_005",
+      "en": "the cost of living",
+      "ja": "物価、生活費",
+      "type": "phrase",
+      "lineIds": [
+        "ln_007"
+      ],
+      "note": ""
+    },
+    {
+      "id": "w_006",
+      "en": "I'd definitely recommend ~",
+      "ja": "〜を強くおすすめする",
+      "type": "phrase",
+      "lineIds": [
+        "ln_007"
+      ],
+      "note": ""
+    }
+  ]
+}

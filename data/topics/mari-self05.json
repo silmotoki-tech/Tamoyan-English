@@ -1,0 +1,186 @@
+{
+  "id": "tpc_mari_self05",
+  "title": "自分ごと｜これまでの歩み",
+  "titleEn": "How I Got Here",
+  "level": "A2",
+  "tags": [
+    "自分ごと",
+    "一問一答"
+  ],
+  "audience": "mari",
+  "myRole": "S2",
+  "speakers": [
+    {
+      "id": "S1",
+      "label": "相手",
+      "gender": "male"
+    },
+    {
+      "id": "S2",
+      "label": "自分",
+      "gender": "female"
+    }
+  ],
+  "blocks": [
+    {
+      "id": "b1",
+      "label": "質問1・2",
+      "from": "ln_001",
+      "to": "ln_004"
+    },
+    {
+      "id": "b2",
+      "label": "質問3・4・5",
+      "from": "ln_005",
+      "to": "ln_012"
+    }
+  ],
+  "lines": [
+    {
+      "id": "ln_001",
+      "speakerId": "S1",
+      "en": "What did you study in high school or university?",
+      "ja": "高校や大学では何を勉強しましたか？",
+      "note": ""
+    },
+    {
+      "id": "ln_002",
+      "speakerId": "S2",
+      "en": "I studied Japanese literature at university. I enjoyed learning about Japanese novels and writers.",
+      "ja": "大学では日本文学を学びました。日本の小説や作家について学ぶのが楽しかったです。",
+      "note": ""
+    },
+    {
+      "id": "ln_003",
+      "speakerId": "S1",
+      "en": "Why did you choose that field?",
+      "ja": "なぜその分野を選んだのですか？",
+      "note": ""
+    },
+    {
+      "id": "ln_004",
+      "speakerId": "S2",
+      "en": "I chose that field because I loved Japanese children's literature.",
+      "ja": "日本の児童文学が好きだったので、その分野を選びました。",
+      "note": ""
+    },
+    {
+      "id": "ln_005",
+      "speakerId": "S1",
+      "en": "How did you get into your current field?",
+      "ja": "今の分野に入ったきっかけは何ですか？",
+      "note": ""
+    },
+    {
+      "id": "ln_006",
+      "speakerId": "S2",
+      "en": "I got into this field because I married a veterinarian. That gave me the opportunity to become involved in running an animal hospital.",
+      "ja": "獣医師と結婚したので、この分野に入りました。それがきっかけで、動物病院の経営に関わることになりました。",
+      "note": ""
+    },
+    {
+      "id": "ln_007",
+      "speakerId": "S1",
+      "en": "What was your first job like?",
+      "ja": "初めての仕事はどのようなものでしたか？",
+      "note": ""
+    },
+    {
+      "id": "ln_008",
+      "speakerId": "S2",
+      "en": "My first job was at a bank. It taught me a lot about responsibility and working with people.",
+      "ja": "最初の仕事は銀行でした。責任を持つことや、人と一緒に働くことを、たくさん教わりました。",
+      "note": ""
+    },
+    {
+      "id": "ln_009",
+      "speakerId": "S1",
+      "en": "How has your career changed over time?",
+      "ja": "これまでキャリアはどのように変化してきましたか？",
+      "note": ""
+    },
+    {
+      "id": "ln_010",
+      "speakerId": "S2",
+      "en": "My career has changed quite a bit over time. I went from working at a bank to helping run an animal hospital.",
+      "ja": "これまででキャリアはずいぶん変わりました。銀行員から、動物病院の経営を手伝う立場になりました。",
+      "note": ""
+    },
+    {
+      "id": "ln_011",
+      "speakerId": "S2",
+      "en": "In the beginning, I mainly worked as a veterinary nurse, but now I focus on management.",
+      "ja": "最初は主に動物看護師として働いていましたが、今は経営が中心です。",
+      "note": ""
+    },
+    {
+      "id": "ln_012",
+      "speakerId": "S2",
+      "en": "The hospital can run smoothly even when I'm not there.",
+      "ja": "私がいなくても、病院はちゃんと回ります。",
+      "note": ""
+    }
+  ],
+  "words": [
+    {
+      "id": "w_001",
+      "en": "get into ~",
+      "ja": "〜の道に入る",
+      "type": "phrase",
+      "lineIds": [
+        "ln_006"
+      ],
+      "note": ""
+    },
+    {
+      "id": "w_002",
+      "en": "That gave me the opportunity to ~",
+      "ja": "それがきっかけで〜できた",
+      "type": "phrase",
+      "lineIds": [
+        "ln_006"
+      ],
+      "note": ""
+    },
+    {
+      "id": "w_003",
+      "en": "It taught me a lot about ~",
+      "ja": "〜について多くを学んだ",
+      "type": "phrase",
+      "lineIds": [
+        "ln_008"
+      ],
+      "note": ""
+    },
+    {
+      "id": "w_004",
+      "en": "go from A to B",
+      "ja": "AからBになる",
+      "type": "phrase",
+      "lineIds": [
+        "ln_010"
+      ],
+      "note": ""
+    },
+    {
+      "id": "w_005",
+      "en": "in the beginning",
+      "ja": "最初のころは",
+      "type": "phrase",
+      "lineIds": [
+        "ln_011"
+      ],
+      "note": ""
+    },
+    {
+      "id": "w_006",
+      "en": "focus on ~",
+      "ja": "〜に集中する",
+      "type": "phrase",
+      "lineIds": [
+        "ln_011"
+      ],
+      "note": ""
+    }
+  ]
+}

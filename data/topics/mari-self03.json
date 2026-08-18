@@ -1,0 +1,200 @@
+{
+  "id": "tpc_mari_self03",
+  "title": "自分ごと｜いまの仕事",
+  "titleEn": "My Work",
+  "level": "A2",
+  "tags": [
+    "自分ごと",
+    "一問一答"
+  ],
+  "audience": "mari",
+  "myRole": "S2",
+  "speakers": [
+    {
+      "id": "S1",
+      "label": "相手",
+      "gender": "male"
+    },
+    {
+      "id": "S2",
+      "label": "自分",
+      "gender": "female"
+    }
+  ],
+  "blocks": [
+    {
+      "id": "b1",
+      "label": "質問1・2",
+      "from": "ln_001",
+      "to": "ln_005"
+    },
+    {
+      "id": "b2",
+      "label": "質問3・4・5",
+      "from": "ln_006",
+      "to": "ln_014"
+    }
+  ],
+  "lines": [
+    {
+      "id": "ln_001",
+      "speakerId": "S1",
+      "en": "What do you do for work?",
+      "ja": "お仕事は何をしていますか？",
+      "note": ""
+    },
+    {
+      "id": "ln_002",
+      "speakerId": "S2",
+      "en": "I run an animal hospital.",
+      "ja": "動物病院を経営しています。",
+      "note": ""
+    },
+    {
+      "id": "ln_003",
+      "speakerId": "S1",
+      "en": "What kind of work do you do?",
+      "ja": "どのようなお仕事をしていますか？",
+      "note": ""
+    },
+    {
+      "id": "ln_004",
+      "speakerId": "S2",
+      "en": "I handle reception work and manage the staff at our animal hospital.",
+      "ja": "動物病院で、受付の仕事とスタッフのマネジメントをしています。",
+      "note": ""
+    },
+    {
+      "id": "ln_005",
+      "speakerId": "S2",
+      "en": "I spend a lot of time making sure everything runs smoothly.",
+      "ja": "全体がうまく回るように気を配ることに、多くの時間を使っています。",
+      "note": ""
+    },
+    {
+      "id": "ln_006",
+      "speakerId": "S1",
+      "en": "What are your main responsibilities?",
+      "ja": "主な担当業務は何ですか？",
+      "note": ""
+    },
+    {
+      "id": "ln_007",
+      "speakerId": "S2",
+      "en": "I'm mainly responsible for accounting and business management.",
+      "ja": "主に経理と経営を担当しています。",
+      "note": ""
+    },
+    {
+      "id": "ln_008",
+      "speakerId": "S2",
+      "en": "I help make important decisions to keep the animal hospital running successfully.",
+      "ja": "動物病院がうまく続いていくように、大事な決定に関わっています。",
+      "note": ""
+    },
+    {
+      "id": "ln_009",
+      "speakerId": "S1",
+      "en": "What does a typical workday look like for you?",
+      "ja": "普段の仕事の日はどのような流れですか？",
+      "note": ""
+    },
+    {
+      "id": "ln_010",
+      "speakerId": "S2",
+      "en": "A typical workday involves checking on the staff, helping out when needed, and taking care of administrative tasks.",
+      "ja": "普段の一日は、スタッフの様子を見て、必要なら手伝って、事務の仕事をこなす、という感じです。",
+      "note": ""
+    },
+    {
+      "id": "ln_011",
+      "speakerId": "S2",
+      "en": "I try to support the team and keep things running smoothly.",
+      "ja": "チームを支えて、物事がうまく回るようにしたいと思っています。",
+      "note": ""
+    },
+    {
+      "id": "ln_012",
+      "speakerId": "S1",
+      "en": "What do you enjoy most about your work?",
+      "ja": "仕事の中で一番楽しいことは何ですか？",
+      "note": ""
+    },
+    {
+      "id": "ln_013",
+      "speakerId": "S2",
+      "en": "What I enjoy most about my work is seeing my staff grow.",
+      "ja": "仕事で一番楽しいのは、スタッフが成長していくのを見ることです。",
+      "note": ""
+    },
+    {
+      "id": "ln_014",
+      "speakerId": "S2",
+      "en": "It's rewarding to watch them gain confidence and develop their skills.",
+      "ja": "自信をつけて、力をのばしていくのを見るのは、やりがいがあります。",
+      "note": ""
+    }
+  ],
+  "words": [
+    {
+      "id": "w_001",
+      "en": "run ~",
+      "ja": "〜を経営する",
+      "type": "word",
+      "lineIds": [
+        "ln_002"
+      ],
+      "note": ""
+    },
+    {
+      "id": "w_002",
+      "en": "handle ~",
+      "ja": "〜を担当する・こなす",
+      "type": "word",
+      "lineIds": [
+        "ln_004"
+      ],
+      "note": ""
+    },
+    {
+      "id": "w_003",
+      "en": "be responsible for ~",
+      "ja": "〜を担当している",
+      "type": "phrase",
+      "lineIds": [
+        "ln_007"
+      ],
+      "note": ""
+    },
+    {
+      "id": "w_004",
+      "en": "make sure ~",
+      "ja": "〜になるよう気を配る",
+      "type": "phrase",
+      "lineIds": [
+        "ln_005"
+      ],
+      "note": ""
+    },
+    {
+      "id": "w_005",
+      "en": "run smoothly",
+      "ja": "うまく回る",
+      "type": "phrase",
+      "lineIds": [
+        "ln_011"
+      ],
+      "note": ""
+    },
+    {
+      "id": "w_006",
+      "en": "a typical workday",
+      "ja": "普段の仕事の一日",
+      "type": "phrase",
+      "lineIds": [
+        "ln_010"
+      ],
+      "note": ""
+    }
+  ]
+}

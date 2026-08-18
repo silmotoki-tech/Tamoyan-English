@@ -1,0 +1,254 @@
+{
+  "id": "tpc_mari_self11",
+  "title": "自分ごと｜日本のことと英語のこと",
+  "titleEn": "Japan and English",
+  "level": "A2",
+  "tags": [
+    "自分ごと",
+    "一問一答"
+  ],
+  "audience": "mari",
+  "myRole": "S2",
+  "speakers": [
+    {
+      "id": "S1",
+      "label": "相手",
+      "gender": "male"
+    },
+    {
+      "id": "S2",
+      "label": "自分",
+      "gender": "female"
+    }
+  ],
+  "blocks": [
+    {
+      "id": "b1",
+      "label": "質問1・2",
+      "from": "ln_001",
+      "to": "ln_006"
+    },
+    {
+      "id": "b2",
+      "label": "質問3・4",
+      "from": "ln_007",
+      "to": "ln_012"
+    },
+    {
+      "id": "b3",
+      "label": "質問5・6",
+      "from": "ln_013",
+      "to": "ln_018"
+    }
+  ],
+  "lines": [
+    {
+      "id": "ln_001",
+      "speakerId": "S1",
+      "en": "What do you like most about Japan?",
+      "ja": "日本の一番好きなところは何ですか？",
+      "note": ""
+    },
+    {
+      "id": "ln_002",
+      "speakerId": "S2",
+      "en": "What I like most about Japan is Hokkaido.",
+      "ja": "日本で一番好きなのは北海道です。",
+      "note": ""
+    },
+    {
+      "id": "ln_003",
+      "speakerId": "S2",
+      "en": "It has great saunas and hot springs, the food is amazing, and there are so many different ways to enjoy the area because it's so large.",
+      "ja": "いいサウナや温泉があって、ご飯もおいしくて、広いのでいろいろな楽しみ方ができます。",
+      "note": ""
+    },
+    {
+      "id": "ln_004",
+      "speakerId": "S1",
+      "en": "What do you think Japan could improve?",
+      "ja": "日本がもっと良くできると思うところは何ですか？",
+      "note": ""
+    },
+    {
+      "id": "ln_005",
+      "speakerId": "S2",
+      "en": "I think Japan should charge a higher tourism tax for international visitors.",
+      "ja": "日本は、外国からの観光客にもっと高い観光税をかけるべきだと思います。",
+      "note": ""
+    },
+    {
+      "id": "ln_006",
+      "speakerId": "S2",
+      "en": "Japan is a clean and beautiful country, and that extra revenue could help maintain and protect it.",
+      "ja": "日本はきれいで美しい国なので、その収入で守っていけると思うんです。",
+      "note": ""
+    },
+    {
+      "id": "ln_007",
+      "speakerId": "S1",
+      "en": "What brought you here today?",
+      "ja": "今日ここに来たきっかけは何ですか？",
+      "note": ""
+    },
+    {
+      "id": "ln_008",
+      "speakerId": "S2",
+      "en": "I'm studying English because my friend Mucchan keeps encouraging me to do it.",
+      "ja": "友達のむっちゃんがずっと勧めてくれるので、英語を勉強しています。",
+      "note": ""
+    },
+    {
+      "id": "ln_009",
+      "speakerId": "S2",
+      "en": "At first, it wasn't really my idea, but now I'm trying to make the most of it.",
+      "ja": "最初は自分から始めたわけではないのですが、今はせっかくだからと思ってやっています。",
+      "note": ""
+    },
+    {
+      "id": "ln_010",
+      "speakerId": "S1",
+      "en": "Why did you start studying English?",
+      "ja": "なぜ英語の勉強を始めたのですか？",
+      "note": ""
+    },
+    {
+      "id": "ln_011",
+      "speakerId": "S2",
+      "en": "I'm being forced to study English by my friend Mucchan.",
+      "ja": "友達のむっちゃんに、英語の勉強をさせられています。",
+      "note": ""
+    },
+    {
+      "id": "ln_012",
+      "speakerId": "S2",
+      "en": "But I think my trips abroad will be much more enjoyable if I can speak English.",
+      "ja": "でも英語が話せたら、海外旅行がもっと楽しくなると思います。",
+      "note": ""
+    },
+    {
+      "id": "ln_013",
+      "speakerId": "S1",
+      "en": "What's something good that English has brought to your life?",
+      "ja": "英語が人生にもたらした良いことは？",
+      "note": ""
+    },
+    {
+      "id": "ln_014",
+      "speakerId": "S2",
+      "en": "English has helped me understand a little of what foreigners are saying.",
+      "ja": "英語のおかげで、外国の人が言っていることが少し分かるようになりました。",
+      "note": ""
+    },
+    {
+      "id": "ln_015",
+      "speakerId": "S2",
+      "en": "I still miss most of it, but I can understand more than I used to.",
+      "ja": "まだほとんど聞き取れませんが、以前よりは分かるようになりました。",
+      "note": ""
+    },
+    {
+      "id": "ln_016",
+      "speakerId": "S1",
+      "en": "How do you practice English in your daily life?",
+      "ja": "日常生活でどのように英語を練習していますか？",
+      "note": ""
+    },
+    {
+      "id": "ln_017",
+      "speakerId": "S2",
+      "en": "I used to study English quite regularly.",
+      "ja": "以前はわりとちゃんと英語を勉強していました。",
+      "note": ""
+    },
+    {
+      "id": "ln_018",
+      "speakerId": "S2",
+      "en": "For about a year, I used apps and memorized English sentences, but I'm not doing much at the moment.",
+      "ja": "1年ほどアプリを使ったり英文を暗記したりしていましたが、今はあまりやっていません。",
+      "note": ""
+    }
+  ],
+  "words": [
+    {
+      "id": "w_001",
+      "en": "What I like most about ~ is ...",
+      "ja": "〜で一番好きなのは…",
+      "type": "phrase",
+      "lineIds": [
+        "ln_002"
+      ],
+      "note": ""
+    },
+    {
+      "id": "w_002",
+      "en": "so many different ways to enjoy ~",
+      "ja": "〜のいろいろな楽しみ方",
+      "type": "phrase",
+      "lineIds": [
+        "ln_003"
+      ],
+      "note": ""
+    },
+    {
+      "id": "w_003",
+      "en": "charge a higher tax",
+      "ja": "より高い税をかける",
+      "type": "phrase",
+      "lineIds": [
+        "ln_005"
+      ],
+      "note": ""
+    },
+    {
+      "id": "w_004",
+      "en": "maintain and protect ~",
+      "ja": "〜を維持して守る",
+      "type": "phrase",
+      "lineIds": [
+        "ln_006"
+      ],
+      "note": ""
+    },
+    {
+      "id": "w_005",
+      "en": "keep encouraging me to ~",
+      "ja": "ずっと〜するよう勧めてくれる",
+      "type": "phrase",
+      "lineIds": [
+        "ln_008"
+      ],
+      "note": ""
+    },
+    {
+      "id": "w_006",
+      "en": "make the most of it",
+      "ja": "せっかくだから活かす",
+      "type": "phrase",
+      "lineIds": [
+        "ln_009"
+      ],
+      "note": ""
+    },
+    {
+      "id": "w_007",
+      "en": "I used to ~",
+      "ja": "以前は〜していた",
+      "type": "phrase",
+      "lineIds": [
+        "ln_017"
+      ],
+      "note": ""
+    },
+    {
+      "id": "w_008",
+      "en": "miss most of it",
+      "ja": "ほとんど聞き取れない",
+      "type": "phrase",
+      "lineIds": [
+        "ln_015"
+      ],
+      "note": ""
+    }
+  ]
+}

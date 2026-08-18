@@ -1,0 +1,193 @@
+{
+  "id": "tpc_mari_self01",
+  "title": "自分ごと｜出身と住まい",
+  "titleEn": "Where I Live",
+  "level": "A2",
+  "tags": [
+    "自分ごと",
+    "一問一答"
+  ],
+  "audience": "mari",
+  "myRole": "S2",
+  "speakers": [
+    {
+      "id": "S1",
+      "label": "相手",
+      "gender": "male"
+    },
+    {
+      "id": "S2",
+      "label": "自分",
+      "gender": "female"
+    }
+  ],
+  "blocks": [
+    {
+      "id": "b1",
+      "label": "質問1・2",
+      "from": "ln_001",
+      "to": "ln_006"
+    },
+    {
+      "id": "b2",
+      "label": "質問3・4・5",
+      "from": "ln_007",
+      "to": "ln_013"
+    }
+  ],
+  "lines": [
+    {
+      "id": "ln_001",
+      "speakerId": "S1",
+      "en": "Where are you from originally?",
+      "ja": "ご出身はどちらですか？",
+      "note": ""
+    },
+    {
+      "id": "ln_002",
+      "speakerId": "S2",
+      "en": "I'm originally from Kanagawa. I grew up in Fujisawa and lived there until I became an adult.",
+      "ja": "神奈川の出身です。藤沢で育って、大人になるまでそこにいました。",
+      "note": ""
+    },
+    {
+      "id": "ln_003",
+      "speakerId": "S2",
+      "en": "After that, I moved to Aobadai, and now I live in Sagamihara with my family.",
+      "ja": "その後、青葉台に引っ越して、今は家族と相模原に住んでいます。",
+      "note": ""
+    },
+    {
+      "id": "ln_004",
+      "speakerId": "S1",
+      "en": "Where do you live now?",
+      "ja": "今はどちらに住んでいますか？",
+      "note": ""
+    },
+    {
+      "id": "ln_005",
+      "speakerId": "S2",
+      "en": "I live in Sagamihara now. We have our own animal hospital here, so it's an important place for us.",
+      "ja": "今は相模原に住んでいます。ここに自分たちの動物病院があるので、大切な場所です。",
+      "note": ""
+    },
+    {
+      "id": "ln_006",
+      "speakerId": "S2",
+      "en": "I like it because it's not too crowded and not too rural.",
+      "ja": "都会すぎず田舎すぎないところが気に入っています。",
+      "note": ""
+    },
+    {
+      "id": "ln_007",
+      "speakerId": "S1",
+      "en": "How long have you lived there?",
+      "ja": "そこにはどのくらい住んでいますか？",
+      "note": ""
+    },
+    {
+      "id": "ln_008",
+      "speakerId": "S2",
+      "en": "I've lived in Sagamihara for 13 years.",
+      "ja": "相模原に住んで13年になります。",
+      "note": ""
+    },
+    {
+      "id": "ln_009",
+      "speakerId": "S1",
+      "en": "Where have you lived before?",
+      "ja": "以前はどこに住んでいましたか？",
+      "note": ""
+    },
+    {
+      "id": "ln_010",
+      "speakerId": "S2",
+      "en": "Before moving to Sagamihara, I lived in Aobadai. It was an upscale residential area, and I liked its stylish atmosphere.",
+      "ja": "相模原に移る前は青葉台に住んでいました。高級住宅地で、おしゃれな雰囲気が好きでした。",
+      "note": ""
+    },
+    {
+      "id": "ln_011",
+      "speakerId": "S1",
+      "en": "What do you like about the area where you live?",
+      "ja": "今住んでいる地域のどんなところが好きですか？",
+      "note": ""
+    },
+    {
+      "id": "ln_012",
+      "speakerId": "S2",
+      "en": "I like living here because there are plenty of shops, but the town still has a traditional feel.",
+      "ja": "お店がたくさんあるのに、昔ながらの雰囲気も残っているところが好きです。",
+      "note": ""
+    },
+    {
+      "id": "ln_013",
+      "speakerId": "S2",
+      "en": "It has a good balance between convenience and local charm.",
+      "ja": "便利さと土地らしさのバランスがいいんです。",
+      "note": ""
+    }
+  ],
+  "words": [
+    {
+      "id": "w_001",
+      "en": "be originally from ~",
+      "ja": "〜の出身だ",
+      "type": "phrase",
+      "lineIds": [
+        "ln_002"
+      ],
+      "note": ""
+    },
+    {
+      "id": "w_002",
+      "en": "grow up in ~",
+      "ja": "〜で育つ",
+      "type": "phrase",
+      "lineIds": [
+        "ln_002"
+      ],
+      "note": ""
+    },
+    {
+      "id": "w_003",
+      "en": "move to ~",
+      "ja": "〜に引っ越す",
+      "type": "phrase",
+      "lineIds": [
+        "ln_003"
+      ],
+      "note": ""
+    },
+    {
+      "id": "w_004",
+      "en": "an upscale residential area",
+      "ja": "高級住宅地",
+      "type": "phrase",
+      "lineIds": [
+        "ln_010"
+      ],
+      "note": ""
+    },
+    {
+      "id": "w_005",
+      "en": "not too A and not too B",
+      "ja": "Aすぎず、Bすぎず",
+      "type": "phrase",
+      "lineIds": [
+        "ln_006"
+      ],
+      "note": ""
+    },
+    {
+      "id": "w_006",
+      "en": "a good balance between A and B",
+      "ja": "AとBのバランスがいい",
+      "type": "phrase",
+      "lineIds": [
+        "ln_013"
+      ],
+      "note": ""
+    }
+  ]
+}

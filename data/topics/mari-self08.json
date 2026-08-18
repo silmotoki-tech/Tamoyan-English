@@ -1,0 +1,196 @@
+{
+  "id": "tpc_mari_self08",
+  "title": "自分ごと｜これからやりたいこと",
+  "titleEn": "What I Want to Do Next",
+  "level": "A2",
+  "tags": [
+    "自分ごと",
+    "一問一答"
+  ],
+  "audience": "mari",
+  "myRole": "S2",
+  "speakers": [
+    {
+      "id": "S1",
+      "label": "相手",
+      "gender": "male"
+    },
+    {
+      "id": "S2",
+      "label": "自分",
+      "gender": "female"
+    }
+  ],
+  "blocks": [
+    {
+      "id": "b1",
+      "label": "質問1・2",
+      "from": "ln_001",
+      "to": "ln_004"
+    },
+    {
+      "id": "b2",
+      "label": "質問3・4・5",
+      "from": "ln_005",
+      "to": "ln_012"
+    }
+  ],
+  "lines": [
+    {
+      "id": "ln_001",
+      "speakerId": "S1",
+      "en": "What have you been up to lately?",
+      "ja": "最近はどんなことをしていますか？",
+      "note": ""
+    },
+    {
+      "id": "ln_002",
+      "speakerId": "S2",
+      "en": "I've been traveling a lot lately. I've been enjoying visiting different places whenever I have time.",
+      "ja": "最近はよく旅行に行っています。時間ができるたびに、いろいろな場所を訪ねるのを楽しんでいます。",
+      "note": ""
+    },
+    {
+      "id": "ln_003",
+      "speakerId": "S1",
+      "en": "What do you want to do in the next few years?",
+      "ja": "今後数年で何をしたいですか？",
+      "note": ""
+    },
+    {
+      "id": "ln_004",
+      "speakerId": "S2",
+      "en": "I want to lose seven kilograms over the next year. I'm trying to build healthier habits and take better care of myself.",
+      "ja": "これから1年で7キロ減らしたいです。もっと健康的な習慣をつくって、自分を大事にしようとしています。",
+      "note": ""
+    },
+    {
+      "id": "ln_005",
+      "speakerId": "S1",
+      "en": "What's a goal you're working on right now?",
+      "ja": "今取り組んでいる目標は何ですか？",
+      "note": ""
+    },
+    {
+      "id": "ln_006",
+      "speakerId": "S2",
+      "en": "My goal right now is to lose seven kilograms, but to be honest, I haven't started doing anything yet.",
+      "ja": "今の目標は7キロ減らすことですが、正直に言うと、まだ何も始めていません。",
+      "note": ""
+    },
+    {
+      "id": "ln_007",
+      "speakerId": "S2",
+      "en": "I know I need to take action soon.",
+      "ja": "そろそろ動き出さないといけないと分かっています。",
+      "note": ""
+    },
+    {
+      "id": "ln_008",
+      "speakerId": "S1",
+      "en": "What would you do if you had more time?",
+      "ja": "もっと時間があったら何をしたいですか？",
+      "note": ""
+    },
+    {
+      "id": "ln_009",
+      "speakerId": "S2",
+      "en": "If I had more time, I'd like to upload my travel videos to YouTube.",
+      "ja": "もっと時間があったら、旅行の動画をYouTubeに上げたいです。",
+      "note": ""
+    },
+    {
+      "id": "ln_010",
+      "speakerId": "S2",
+      "en": "I've recorded a lot of footage over the years, and I'd love to share my experiences with others.",
+      "ja": "何年もかけてたくさん撮りためてきたので、その経験を人と分かち合えたらうれしいです。",
+      "note": ""
+    },
+    {
+      "id": "ln_011",
+      "speakerId": "S1",
+      "en": "What would you do if money weren't an issue?",
+      "ja": "お金の問題がなければ何をしたいですか？",
+      "note": ""
+    },
+    {
+      "id": "ln_012",
+      "speakerId": "S2",
+      "en": "If money weren't an issue, I'd quit my job. I'd spend more time traveling and doing things I truly enjoy.",
+      "ja": "お金の問題がなければ、仕事を辞めます。もっと旅行をして、本当に好きなことをする時間を増やしたいです。",
+      "note": ""
+    }
+  ],
+  "words": [
+    {
+      "id": "w_001",
+      "en": "I've been ~ing lately",
+      "ja": "最近〜している",
+      "type": "phrase",
+      "lineIds": [
+        "ln_002"
+      ],
+      "note": ""
+    },
+    {
+      "id": "w_002",
+      "en": "whenever I have time",
+      "ja": "時間があるときはいつでも",
+      "type": "phrase",
+      "lineIds": [
+        "ln_002"
+      ],
+      "note": ""
+    },
+    {
+      "id": "w_003",
+      "en": "build healthier habits",
+      "ja": "もっと健康的な習慣をつくる",
+      "type": "phrase",
+      "lineIds": [
+        "ln_004"
+      ],
+      "note": ""
+    },
+    {
+      "id": "w_004",
+      "en": "take better care of myself",
+      "ja": "自分をもっと大事にする",
+      "type": "phrase",
+      "lineIds": [
+        "ln_004"
+      ],
+      "note": ""
+    },
+    {
+      "id": "w_005",
+      "en": "take action",
+      "ja": "動き出す",
+      "type": "phrase",
+      "lineIds": [
+        "ln_007"
+      ],
+      "note": ""
+    },
+    {
+      "id": "w_006",
+      "en": "If I had more time, I'd ~",
+      "ja": "もっと時間があったら〜する",
+      "type": "phrase",
+      "lineIds": [
+        "ln_009"
+      ],
+      "note": ""
+    },
+    {
+      "id": "w_007",
+      "en": "If money weren't an issue, I'd ~",
+      "ja": "お金の問題がなければ〜する",
+      "type": "phrase",
+      "lineIds": [
+        "ln_012"
+      ],
+      "note": ""
+    }
+  ]
+}

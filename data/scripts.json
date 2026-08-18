@@ -1,5 +1,5 @@
 {
-  "publishedAt": 1786548986185,
+  "publishedAt": 1787012064360,
   "topics": [
     {
       "id": "tpc_mari_cafe",
@@ -459,6 +459,2061 @@
       "createdAt": 1786550000000,
       "updatedAt": 1786550000000,
       "schemaVersion": 3
+    },
+    {
+      "id": "tpc_mari_self01",
+      "title": "自分ごと｜出身と住まい",
+      "titleEn": "Where I Live",
+      "level": "A2",
+      "tags": [
+        "自分ごと",
+        "一問一答"
+      ],
+      "audience": "mari",
+      "myRole": "S2",
+      "speakers": [
+        {
+          "id": "S1",
+          "label": "相手",
+          "gender": "male"
+        },
+        {
+          "id": "S2",
+          "label": "自分",
+          "gender": "female"
+        }
+      ],
+      "blocks": [
+        {
+          "id": "b1",
+          "label": "質問1・2",
+          "from": "ln_001",
+          "to": "ln_006"
+        },
+        {
+          "id": "b2",
+          "label": "質問3・4・5",
+          "from": "ln_007",
+          "to": "ln_013"
+        }
+      ],
+      "lines": [
+        {
+          "id": "ln_001",
+          "speakerId": "S1",
+          "en": "Where are you from originally?",
+          "ja": "ご出身はどちらですか？",
+          "note": ""
+        },
+        {
+          "id": "ln_002",
+          "speakerId": "S2",
+          "en": "I'm originally from Kanagawa. I grew up in Fujisawa and lived there until I became an adult.",
+          "ja": "神奈川の出身です。藤沢で育って、大人になるまでそこにいました。",
+          "note": ""
+        },
+        {
+          "id": "ln_003",
+          "speakerId": "S2",
+          "en": "After that, I moved to Aobadai, and now I live in Sagamihara with my family.",
+          "ja": "その後、青葉台に引っ越して、今は家族と相模原に住んでいます。",
+          "note": ""
+        },
+        {
+          "id": "ln_004",
+          "speakerId": "S1",
+          "en": "Where do you live now?",
+          "ja": "今はどちらに住んでいますか？",
+          "note": ""
+        },
+        {
+          "id": "ln_005",
+          "speakerId": "S2",
+          "en": "I live in Sagamihara now. We have our own animal hospital here, so it's an important place for us.",
+          "ja": "今は相模原に住んでいます。ここに自分たちの動物病院があるので、大切な場所です。",
+          "note": ""
+        },
+        {
+          "id": "ln_006",
+          "speakerId": "S2",
+          "en": "I like it because it's not too crowded and not too rural.",
+          "ja": "都会すぎず田舎すぎないところが気に入っています。",
+          "note": ""
+        },
+        {
+          "id": "ln_007",
+          "speakerId": "S1",
+          "en": "How long have you lived there?",
+          "ja": "そこにはどのくらい住んでいますか？",
+          "note": ""
+        },
+        {
+          "id": "ln_008",
+          "speakerId": "S2",
+          "en": "I've lived in Sagamihara for 13 years.",
+          "ja": "相模原に住んで13年になります。",
+          "note": ""
+        },
+        {
+          "id": "ln_009",
+          "speakerId": "S1",
+          "en": "Where have you lived before?",
+          "ja": "以前はどこに住んでいましたか？",
+          "note": ""
+        },
+        {
+          "id": "ln_010",
+          "speakerId": "S2",
+          "en": "Before moving to Sagamihara, I lived in Aobadai. It was an upscale residential area, and I liked its stylish atmosphere.",
+          "ja": "相模原に移る前は青葉台に住んでいました。高級住宅地で、おしゃれな雰囲気が好きでした。",
+          "note": ""
+        },
+        {
+          "id": "ln_011",
+          "speakerId": "S1",
+          "en": "What do you like about the area where you live?",
+          "ja": "今住んでいる地域のどんなところが好きですか？",
+          "note": ""
+        },
+        {
+          "id": "ln_012",
+          "speakerId": "S2",
+          "en": "I like living here because there are plenty of shops, but the town still has a traditional feel.",
+          "ja": "お店がたくさんあるのに、昔ながらの雰囲気も残っているところが好きです。",
+          "note": ""
+        },
+        {
+          "id": "ln_013",
+          "speakerId": "S2",
+          "en": "It has a good balance between convenience and local charm.",
+          "ja": "便利さと土地らしさのバランスがいいんです。",
+          "note": ""
+        }
+      ],
+      "words": [
+        {
+          "id": "w_001",
+          "en": "be originally from ~",
+          "ja": "〜の出身だ",
+          "type": "phrase",
+          "lineIds": [
+            "ln_002"
+          ],
+          "note": ""
+        },
+        {
+          "id": "w_002",
+          "en": "grow up in ~",
+          "ja": "〜で育つ",
+          "type": "phrase",
+          "lineIds": [
+            "ln_002"
+          ],
+          "note": ""
+        },
+        {
+          "id": "w_003",
+          "en": "move to ~",
+          "ja": "〜に引っ越す",
+          "type": "phrase",
+          "lineIds": [
+            "ln_003"
+          ],
+          "note": ""
+        },
+        {
+          "id": "w_004",
+          "en": "an upscale residential area",
+          "ja": "高級住宅地",
+          "type": "phrase",
+          "lineIds": [
+            "ln_010"
+          ],
+          "note": ""
+        },
+        {
+          "id": "w_005",
+          "en": "not too A and not too B",
+          "ja": "Aすぎず、Bすぎず",
+          "type": "phrase",
+          "lineIds": [
+            "ln_006"
+          ],
+          "note": ""
+        },
+        {
+          "id": "w_006",
+          "en": "a good balance between A and B",
+          "ja": "AとBのバランスがいい",
+          "type": "phrase",
+          "lineIds": [
+            "ln_013"
+          ],
+          "note": ""
+        }
+      ]
+    },
+    {
+      "id": "tpc_mari_self02",
+      "title": "自分ごと｜家族と友人",
+      "titleEn": "Family and Friends",
+      "level": "A2",
+      "tags": [
+        "自分ごと",
+        "一問一答"
+      ],
+      "audience": "mari",
+      "myRole": "S2",
+      "speakers": [
+        {
+          "id": "S1",
+          "label": "相手",
+          "gender": "male"
+        },
+        {
+          "id": "S2",
+          "label": "自分",
+          "gender": "female"
+        }
+      ],
+      "blocks": [],
+      "lines": [
+        {
+          "id": "ln_001",
+          "speakerId": "S1",
+          "en": "Do you live alone or with family?",
+          "ja": "一人暮らしですか？それとも家族と住んでいますか？",
+          "note": ""
+        },
+        {
+          "id": "ln_002",
+          "speakerId": "S2",
+          "en": "I live with my husband.",
+          "ja": "夫と二人で暮らしています。",
+          "note": ""
+        },
+        {
+          "id": "ln_003",
+          "speakerId": "S2",
+          "en": "We don't have children, but we do have a stuffed chicken named Mofu, and we like to joke that he's our child.",
+          "ja": "子どもはいませんが、モフというニワトリのぬいぐるみがいて、うちの子だと冗談で言っています。",
+          "note": ""
+        },
+        {
+          "id": "ln_004",
+          "speakerId": "S1",
+          "en": "Who are you closest to in your family?",
+          "ja": "家族の中で一番親しいのは誰ですか？",
+          "note": ""
+        },
+        {
+          "id": "ln_005",
+          "speakerId": "S2",
+          "en": "I'm closest to Mofu, our stuffed chicken.",
+          "ja": "一番親しいのは、うちのぬいぐるみのニワトリ、モフです。",
+          "note": ""
+        },
+        {
+          "id": "ln_006",
+          "speakerId": "S2",
+          "en": "We also have three pet guinea pigs named Kin-chan, Bon-chan, and Momo-chan, so our home is always full of cute characters.",
+          "ja": "あとはモルモットが3匹いて、キンちゃん、ボンちゃん、モモちゃんといいます。家はいつもかわいい子でいっぱいです。",
+          "note": ""
+        },
+        {
+          "id": "ln_007",
+          "speakerId": "S1",
+          "en": "What do you usually do with friends?",
+          "ja": "友達とは普段どんなことをしますか？",
+          "note": ""
+        },
+        {
+          "id": "ln_008",
+          "speakerId": "S2",
+          "en": "I don't meet my friends very often. However, I stay in touch with them every day through LINE.",
+          "ja": "友達とはあまり頻繁には会いません。でもLINEで毎日やり取りしています。",
+          "note": ""
+        }
+      ],
+      "words": [
+        {
+          "id": "w_001",
+          "en": "live with ~",
+          "ja": "〜と暮らしている",
+          "type": "phrase",
+          "lineIds": [
+            "ln_002"
+          ],
+          "note": ""
+        },
+        {
+          "id": "w_002",
+          "en": "be closest to ~",
+          "ja": "〜が一番親しい",
+          "type": "phrase",
+          "lineIds": [
+            "ln_005"
+          ],
+          "note": ""
+        },
+        {
+          "id": "w_003",
+          "en": "we like to joke that ~",
+          "ja": "〜だと冗談で言っている",
+          "type": "phrase",
+          "lineIds": [
+            "ln_003"
+          ],
+          "note": ""
+        },
+        {
+          "id": "w_004",
+          "en": "stay in touch with ~",
+          "ja": "〜と連絡を取り合う",
+          "type": "phrase",
+          "lineIds": [
+            "ln_008"
+          ],
+          "note": ""
+        },
+        {
+          "id": "w_005",
+          "en": "not ~ very often",
+          "ja": "あまり頻繁に〜しない",
+          "type": "phrase",
+          "lineIds": [
+            "ln_008"
+          ],
+          "note": ""
+        }
+      ]
+    },
+    {
+      "id": "tpc_mari_self03",
+      "title": "自分ごと｜いまの仕事",
+      "titleEn": "My Work",
+      "level": "A2",
+      "tags": [
+        "自分ごと",
+        "一問一答"
+      ],
+      "audience": "mari",
+      "myRole": "S2",
+      "speakers": [
+        {
+          "id": "S1",
+          "label": "相手",
+          "gender": "male"
+        },
+        {
+          "id": "S2",
+          "label": "自分",
+          "gender": "female"
+        }
+      ],
+      "blocks": [
+        {
+          "id": "b1",
+          "label": "質問1・2",
+          "from": "ln_001",
+          "to": "ln_005"
+        },
+        {
+          "id": "b2",
+          "label": "質問3・4・5",
+          "from": "ln_006",
+          "to": "ln_014"
+        }
+      ],
+      "lines": [
+        {
+          "id": "ln_001",
+          "speakerId": "S1",
+          "en": "What do you do for work?",
+          "ja": "お仕事は何をしていますか？",
+          "note": ""
+        },
+        {
+          "id": "ln_002",
+          "speakerId": "S2",
+          "en": "I run an animal hospital.",
+          "ja": "動物病院を経営しています。",
+          "note": ""
+        },
+        {
+          "id": "ln_003",
+          "speakerId": "S1",
+          "en": "What kind of work do you do?",
+          "ja": "どのようなお仕事をしていますか？",
+          "note": ""
+        },
+        {
+          "id": "ln_004",
+          "speakerId": "S2",
+          "en": "I handle reception work and manage the staff at our animal hospital.",
+          "ja": "動物病院で、受付の仕事とスタッフのマネジメントをしています。",
+          "note": ""
+        },
+        {
+          "id": "ln_005",
+          "speakerId": "S2",
+          "en": "I spend a lot of time making sure everything runs smoothly.",
+          "ja": "全体がうまく回るように気を配ることに、多くの時間を使っています。",
+          "note": ""
+        },
+        {
+          "id": "ln_006",
+          "speakerId": "S1",
+          "en": "What are your main responsibilities?",
+          "ja": "主な担当業務は何ですか？",
+          "note": ""
+        },
+        {
+          "id": "ln_007",
+          "speakerId": "S2",
+          "en": "I'm mainly responsible for accounting and business management.",
+          "ja": "主に経理と経営を担当しています。",
+          "note": ""
+        },
+        {
+          "id": "ln_008",
+          "speakerId": "S2",
+          "en": "I help make important decisions to keep the animal hospital running successfully.",
+          "ja": "動物病院がうまく続いていくように、大事な決定に関わっています。",
+          "note": ""
+        },
+        {
+          "id": "ln_009",
+          "speakerId": "S1",
+          "en": "What does a typical workday look like for you?",
+          "ja": "普段の仕事の日はどのような流れですか？",
+          "note": ""
+        },
+        {
+          "id": "ln_010",
+          "speakerId": "S2",
+          "en": "A typical workday involves checking on the staff, helping out when needed, and taking care of administrative tasks.",
+          "ja": "普段の一日は、スタッフの様子を見て、必要なら手伝って、事務の仕事をこなす、という感じです。",
+          "note": ""
+        },
+        {
+          "id": "ln_011",
+          "speakerId": "S2",
+          "en": "I try to support the team and keep things running smoothly.",
+          "ja": "チームを支えて、物事がうまく回るようにしたいと思っています。",
+          "note": ""
+        },
+        {
+          "id": "ln_012",
+          "speakerId": "S1",
+          "en": "What do you enjoy most about your work?",
+          "ja": "仕事の中で一番楽しいことは何ですか？",
+          "note": ""
+        },
+        {
+          "id": "ln_013",
+          "speakerId": "S2",
+          "en": "What I enjoy most about my work is seeing my staff grow.",
+          "ja": "仕事で一番楽しいのは、スタッフが成長していくのを見ることです。",
+          "note": ""
+        },
+        {
+          "id": "ln_014",
+          "speakerId": "S2",
+          "en": "It's rewarding to watch them gain confidence and develop their skills.",
+          "ja": "自信をつけて、力をのばしていくのを見るのは、やりがいがあります。",
+          "note": ""
+        }
+      ],
+      "words": [
+        {
+          "id": "w_001",
+          "en": "run ~",
+          "ja": "〜を経営する",
+          "type": "word",
+          "lineIds": [
+            "ln_002"
+          ],
+          "note": ""
+        },
+        {
+          "id": "w_002",
+          "en": "handle ~",
+          "ja": "〜を担当する・こなす",
+          "type": "word",
+          "lineIds": [
+            "ln_004"
+          ],
+          "note": ""
+        },
+        {
+          "id": "w_003",
+          "en": "be responsible for ~",
+          "ja": "〜を担当している",
+          "type": "phrase",
+          "lineIds": [
+            "ln_007"
+          ],
+          "note": ""
+        },
+        {
+          "id": "w_004",
+          "en": "make sure ~",
+          "ja": "〜になるよう気を配る",
+          "type": "phrase",
+          "lineIds": [
+            "ln_005"
+          ],
+          "note": ""
+        },
+        {
+          "id": "w_005",
+          "en": "run smoothly",
+          "ja": "うまく回る",
+          "type": "phrase",
+          "lineIds": [
+            "ln_011"
+          ],
+          "note": ""
+        },
+        {
+          "id": "w_006",
+          "en": "a typical workday",
+          "ja": "普段の仕事の一日",
+          "type": "phrase",
+          "lineIds": [
+            "ln_010"
+          ],
+          "note": ""
+        }
+      ]
+    },
+    {
+      "id": "tpc_mari_self04",
+      "title": "自分ごと｜仕事の手ごたえと業界",
+      "titleEn": "Challenges and My Industry",
+      "level": "A2",
+      "tags": [
+        "自分ごと",
+        "一問一答"
+      ],
+      "audience": "mari",
+      "myRole": "S2",
+      "speakers": [
+        {
+          "id": "S1",
+          "label": "相手",
+          "gender": "male"
+        },
+        {
+          "id": "S2",
+          "label": "自分",
+          "gender": "female"
+        }
+      ],
+      "blocks": [
+        {
+          "id": "b1",
+          "label": "質問1・2",
+          "from": "ln_001",
+          "to": "ln_006"
+        },
+        {
+          "id": "b2",
+          "label": "質問3・4",
+          "from": "ln_007",
+          "to": "ln_012"
+        }
+      ],
+      "lines": [
+        {
+          "id": "ln_001",
+          "speakerId": "S1",
+          "en": "What's the most challenging part of your work?",
+          "ja": "仕事で一番大変なことは何ですか？",
+          "note": ""
+        },
+        {
+          "id": "ln_002",
+          "speakerId": "S2",
+          "en": "The most challenging part of my job is having to give staff feedback when they need guidance.",
+          "ja": "仕事で一番大変なのは、指導が必要なときにスタッフに伝えなければいけないことです。",
+          "note": ""
+        },
+        {
+          "id": "ln_003",
+          "speakerId": "S2",
+          "en": "I know it's important, but it's not always easy.",
+          "ja": "大事なことだとは分かっていますが、いつも簡単というわけではありません。",
+          "note": ""
+        },
+        {
+          "id": "ln_004",
+          "speakerId": "S1",
+          "en": "What skills do you use most in your job?",
+          "ja": "仕事で一番よく使うスキルは何ですか？",
+          "note": ""
+        },
+        {
+          "id": "ln_005",
+          "speakerId": "S2",
+          "en": "The skills I use most are communication skills and the ability to understand how people feel.",
+          "ja": "一番よく使うのは、コミュニケーション力と、人の気持ちを汲み取る力です。",
+          "note": ""
+        },
+        {
+          "id": "ln_006",
+          "speakerId": "S2",
+          "en": "I try to listen carefully and see things from other people's point of view.",
+          "ja": "よく聞いて、相手の立場から物事を見るようにしています。",
+          "note": ""
+        },
+        {
+          "id": "ln_007",
+          "speakerId": "S1",
+          "en": "What's changing in your industry right now?",
+          "ja": "今、あなたの業界ではどんな変化が起きていますか？",
+          "note": ""
+        },
+        {
+          "id": "ln_008",
+          "speakerId": "S2",
+          "en": "One big change in my industry is that it's becoming harder to hire people.",
+          "ja": "業界の大きな変化のひとつは、人を雇うのが難しくなってきていることです。",
+          "note": ""
+        },
+        {
+          "id": "ln_009",
+          "speakerId": "S2",
+          "en": "Finding and keeping good staff has become more challenging than before.",
+          "ja": "いいスタッフを見つけて、続けてもらうのが、以前より難しくなりました。",
+          "note": ""
+        },
+        {
+          "id": "ln_010",
+          "speakerId": "S1",
+          "en": "Where do you think your industry is heading in the next few years?",
+          "ja": "今後数年で、あなたの業界はどのような方向に進むと思いますか？",
+          "note": ""
+        },
+        {
+          "id": "ln_011",
+          "speakerId": "S2",
+          "en": "I think corporate-owned animal hospitals will become more common in the next few years.",
+          "ja": "今後数年で、企業が経営する動物病院が増えていくと思います。",
+          "note": ""
+        },
+        {
+          "id": "ln_012",
+          "speakerId": "S2",
+          "en": "As a result, it will be much harder for people to start and run their own animal hospitals.",
+          "ja": "その結果、自分で動物病院を開いて続けていくのは、ずっと難しくなるでしょう。",
+          "note": ""
+        }
+      ],
+      "words": [
+        {
+          "id": "w_001",
+          "en": "the most challenging part of ~",
+          "ja": "〜で一番大変なこと",
+          "type": "phrase",
+          "lineIds": [
+            "ln_002"
+          ],
+          "note": ""
+        },
+        {
+          "id": "w_002",
+          "en": "give feedback",
+          "ja": "指摘や助言をする",
+          "type": "phrase",
+          "lineIds": [
+            "ln_002"
+          ],
+          "note": ""
+        },
+        {
+          "id": "w_003",
+          "en": "it's not always easy",
+          "ja": "いつも簡単なわけではない",
+          "type": "phrase",
+          "lineIds": [
+            "ln_003"
+          ],
+          "note": ""
+        },
+        {
+          "id": "w_004",
+          "en": "see things from ~'s point of view",
+          "ja": "〜の立場から物事を見る",
+          "type": "phrase",
+          "lineIds": [
+            "ln_006"
+          ],
+          "note": ""
+        },
+        {
+          "id": "w_005",
+          "en": "it's becoming harder to ~",
+          "ja": "〜するのが難しくなってきている",
+          "type": "phrase",
+          "lineIds": [
+            "ln_008"
+          ],
+          "note": ""
+        },
+        {
+          "id": "w_006",
+          "en": "as a result",
+          "ja": "その結果",
+          "type": "phrase",
+          "lineIds": [
+            "ln_012"
+          ],
+          "note": ""
+        }
+      ]
+    },
+    {
+      "id": "tpc_mari_self05",
+      "title": "自分ごと｜これまでの歩み",
+      "titleEn": "How I Got Here",
+      "level": "A2",
+      "tags": [
+        "自分ごと",
+        "一問一答"
+      ],
+      "audience": "mari",
+      "myRole": "S2",
+      "speakers": [
+        {
+          "id": "S1",
+          "label": "相手",
+          "gender": "male"
+        },
+        {
+          "id": "S2",
+          "label": "自分",
+          "gender": "female"
+        }
+      ],
+      "blocks": [
+        {
+          "id": "b1",
+          "label": "質問1・2",
+          "from": "ln_001",
+          "to": "ln_004"
+        },
+        {
+          "id": "b2",
+          "label": "質問3・4・5",
+          "from": "ln_005",
+          "to": "ln_012"
+        }
+      ],
+      "lines": [
+        {
+          "id": "ln_001",
+          "speakerId": "S1",
+          "en": "What did you study in high school or university?",
+          "ja": "高校や大学では何を勉強しましたか？",
+          "note": ""
+        },
+        {
+          "id": "ln_002",
+          "speakerId": "S2",
+          "en": "I studied Japanese literature at university. I enjoyed learning about Japanese novels and writers.",
+          "ja": "大学では日本文学を学びました。日本の小説や作家について学ぶのが楽しかったです。",
+          "note": ""
+        },
+        {
+          "id": "ln_003",
+          "speakerId": "S1",
+          "en": "Why did you choose that field?",
+          "ja": "なぜその分野を選んだのですか？",
+          "note": ""
+        },
+        {
+          "id": "ln_004",
+          "speakerId": "S2",
+          "en": "I chose that field because I loved Japanese children's literature.",
+          "ja": "日本の児童文学が好きだったので、その分野を選びました。",
+          "note": ""
+        },
+        {
+          "id": "ln_005",
+          "speakerId": "S1",
+          "en": "How did you get into your current field?",
+          "ja": "今の分野に入ったきっかけは何ですか？",
+          "note": ""
+        },
+        {
+          "id": "ln_006",
+          "speakerId": "S2",
+          "en": "I got into this field because I married a veterinarian. That gave me the opportunity to become involved in running an animal hospital.",
+          "ja": "獣医師と結婚したので、この分野に入りました。それがきっかけで、動物病院の経営に関わることになりました。",
+          "note": ""
+        },
+        {
+          "id": "ln_007",
+          "speakerId": "S1",
+          "en": "What was your first job like?",
+          "ja": "初めての仕事はどのようなものでしたか？",
+          "note": ""
+        },
+        {
+          "id": "ln_008",
+          "speakerId": "S2",
+          "en": "My first job was at a bank. It taught me a lot about responsibility and working with people.",
+          "ja": "最初の仕事は銀行でした。責任を持つことや、人と一緒に働くことを、たくさん教わりました。",
+          "note": ""
+        },
+        {
+          "id": "ln_009",
+          "speakerId": "S1",
+          "en": "How has your career changed over time?",
+          "ja": "これまでキャリアはどのように変化してきましたか？",
+          "note": ""
+        },
+        {
+          "id": "ln_010",
+          "speakerId": "S2",
+          "en": "My career has changed quite a bit over time. I went from working at a bank to helping run an animal hospital.",
+          "ja": "これまででキャリアはずいぶん変わりました。銀行員から、動物病院の経営を手伝う立場になりました。",
+          "note": ""
+        },
+        {
+          "id": "ln_011",
+          "speakerId": "S2",
+          "en": "In the beginning, I mainly worked as a veterinary nurse, but now I focus on management.",
+          "ja": "最初は主に動物看護師として働いていましたが、今は経営が中心です。",
+          "note": ""
+        },
+        {
+          "id": "ln_012",
+          "speakerId": "S2",
+          "en": "The hospital can run smoothly even when I'm not there.",
+          "ja": "私がいなくても、病院はちゃんと回ります。",
+          "note": ""
+        }
+      ],
+      "words": [
+        {
+          "id": "w_001",
+          "en": "get into ~",
+          "ja": "〜の道に入る",
+          "type": "phrase",
+          "lineIds": [
+            "ln_006"
+          ],
+          "note": ""
+        },
+        {
+          "id": "w_002",
+          "en": "That gave me the opportunity to ~",
+          "ja": "それがきっかけで〜できた",
+          "type": "phrase",
+          "lineIds": [
+            "ln_006"
+          ],
+          "note": ""
+        },
+        {
+          "id": "w_003",
+          "en": "It taught me a lot about ~",
+          "ja": "〜について多くを学んだ",
+          "type": "phrase",
+          "lineIds": [
+            "ln_008"
+          ],
+          "note": ""
+        },
+        {
+          "id": "w_004",
+          "en": "go from A to B",
+          "ja": "AからBになる",
+          "type": "phrase",
+          "lineIds": [
+            "ln_010"
+          ],
+          "note": ""
+        },
+        {
+          "id": "w_005",
+          "en": "in the beginning",
+          "ja": "最初のころは",
+          "type": "phrase",
+          "lineIds": [
+            "ln_011"
+          ],
+          "note": ""
+        },
+        {
+          "id": "w_006",
+          "en": "focus on ~",
+          "ja": "〜に集中する",
+          "type": "phrase",
+          "lineIds": [
+            "ln_011"
+          ],
+          "note": ""
+        }
+      ]
+    },
+    {
+      "id": "tpc_mari_self06",
+      "title": "自分ごと｜転機と乗り越えたこと",
+      "titleEn": "Turning Points",
+      "level": "A2",
+      "tags": [
+        "自分ごと",
+        "一問一答"
+      ],
+      "audience": "mari",
+      "myRole": "S2",
+      "speakers": [
+        {
+          "id": "S1",
+          "label": "相手",
+          "gender": "male"
+        },
+        {
+          "id": "S2",
+          "label": "自分",
+          "gender": "female"
+        }
+      ],
+      "blocks": [
+        {
+          "id": "b1",
+          "label": "質問1・2",
+          "from": "ln_001",
+          "to": "ln_006"
+        },
+        {
+          "id": "b2",
+          "label": "質問3・4",
+          "from": "ln_007",
+          "to": "ln_013"
+        }
+      ],
+      "lines": [
+        {
+          "id": "ln_001",
+          "speakerId": "S1",
+          "en": "What made you change roles or jobs?",
+          "ja": "役割や仕事を変えたきっかけは何ですか？",
+          "note": ""
+        },
+        {
+          "id": "ln_002",
+          "speakerId": "S2",
+          "en": "I changed my role because I was able to develop my staff and trust them with more responsibilities.",
+          "ja": "スタッフを育てて、より多くのことを任せられるようになったので、役割を変えました。",
+          "note": ""
+        },
+        {
+          "id": "ln_003",
+          "speakerId": "S2",
+          "en": "As they became more capable, I was able to focus more on management.",
+          "ja": "みんなができるようになるにつれて、私は経営に集中できるようになりました。",
+          "note": ""
+        },
+        {
+          "id": "ln_004",
+          "speakerId": "S1",
+          "en": "What's a career decision you're glad you made?",
+          "ja": "今振り返って、してよかったと思うキャリア上の決断は何ですか？",
+          "note": ""
+        },
+        {
+          "id": "ln_005",
+          "speakerId": "S2",
+          "en": "One career decision I'm glad I made was hiring and developing more staff.",
+          "ja": "してよかったと思う決断のひとつは、スタッフをもっと採用して育てたことです。",
+          "note": ""
+        },
+        {
+          "id": "ln_006",
+          "speakerId": "S2",
+          "en": "Investing in people helped the hospital grow and made the team much stronger.",
+          "ja": "人に投資したことで病院は大きくなり、チームもずっと強くなりました。",
+          "note": ""
+        },
+        {
+          "id": "ln_007",
+          "speakerId": "S1",
+          "en": "What was a turning point in your life?",
+          "ja": "人生の転機は何でしたか？",
+          "note": ""
+        },
+        {
+          "id": "ln_008",
+          "speakerId": "S2",
+          "en": "I think opening our animal hospital was the biggest turning point in my life.",
+          "ja": "動物病院を開いたことが、人生で一番大きな転機だったと思います。",
+          "note": ""
+        },
+        {
+          "id": "ln_009",
+          "speakerId": "S2",
+          "en": "It changed my career and gave me a completely new path.",
+          "ja": "キャリアが変わって、まったく新しい道が開けました。",
+          "note": ""
+        },
+        {
+          "id": "ln_010",
+          "speakerId": "S1",
+          "en": "What's something difficult you overcame, and what did you learn?",
+          "ja": "乗り越えた困難と、そこから学んだことは何ですか？",
+          "note": ""
+        },
+        {
+          "id": "ln_011",
+          "speakerId": "S2",
+          "en": "One of the biggest challenges I faced was managing my staff.",
+          "ja": "一番大変だったことのひとつは、スタッフのマネジメントでした。",
+          "note": ""
+        },
+        {
+          "id": "ln_012",
+          "speakerId": "S2",
+          "en": "In the beginning, I didn't treat people as well as I should have, and many staff members left.",
+          "ja": "最初のころ、私は人に対してよくない接し方をしてしまい、たくさんのスタッフが辞めていきました。",
+          "note": ""
+        },
+        {
+          "id": "ln_013",
+          "speakerId": "S2",
+          "en": "That experience taught me how important it is to always treat people with respect.",
+          "ja": "あの経験から、人にはいつも敬意をもって接することが大事だと学びました。",
+          "note": ""
+        }
+      ],
+      "words": [
+        {
+          "id": "w_001",
+          "en": "trust ~ with ...",
+          "ja": "〜に…を任せる",
+          "type": "phrase",
+          "lineIds": [
+            "ln_002"
+          ],
+          "note": ""
+        },
+        {
+          "id": "w_002",
+          "en": "a turning point",
+          "ja": "転機",
+          "type": "phrase",
+          "lineIds": [
+            "ln_008"
+          ],
+          "note": ""
+        },
+        {
+          "id": "w_003",
+          "en": "I'm glad I ~",
+          "ja": "〜してよかった",
+          "type": "phrase",
+          "lineIds": [
+            "ln_005"
+          ],
+          "note": ""
+        },
+        {
+          "id": "w_004",
+          "en": "invest in ~",
+          "ja": "〜に投資する",
+          "type": "phrase",
+          "lineIds": [
+            "ln_006"
+          ],
+          "note": ""
+        },
+        {
+          "id": "w_005",
+          "en": "That experience taught me ~",
+          "ja": "あの経験から〜を学んだ",
+          "type": "phrase",
+          "lineIds": [
+            "ln_013"
+          ],
+          "note": ""
+        },
+        {
+          "id": "w_006",
+          "en": "treat people with respect",
+          "ja": "人に敬意をもって接する",
+          "type": "phrase",
+          "lineIds": [
+            "ln_013"
+          ],
+          "note": ""
+        }
+      ]
+    },
+    {
+      "id": "tpc_mari_self07",
+      "title": "自分ごと｜大事にしていること",
+      "titleEn": "What Matters to Me",
+      "level": "A2",
+      "tags": [
+        "自分ごと",
+        "一問一答"
+      ],
+      "audience": "mari",
+      "myRole": "S2",
+      "speakers": [
+        {
+          "id": "S1",
+          "label": "相手",
+          "gender": "male"
+        },
+        {
+          "id": "S2",
+          "label": "自分",
+          "gender": "female"
+        }
+      ],
+      "blocks": [
+        {
+          "id": "b1",
+          "label": "質問1・2",
+          "from": "ln_001",
+          "to": "ln_004"
+        },
+        {
+          "id": "b2",
+          "label": "質問3・4",
+          "from": "ln_005",
+          "to": "ln_009"
+        }
+      ],
+      "lines": [
+        {
+          "id": "ln_001",
+          "speakerId": "S1",
+          "en": "What values matter most to you?",
+          "ja": "あなたにとって最も大切な価値観は何ですか？",
+          "note": ""
+        },
+        {
+          "id": "ln_002",
+          "speakerId": "S2",
+          "en": "The value that matters most to me is sincerity. I believe that being honest and genuine is the foundation of trust.",
+          "ja": "私が一番大切にしている価値観は誠実さです。正直で、嘘のないことが、信頼の土台だと思っています。",
+          "note": ""
+        },
+        {
+          "id": "ln_003",
+          "speakerId": "S1",
+          "en": "What's been on your mind lately?",
+          "ja": "最近、気になっていることは何ですか？",
+          "note": ""
+        },
+        {
+          "id": "ln_004",
+          "speakerId": "S2",
+          "en": "Lately, I've been thinking a lot about losing weight. I want to lose seven kilograms, but I haven't started working on it yet.",
+          "ja": "最近は体重を減らすことをよく考えています。7キロ減らしたいのですが、まだ何も始めていません。",
+          "note": ""
+        },
+        {
+          "id": "ln_005",
+          "speakerId": "S1",
+          "en": "What's something you're dealing with these days?",
+          "ja": "最近、対応していることや向き合っていることは何ですか？",
+          "note": ""
+        },
+        {
+          "id": "ln_006",
+          "speakerId": "S2",
+          "en": "To be honest, there's nothing in particular I'm dealing with right now. Things are going pretty smoothly these days.",
+          "ja": "正直なところ、今は特に抱えていることはありません。最近は順調にいっています。",
+          "note": ""
+        },
+        {
+          "id": "ln_007",
+          "speakerId": "S1",
+          "en": "What are you trying to improve right now?",
+          "ja": "今、改善しようとしていることは何ですか？",
+          "note": ""
+        },
+        {
+          "id": "ln_008",
+          "speakerId": "S2",
+          "en": "I'm trying to improve the quality of my diet and sleep.",
+          "ja": "食事と睡眠の質を上げようとしています。",
+          "note": ""
+        },
+        {
+          "id": "ln_009",
+          "speakerId": "S2",
+          "en": "I know those two things are important if I want to lose weight and stay healthy.",
+          "ja": "体重を減らして健康でいたいなら、この2つが大事だと分かっているので。",
+          "note": ""
+        }
+      ],
+      "words": [
+        {
+          "id": "w_001",
+          "en": "the value that matters most to me",
+          "ja": "一番大切にしている価値観",
+          "type": "phrase",
+          "lineIds": [
+            "ln_002"
+          ],
+          "note": ""
+        },
+        {
+          "id": "w_002",
+          "en": "the foundation of trust",
+          "ja": "信頼の土台",
+          "type": "phrase",
+          "lineIds": [
+            "ln_002"
+          ],
+          "note": ""
+        },
+        {
+          "id": "w_003",
+          "en": "to be honest",
+          "ja": "正直なところ",
+          "type": "phrase",
+          "lineIds": [
+            "ln_006"
+          ],
+          "note": ""
+        },
+        {
+          "id": "w_004",
+          "en": "nothing in particular",
+          "ja": "特に何もない",
+          "type": "phrase",
+          "lineIds": [
+            "ln_006"
+          ],
+          "note": ""
+        },
+        {
+          "id": "w_005",
+          "en": "go smoothly",
+          "ja": "順調にいく",
+          "type": "phrase",
+          "lineIds": [
+            "ln_006"
+          ],
+          "note": ""
+        },
+        {
+          "id": "w_006",
+          "en": "improve the quality of ~",
+          "ja": "〜の質を上げる",
+          "type": "phrase",
+          "lineIds": [
+            "ln_008"
+          ],
+          "note": ""
+        }
+      ]
+    },
+    {
+      "id": "tpc_mari_self08",
+      "title": "自分ごと｜これからやりたいこと",
+      "titleEn": "What I Want to Do Next",
+      "level": "A2",
+      "tags": [
+        "自分ごと",
+        "一問一答"
+      ],
+      "audience": "mari",
+      "myRole": "S2",
+      "speakers": [
+        {
+          "id": "S1",
+          "label": "相手",
+          "gender": "male"
+        },
+        {
+          "id": "S2",
+          "label": "自分",
+          "gender": "female"
+        }
+      ],
+      "blocks": [
+        {
+          "id": "b1",
+          "label": "質問1・2",
+          "from": "ln_001",
+          "to": "ln_004"
+        },
+        {
+          "id": "b2",
+          "label": "質問3・4・5",
+          "from": "ln_005",
+          "to": "ln_012"
+        }
+      ],
+      "lines": [
+        {
+          "id": "ln_001",
+          "speakerId": "S1",
+          "en": "What have you been up to lately?",
+          "ja": "最近はどんなことをしていますか？",
+          "note": ""
+        },
+        {
+          "id": "ln_002",
+          "speakerId": "S2",
+          "en": "I've been traveling a lot lately. I've been enjoying visiting different places whenever I have time.",
+          "ja": "最近はよく旅行に行っています。時間ができるたびに、いろいろな場所を訪ねるのを楽しんでいます。",
+          "note": ""
+        },
+        {
+          "id": "ln_003",
+          "speakerId": "S1",
+          "en": "What do you want to do in the next few years?",
+          "ja": "今後数年で何をしたいですか？",
+          "note": ""
+        },
+        {
+          "id": "ln_004",
+          "speakerId": "S2",
+          "en": "I want to lose seven kilograms over the next year. I'm trying to build healthier habits and take better care of myself.",
+          "ja": "これから1年で7キロ減らしたいです。もっと健康的な習慣をつくって、自分を大事にしようとしています。",
+          "note": ""
+        },
+        {
+          "id": "ln_005",
+          "speakerId": "S1",
+          "en": "What's a goal you're working on right now?",
+          "ja": "今取り組んでいる目標は何ですか？",
+          "note": ""
+        },
+        {
+          "id": "ln_006",
+          "speakerId": "S2",
+          "en": "My goal right now is to lose seven kilograms, but to be honest, I haven't started doing anything yet.",
+          "ja": "今の目標は7キロ減らすことですが、正直に言うと、まだ何も始めていません。",
+          "note": ""
+        },
+        {
+          "id": "ln_007",
+          "speakerId": "S2",
+          "en": "I know I need to take action soon.",
+          "ja": "そろそろ動き出さないといけないと分かっています。",
+          "note": ""
+        },
+        {
+          "id": "ln_008",
+          "speakerId": "S1",
+          "en": "What would you do if you had more time?",
+          "ja": "もっと時間があったら何をしたいですか？",
+          "note": ""
+        },
+        {
+          "id": "ln_009",
+          "speakerId": "S2",
+          "en": "If I had more time, I'd like to upload my travel videos to YouTube.",
+          "ja": "もっと時間があったら、旅行の動画をYouTubeに上げたいです。",
+          "note": ""
+        },
+        {
+          "id": "ln_010",
+          "speakerId": "S2",
+          "en": "I've recorded a lot of footage over the years, and I'd love to share my experiences with others.",
+          "ja": "何年もかけてたくさん撮りためてきたので、その経験を人と分かち合えたらうれしいです。",
+          "note": ""
+        },
+        {
+          "id": "ln_011",
+          "speakerId": "S1",
+          "en": "What would you do if money weren't an issue?",
+          "ja": "お金の問題がなければ何をしたいですか？",
+          "note": ""
+        },
+        {
+          "id": "ln_012",
+          "speakerId": "S2",
+          "en": "If money weren't an issue, I'd quit my job. I'd spend more time traveling and doing things I truly enjoy.",
+          "ja": "お金の問題がなければ、仕事を辞めます。もっと旅行をして、本当に好きなことをする時間を増やしたいです。",
+          "note": ""
+        }
+      ],
+      "words": [
+        {
+          "id": "w_001",
+          "en": "I've been ~ing lately",
+          "ja": "最近〜している",
+          "type": "phrase",
+          "lineIds": [
+            "ln_002"
+          ],
+          "note": ""
+        },
+        {
+          "id": "w_002",
+          "en": "whenever I have time",
+          "ja": "時間があるときはいつでも",
+          "type": "phrase",
+          "lineIds": [
+            "ln_002"
+          ],
+          "note": ""
+        },
+        {
+          "id": "w_003",
+          "en": "build healthier habits",
+          "ja": "もっと健康的な習慣をつくる",
+          "type": "phrase",
+          "lineIds": [
+            "ln_004"
+          ],
+          "note": ""
+        },
+        {
+          "id": "w_004",
+          "en": "take better care of myself",
+          "ja": "自分をもっと大事にする",
+          "type": "phrase",
+          "lineIds": [
+            "ln_004"
+          ],
+          "note": ""
+        },
+        {
+          "id": "w_005",
+          "en": "take action",
+          "ja": "動き出す",
+          "type": "phrase",
+          "lineIds": [
+            "ln_007"
+          ],
+          "note": ""
+        },
+        {
+          "id": "w_006",
+          "en": "If I had more time, I'd ~",
+          "ja": "もっと時間があったら〜する",
+          "type": "phrase",
+          "lineIds": [
+            "ln_009"
+          ],
+          "note": ""
+        },
+        {
+          "id": "w_007",
+          "en": "If money weren't an issue, I'd ~",
+          "ja": "お金の問題がなければ〜する",
+          "type": "phrase",
+          "lineIds": [
+            "ln_012"
+          ],
+          "note": ""
+        }
+      ]
+    },
+    {
+      "id": "tpc_mari_self09",
+      "title": "自分ごと｜休みの日と好きなもの",
+      "titleEn": "Days Off and Favorites",
+      "level": "A2",
+      "tags": [
+        "自分ごと",
+        "一問一答"
+      ],
+      "audience": "mari",
+      "myRole": "S2",
+      "speakers": [
+        {
+          "id": "S1",
+          "label": "相手",
+          "gender": "male"
+        },
+        {
+          "id": "S2",
+          "label": "自分",
+          "gender": "female"
+        }
+      ],
+      "blocks": [
+        {
+          "id": "b1",
+          "label": "質問1・2",
+          "from": "ln_001",
+          "to": "ln_004"
+        },
+        {
+          "id": "b2",
+          "label": "質問3・4",
+          "from": "ln_005",
+          "to": "ln_008"
+        },
+        {
+          "id": "b3",
+          "label": "質問5・6",
+          "from": "ln_009",
+          "to": "ln_013"
+        }
+      ],
+      "lines": [
+        {
+          "id": "ln_001",
+          "speakerId": "S1",
+          "en": "What do you do for fun?",
+          "ja": "楽しみのために何をしていますか？",
+          "note": ""
+        },
+        {
+          "id": "ln_002",
+          "speakerId": "S2",
+          "en": "For fun, I enjoy traveling and going to Yokohama BayStars games. During concert season, I also like going on live concert tours.",
+          "ja": "楽しみとしては、旅行と、横浜ベイスターズの試合を見に行くことです。ライブのシーズンには、ツアーに行くのも好きです。",
+          "note": ""
+        },
+        {
+          "id": "ln_003",
+          "speakerId": "S1",
+          "en": "What hobby have you been into recently?",
+          "ja": "最近ハマっている趣味は何ですか？",
+          "note": ""
+        },
+        {
+          "id": "ln_004",
+          "speakerId": "S2",
+          "en": "Recently, I've really been into watching BayStars games. I enjoy following the team throughout the season and cheering them on at the stadium.",
+          "ja": "最近はベイスターズの試合を見るのにすっかりハマっています。シーズンを通してチームを追いかけて、球場で応援するのが楽しいです。",
+          "note": ""
+        },
+        {
+          "id": "ln_005",
+          "speakerId": "S1",
+          "en": "What kind of music do you like?",
+          "ja": "どんな音楽が好きですか？",
+          "note": ""
+        },
+        {
+          "id": "ln_006",
+          "speakerId": "S2",
+          "en": "I like songs by The Cro-Magnons. Their music is simple, energetic, and always lifts my spirits.",
+          "ja": "クロマニヨンズの曲が好きです。シンプルで元気があって、いつも気持ちを上げてくれます。",
+          "note": ""
+        },
+        {
+          "id": "ln_007",
+          "speakerId": "S1",
+          "en": "What kind of movies or shows do you like?",
+          "ja": "どんな映画や番組が好きですか？",
+          "note": ""
+        },
+        {
+          "id": "ln_008",
+          "speakerId": "S2",
+          "en": "I like feel-good movies and movies with a lot of humor. I enjoy watching something light and fun that makes me laugh.",
+          "ja": "ほのぼのする映画と、笑いの多い映画が好きです。軽くて楽しくて、笑える作品を見るのが好きです。",
+          "note": ""
+        },
+        {
+          "id": "ln_009",
+          "speakerId": "S1",
+          "en": "What do you usually do on weekends?",
+          "ja": "週末は普段何をしていますか？",
+          "note": ""
+        },
+        {
+          "id": "ln_010",
+          "speakerId": "S2",
+          "en": "I usually play tennis and go out for drinks on weekends. It's a great way to relax and spend time with friends.",
+          "ja": "週末はたいていテニスをして、飲みに行きます。リラックスして友達と過ごすのに、ちょうどいいんです。",
+          "note": ""
+        },
+        {
+          "id": "ln_011",
+          "speakerId": "S1",
+          "en": "How do you like to relax on your days off?",
+          "ja": "休みの日はどのようにリラックスしますか？",
+          "note": ""
+        },
+        {
+          "id": "ln_012",
+          "speakerId": "S2",
+          "en": "I like to relax by having a few drinks at home and taking it easy.",
+          "ja": "家で少しお酒を飲んで、のんびりするのが好きです。",
+          "note": ""
+        },
+        {
+          "id": "ln_013",
+          "speakerId": "S2",
+          "en": "On my days off, I enjoy doing as little as possible and just unwinding.",
+          "ja": "休みの日は、できるだけ何もしないでダラダラ過ごすのが好きです。",
+          "note": ""
+        }
+      ],
+      "words": [
+        {
+          "id": "w_001",
+          "en": "for fun",
+          "ja": "楽しみとして",
+          "type": "phrase",
+          "lineIds": [
+            "ln_002"
+          ],
+          "note": ""
+        },
+        {
+          "id": "w_002",
+          "en": "be into ~",
+          "ja": "〜にハマっている",
+          "type": "phrase",
+          "lineIds": [
+            "ln_004"
+          ],
+          "note": ""
+        },
+        {
+          "id": "w_003",
+          "en": "cheer ~ on",
+          "ja": "〜を応援する",
+          "type": "phrase",
+          "lineIds": [
+            "ln_004"
+          ],
+          "note": ""
+        },
+        {
+          "id": "w_004",
+          "en": "lift my spirits",
+          "ja": "気持ちを上げてくれる",
+          "type": "phrase",
+          "lineIds": [
+            "ln_006"
+          ],
+          "note": ""
+        },
+        {
+          "id": "w_005",
+          "en": "feel-good movies",
+          "ja": "ほのぼのする映画",
+          "type": "phrase",
+          "lineIds": [
+            "ln_008"
+          ],
+          "note": ""
+        },
+        {
+          "id": "w_006",
+          "en": "take it easy",
+          "ja": "のんびりする",
+          "type": "phrase",
+          "lineIds": [
+            "ln_012"
+          ],
+          "note": ""
+        },
+        {
+          "id": "w_007",
+          "en": "unwind",
+          "ja": "くつろぐ、気を抜く",
+          "type": "word",
+          "lineIds": [
+            "ln_013"
+          ],
+          "note": ""
+        }
+      ]
+    },
+    {
+      "id": "tpc_mari_self10",
+      "title": "自分ごと｜食べものと旅",
+      "titleEn": "Food and Travel",
+      "level": "A2",
+      "tags": [
+        "自分ごと",
+        "一問一答"
+      ],
+      "audience": "mari",
+      "myRole": "S2",
+      "speakers": [
+        {
+          "id": "S1",
+          "label": "相手",
+          "gender": "male"
+        },
+        {
+          "id": "S2",
+          "label": "自分",
+          "gender": "female"
+        }
+      ],
+      "blocks": [],
+      "lines": [
+        {
+          "id": "ln_001",
+          "speakerId": "S1",
+          "en": "What kind of food do you like, and what's your go-to dish?",
+          "ja": "どんな食べ物が好きですか？また、よく選ぶ定番料理は何ですか？",
+          "note": ""
+        },
+        {
+          "id": "ln_002",
+          "speakerId": "S2",
+          "en": "I tend to go for ramen, Italian food, sushi, or yakiniku. Those are my favorite choices when I eat out.",
+          "ja": "ラーメン、イタリアン、寿司、焼肉を選びがちです。外食のときは、だいたいこの中から選びます。",
+          "note": ""
+        },
+        {
+          "id": "ln_003",
+          "speakerId": "S1",
+          "en": "What kind of travel do you enjoy?",
+          "ja": "どんな旅行が好きですか？",
+          "note": ""
+        },
+        {
+          "id": "ln_004",
+          "speakerId": "S2",
+          "en": "I enjoy trips centered around saunas and relaxing with no particular plan.",
+          "ja": "サウナを中心にした旅や、特に予定を決めずにのんびりする旅が好きです。",
+          "note": ""
+        },
+        {
+          "id": "ln_005",
+          "speakerId": "S2",
+          "en": "One of my favorite things is eating great local food and having a few drinks while taking it easy.",
+          "ja": "一番の楽しみは、その土地のおいしいものを食べて、のんびりお酒を飲むことです。",
+          "note": ""
+        },
+        {
+          "id": "ln_006",
+          "speakerId": "S1",
+          "en": "What's a place you love and would recommend to others?",
+          "ja": "おすすめしたい場所はどこですか？",
+          "note": ""
+        },
+        {
+          "id": "ln_007",
+          "speakerId": "S2",
+          "en": "I'd definitely recommend Vietnam. The cost of living is low, the food is delicious, and I feel safe traveling there.",
+          "ja": "ベトナムがおすすめです。物価が安くて、ご飯もおいしくて、旅していて安全だと感じます。",
+          "note": ""
+        }
+      ],
+      "words": [
+        {
+          "id": "w_001",
+          "en": "tend to ~",
+          "ja": "〜しがちだ",
+          "type": "phrase",
+          "lineIds": [
+            "ln_002"
+          ],
+          "note": ""
+        },
+        {
+          "id": "w_002",
+          "en": "when I eat out",
+          "ja": "外食のとき",
+          "type": "phrase",
+          "lineIds": [
+            "ln_002"
+          ],
+          "note": ""
+        },
+        {
+          "id": "w_003",
+          "en": "centered around ~",
+          "ja": "〜を中心にした",
+          "type": "phrase",
+          "lineIds": [
+            "ln_004"
+          ],
+          "note": ""
+        },
+        {
+          "id": "w_004",
+          "en": "with no particular plan",
+          "ja": "特に予定を決めずに",
+          "type": "phrase",
+          "lineIds": [
+            "ln_004"
+          ],
+          "note": ""
+        },
+        {
+          "id": "w_005",
+          "en": "the cost of living",
+          "ja": "物価、生活費",
+          "type": "phrase",
+          "lineIds": [
+            "ln_007"
+          ],
+          "note": ""
+        },
+        {
+          "id": "w_006",
+          "en": "I'd definitely recommend ~",
+          "ja": "〜を強くおすすめする",
+          "type": "phrase",
+          "lineIds": [
+            "ln_007"
+          ],
+          "note": ""
+        }
+      ]
+    },
+    {
+      "id": "tpc_mari_self11",
+      "title": "自分ごと｜日本のことと英語のこと",
+      "titleEn": "Japan and English",
+      "level": "A2",
+      "tags": [
+        "自分ごと",
+        "一問一答"
+      ],
+      "audience": "mari",
+      "myRole": "S2",
+      "speakers": [
+        {
+          "id": "S1",
+          "label": "相手",
+          "gender": "male"
+        },
+        {
+          "id": "S2",
+          "label": "自分",
+          "gender": "female"
+        }
+      ],
+      "blocks": [
+        {
+          "id": "b1",
+          "label": "質問1・2",
+          "from": "ln_001",
+          "to": "ln_006"
+        },
+        {
+          "id": "b2",
+          "label": "質問3・4",
+          "from": "ln_007",
+          "to": "ln_012"
+        },
+        {
+          "id": "b3",
+          "label": "質問5・6",
+          "from": "ln_013",
+          "to": "ln_018"
+        }
+      ],
+      "lines": [
+        {
+          "id": "ln_001",
+          "speakerId": "S1",
+          "en": "What do you like most about Japan?",
+          "ja": "日本の一番好きなところは何ですか？",
+          "note": ""
+        },
+        {
+          "id": "ln_002",
+          "speakerId": "S2",
+          "en": "What I like most about Japan is Hokkaido.",
+          "ja": "日本で一番好きなのは北海道です。",
+          "note": ""
+        },
+        {
+          "id": "ln_003",
+          "speakerId": "S2",
+          "en": "It has great saunas and hot springs, the food is amazing, and there are so many different ways to enjoy the area because it's so large.",
+          "ja": "いいサウナや温泉があって、ご飯もおいしくて、広いのでいろいろな楽しみ方ができます。",
+          "note": ""
+        },
+        {
+          "id": "ln_004",
+          "speakerId": "S1",
+          "en": "What do you think Japan could improve?",
+          "ja": "日本がもっと良くできると思うところは何ですか？",
+          "note": ""
+        },
+        {
+          "id": "ln_005",
+          "speakerId": "S2",
+          "en": "I think Japan should charge a higher tourism tax for international visitors.",
+          "ja": "日本は、外国からの観光客にもっと高い観光税をかけるべきだと思います。",
+          "note": ""
+        },
+        {
+          "id": "ln_006",
+          "speakerId": "S2",
+          "en": "Japan is a clean and beautiful country, and that extra revenue could help maintain and protect it.",
+          "ja": "日本はきれいで美しい国なので、その収入で守っていけると思うんです。",
+          "note": ""
+        },
+        {
+          "id": "ln_007",
+          "speakerId": "S1",
+          "en": "What brought you here today?",
+          "ja": "今日ここに来たきっかけは何ですか？",
+          "note": ""
+        },
+        {
+          "id": "ln_008",
+          "speakerId": "S2",
+          "en": "I'm studying English because my friend Mucchan keeps encouraging me to do it.",
+          "ja": "友達のむっちゃんがずっと勧めてくれるので、英語を勉強しています。",
+          "note": ""
+        },
+        {
+          "id": "ln_009",
+          "speakerId": "S2",
+          "en": "At first, it wasn't really my idea, but now I'm trying to make the most of it.",
+          "ja": "最初は自分から始めたわけではないのですが、今はせっかくだからと思ってやっています。",
+          "note": ""
+        },
+        {
+          "id": "ln_010",
+          "speakerId": "S1",
+          "en": "Why did you start studying English?",
+          "ja": "なぜ英語の勉強を始めたのですか？",
+          "note": ""
+        },
+        {
+          "id": "ln_011",
+          "speakerId": "S2",
+          "en": "I'm being forced to study English by my friend Mucchan.",
+          "ja": "友達のむっちゃんに、英語の勉強をさせられています。",
+          "note": ""
+        },
+        {
+          "id": "ln_012",
+          "speakerId": "S2",
+          "en": "But I think my trips abroad will be much more enjoyable if I can speak English.",
+          "ja": "でも英語が話せたら、海外旅行がもっと楽しくなると思います。",
+          "note": ""
+        },
+        {
+          "id": "ln_013",
+          "speakerId": "S1",
+          "en": "What's something good that English has brought to your life?",
+          "ja": "英語が人生にもたらした良いことは？",
+          "note": ""
+        },
+        {
+          "id": "ln_014",
+          "speakerId": "S2",
+          "en": "English has helped me understand a little of what foreigners are saying.",
+          "ja": "英語のおかげで、外国の人が言っていることが少し分かるようになりました。",
+          "note": ""
+        },
+        {
+          "id": "ln_015",
+          "speakerId": "S2",
+          "en": "I still miss most of it, but I can understand more than I used to.",
+          "ja": "まだほとんど聞き取れませんが、以前よりは分かるようになりました。",
+          "note": ""
+        },
+        {
+          "id": "ln_016",
+          "speakerId": "S1",
+          "en": "How do you practice English in your daily life?",
+          "ja": "日常生活でどのように英語を練習していますか？",
+          "note": ""
+        },
+        {
+          "id": "ln_017",
+          "speakerId": "S2",
+          "en": "I used to study English quite regularly.",
+          "ja": "以前はわりとちゃんと英語を勉強していました。",
+          "note": ""
+        },
+        {
+          "id": "ln_018",
+          "speakerId": "S2",
+          "en": "For about a year, I used apps and memorized English sentences, but I'm not doing much at the moment.",
+          "ja": "1年ほどアプリを使ったり英文を暗記したりしていましたが、今はあまりやっていません。",
+          "note": ""
+        }
+      ],
+      "words": [
+        {
+          "id": "w_001",
+          "en": "What I like most about ~ is ...",
+          "ja": "〜で一番好きなのは…",
+          "type": "phrase",
+          "lineIds": [
+            "ln_002"
+          ],
+          "note": ""
+        },
+        {
+          "id": "w_002",
+          "en": "so many different ways to enjoy ~",
+          "ja": "〜のいろいろな楽しみ方",
+          "type": "phrase",
+          "lineIds": [
+            "ln_003"
+          ],
+          "note": ""
+        },
+        {
+          "id": "w_003",
+          "en": "charge a higher tax",
+          "ja": "より高い税をかける",
+          "type": "phrase",
+          "lineIds": [
+            "ln_005"
+          ],
+          "note": ""
+        },
+        {
+          "id": "w_004",
+          "en": "maintain and protect ~",
+          "ja": "〜を維持して守る",
+          "type": "phrase",
+          "lineIds": [
+            "ln_006"
+          ],
+          "note": ""
+        },
+        {
+          "id": "w_005",
+          "en": "keep encouraging me to ~",
+          "ja": "ずっと〜するよう勧めてくれる",
+          "type": "phrase",
+          "lineIds": [
+            "ln_008"
+          ],
+          "note": ""
+        },
+        {
+          "id": "w_006",
+          "en": "make the most of it",
+          "ja": "せっかくだから活かす",
+          "type": "phrase",
+          "lineIds": [
+            "ln_009"
+          ],
+          "note": ""
+        },
+        {
+          "id": "w_007",
+          "en": "I used to ~",
+          "ja": "以前は〜していた",
+          "type": "phrase",
+          "lineIds": [
+            "ln_017"
+          ],
+          "note": ""
+        },
+        {
+          "id": "w_008",
+          "en": "miss most of it",
+          "ja": "ほとんど聞き取れない",
+          "type": "phrase",
+          "lineIds": [
+            "ln_015"
+          ],
+          "note": ""
+        }
+      ]
     },
     {
       "id": "tpc_tamo_hotel",
