@@ -367,3 +367,7 @@ label.field > .field__label { display: block; font-size: .72rem; color: var(--mu
 .mic-meter__fill { height: 100%; width: 0%; background: var(--accent);
   transition: width 60ms linear; }
 .mic-log { margin-top: .4rem; min-height: 1.2rem; font-family: ui-monospace, monospace; }
+
+/* 進捗画面のレイテンシ推移グラフ（§1.9。F8。SVGを直接組み立てる） */
+.latency-graph { color: var(--accent); line-height: 0; }
+.latency-svg { display: block; }

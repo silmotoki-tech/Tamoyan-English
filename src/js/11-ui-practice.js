@@ -15,6 +15,8 @@
   // §7.2 行が進む最短間隔の下限。何が壊れても画面が流れ去らないようにする。
   // TTSが握り潰されて即endが返るような事態でも、これ以上速くは進まない。
   var MIN_LINE_INTERVAL_MS = 1200;
+  // §1.8 積み上げドリルのオファー条件。S3またはS5で同じ行に連続で詰まったら。
+  var BUILDUP_STALL_STREAK = 3;
 
   var S = null;        // 進行中のセッション
   var wakeLock = null;
@@ -84,7 +86,9 @@
       barTimer: null,
       expectedMs: 0,
       cueAt: 0,
-      finished: false
+      finished: false,
+      sessionStartedAt: Date.now(),  // §1.9 F8: 日次ログの分数を出すため
+      buildupOffered: {}             // §1.8: 積み上げドリルは1セッション1行につき1回だけ聞く
     };
     if (!S.queue.length) {
       U.mount(view, h('div', { class: 'empty', text: mode.myRoleOnly
@@ -113,6 +117,15 @@
     try { EST.speech.cancel(); } catch (e) {}
     try { EST.mic.stop(); } catch (e) {}
     releaseWakeLock();
+    // §1.9 F8: 日次ログに分数を積む。10秒に満たない滞在（開いてすぐ離れた等）は
+    // ノイズになるだけなので数えない。
+    var minutes = (Date.now() - (S.sessionStartedAt || Date.now())) / 60000;
+    if (minutes >= 1 / 6 && S.tp) {
+      EST.stage.logSessionActivity(S.tp, { minutes: minutes });
+      EST.stage.saveTopicProgress(S.tp).catch(function (e) {
+        console.warn('[practice] 日次ログの保存に失敗しました', e);
+      });
+    }
     S = null;
   }
 
@@ -472,29 +485,13 @@
       });
   }
 
+  // データの操作自体は EST.store.addTopicWord に共通化してある（F8で設定画面の
+  // チャンク昇格からも同じ経路を使うため）。ここではUIの結果表示だけを行う。
   function addWordToTopic(topicId, en, lineId) {
-    return EST.store.get('topics', topicId).then(function (topic) {
-      if (!topic) return;
-      // 長押しのあいだに他の変更が入っていた場合に備え、直前の値を読み直す
-      if ((topic.words || []).some(function (w) { return String(w.en || '').toLowerCase() === en.toLowerCase(); })) {
-        ui().toast('すでに語彙にあります: ' + en);
-        return;
-      }
-      var words = (topic.words || []).slice();
-      var n = words.length + 1;
-      var id = 'w_' + EST.schema.pad3(n);
-      while (words.some(function (w) { return w.id === id; })) { n++; id = 'w_' + EST.schema.pad3(n); }
-      words.push({
-        id: id, en: en, ja: '',
-        type: EST.schema.countWords(en) > 1 ? 'phrase' : 'word',
-        lineIds: lineId ? [lineId] : [], note: ''
-      });
-      topic.words = words;
-      topic.updatedAt = Date.now();
-      return EST.store.put('topics', topic).then(function () {
-        if (S && S.topic && S.topic.id === topicId) S.topic = topic;
-        ui().toast('語彙に追加しました');
-      });
+    return EST.store.addTopicWord(topicId, { en: en, lineIds: lineId ? [lineId] : [] }).then(function (r) {
+      if (!r.added) { ui().toast(r.reason === 'exists' ? ('すでに語彙にあります: ' + en) : '追加できませんでした'); return; }
+      if (S && S.topic && S.topic.id === topicId) S.topic = r.topic;
+      ui().toast('語彙に追加しました');
     });
   }
 
@@ -597,20 +594,55 @@
     // §1.4 定着判定はシャッフル状態（S5以降）での測定でのみ行う
     var mode = EST.stage.stageMode(stage);
     var line = S.item && S.item.line;
-    EST.stage.recordLineProgress(S.topic.id, lineId, stage, result, line, { shuffled: !!mode.shuffled })
+    // §7.2 行が進む最短間隔に下限を置く。何かが壊れて即座に確定が返っても、
+    // これ以上速くは流れない（画面が流れ去るのを防ぐ最後の砦）。
+    var elapsed = Date.now() - (S.lineStartedAt || 0);
+    var scheduleDelay = Math.max(NEXT_LINE_DELAY_MS, MIN_LINE_INTERVAL_MS - elapsed);
+
+    EST.stage.recordLineProgress(S.topic.id, lineId, stage, result, line, { shuffled: !!mode.shuffled, expectedMs: S.expectedMs })
       .then(function (p) {
+        if (!S || S.closing) return;
         refreshMeter(lineId);
         if (p && p.mastered && !S.masteredShown) {
           // 定着した瞬間だけ控えめに出す
           el.notice.textContent = '定着しました';
         }
+        // §1.8 積み上げドリルのオファー。出している間は次の行へ進めない。
+        if (offerBuildupIfStuck(stage, line, p, scheduleDelay)) return;
+        later(nextLine, scheduleDelay);
       });
     if (result.ok && !result.listenOnly) flash();
+  }
 
-    // §7.2 行が進む最短間隔に下限を置く。何かが壊れて即座に確定が返っても、
-    // これ以上速くは流れない（画面が流れ去るのを防ぐ最後の砦）。
-    var elapsed = Date.now() - (S.lineStartedAt || 0);
-    later(nextLine, Math.max(NEXT_LINE_DELAY_MS, MIN_LINE_INTERVAL_MS - elapsed));
+  /* §1.8 S3/S5で同じ行に3回連続で詰まったら「分解して練習しますか」を出す。
+     1セッション・1行につき1回だけ（断られても連打しない）。承諾したら
+     積み上げドリル（18-ui-buildup.js）へ。自動発動はしない、あくまで提案。 */
+  function offerBuildupIfStuck(stage, line, p, scheduleDelay) {
+    if (!line || (stage !== 'S3' && stage !== 'S5')) return false;
+    if (S.buildupOffered[line.id]) return false;
+    var chunks = (line.chunks && line.chunks.length) ? line.chunks : EST.schema.splitChunks(line.en);
+    if (!chunks || chunks.length < 2) return false;
+    var recent = (p && p.recentStalls) || [];
+    var last = recent.slice(-BUILDUP_STALL_STREAK);
+    var stuck = last.length === BUILDUP_STALL_STREAK && last.every(function (n) { return n > 0; });
+    if (!stuck) return false;
+
+    S.buildupOffered[line.id] = true;
+    var topicId = S.topic.id, lineId = line.id;
+    // §1.8 直近の詰まりの経過時間から、文のどのあたりで詰まったかを大まかに
+    // 推定し、積み上げドリルの開始位置のヒントとして渡す（厳密ではない）。
+    var stalls = (S.lastResult && S.lastResult.result && S.lastResult.result.stalls) || [];
+    var posHint = (stalls.length && S.expectedMs)
+      ? EST.mic.estimateStallPosition(chunks, stalls[0].elapsedMs, S.expectedMs) : null;
+    var hash = '#/buildup/' + encodeURIComponent(topicId) + '/' + encodeURIComponent(lineId)
+      + (posHint ? '/' + encodeURIComponent(posHint) : '');
+    ui().confirm('詰まりが続いています', '「' + line.en + '」を分解して練習しますか？文末から少しずつ増やしていきます。', '分解する')
+      .then(function (ok) {
+        if (!S || S.closing) return;
+        if (ok) { location.hash = hash; return; }
+        later(nextLine, scheduleDelay);
+      });
+    return true;
   }
 
   function flash() {
@@ -630,6 +662,7 @@
     S.tp.laps = S.tp.laps || { total: 0, byStage: {} };
     S.tp.laps.total = (S.tp.laps.total || 0) + 1;
     S.tp.laps.byStage[S.stage] = (S.tp.laps.byStage[S.stage] || 0) + 1;
+    EST.stage.logSessionActivity(S.tp, { laps: 1 });   // §1.9 F8: 日次ログ
     EST.stage.saveTopicProgress(S.tp);
 
     var mode = EST.stage.stageMode(S.stage);

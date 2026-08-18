@@ -302,6 +302,10 @@
           class: 'btn', text: '一覧を見る',
           onClick: function () { location.hash = '#/list/' + encodeURIComponent(t.id); }
         }),
+        h('button', {
+          class: 'btn', text: '進捗',
+          onClick: function () { location.hash = '#/progress/' + encodeURIComponent(t.id); }
+        }),
         canEdit ? h('button', {
           class: 'btn', text: 'JSON書き出し',
           onClick: function () { exportTopic(t); }
@@ -310,9 +314,7 @@
           class: 'btn btn--danger', text: '削除',
           onClick: function () { removeTopic(t); }
         }) : null
-      ]),
-      h('div', { class: 'tiny muted', style: { marginTop: '.35rem' },
-        text: 'S5・S6 と積み上げドリルは F7 で追加します。' })
+      ])
     ]);
 
     var body = h('div', { class: 'card' }, buildLineList(t));
@@ -360,7 +362,8 @@
           l.ja ? h('div', { class: 'line-view__ja', text: l.ja }) : null,
           l.note ? h('div', { class: 'tiny muted', text: l.note }) : null
         ]),
-        speakLineButton(t, l)
+        speakLineButton(t, l),
+        buildupButton(t, l)
       ]);
       lineEls[l.id] = row;
       out.push(row);
@@ -383,6 +386,17 @@
         EST.speech.speak(l.en, { gender: genderOf(t, l.speakerId), topicId: t.id, lineId: l.id });
       }
     }, '🔊');
+  }
+
+  // §1.8「トピック詳細から手動で任意の行を分解することもできる」。
+  // チャンクが1個（＝短い行で分ける意味が無い）なら出さない。
+  function buildupButton(t, l) {
+    var chunks = (l.chunks && l.chunks.length) ? l.chunks : EST.schema.splitChunks(l.en);
+    if (!chunks || chunks.length < 2) return null;
+    return h('button', {
+      class: 'speak-btn', title: '分解して練習', 'aria-label': '分解して練習',
+      onClick: function () { location.hash = '#/buildup/' + encodeURIComponent(t.id) + '/' + encodeURIComponent(l.id); }
+    }, '🧩');
   }
 
   /* ---- 通して再生（§11 F3「台本を入れて聞き流す」） ----------------------

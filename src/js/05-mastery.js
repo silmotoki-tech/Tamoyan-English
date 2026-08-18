@@ -127,6 +127,24 @@
     return buildReviewQueue(now).then(function (q) { return q.length; });
   }
 
+  /* ---- 「定着した行 X/Y」（§1.9。F8） ---------------------------------
+     採点対象はト書き等（skip）を除いた行。台本を渡してもらうのは、
+     ここが Progress ストアしか知らないと「まだ一度も練習していない行」を
+     数えられないため（Progress レコード自体が無い）。 */
+  function topicMasterySummary(topic) {
+    if (!topic) return Promise.resolve({ mastered: 0, total: 0 });
+    var lines = (topic.lines || []).filter(function (l) { return !l.skip && String(l.en || '').trim(); });
+    var total = lines.length;
+    if (!total) return Promise.resolve({ mastered: 0, total: 0 });
+    var me = EST.profile.get();
+    return Promise.all(lines.map(function (l) {
+      return EST.store.get('progress', EST.store.progressKey(topic.id, l.id));
+    })).then(function (recs) {
+      var mastered = recs.filter(function (p) { return p && p.mastered && (!p.profileId || p.profileId === me); }).length;
+      return { mastered: mastered, total: total };
+    });
+  }
+
   /* ---- 再確認1回ぶんの判定（§1.4） -----------------------------------------
      閾値未満 かつ 詰まりなし → 定着を維持し、次の再確認を7日後に置き直す
      それ以外               → 定着を外す
@@ -167,6 +185,7 @@
     isDue: isDue,
     buildReviewQueue: buildReviewQueue,
     countDue: countDue,
-    judgeReview: judgeReview
+    judgeReview: judgeReview,
+    topicMasterySummary: topicMasterySummary
   };
 })(window.EST = window.EST || {});

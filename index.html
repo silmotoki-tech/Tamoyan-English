@@ -385,6 +385,10 @@ label.field > .field__label { display: block; font-size: .72rem; color: var(--mu
   transition: width 60ms linear; }
 .mic-log { margin-top: .4rem; min-height: 1.2rem; font-family: ui-monospace, monospace; }
 
+/* 進捗画面のレイテンシ推移グラフ（§1.9。F8。SVGを直接組み立てる） */
+.latency-graph { color: var(--accent); line-height: 0; }
+.latency-svg { display: block; }
+
 </style>
 </head>
 <body>
@@ -447,8 +451,14 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
     theme: 'auto',
     fontScale: 1.0,
     recordOpens: true,         // §4.1 一覧モードで開いた行を復習キューに入れるか
-    autoBackups: []            // §6.4 直近3世代（部屋ごとに持つ）
+    autoBackups: [],           // §6.4 直近3世代（部屋ごとに持つ）
+    chunkStalls: {}            // §1.8 F8: よく詰まるチャンクの集計（部屋ごと）
   };
+
+  // §1.8 F8「よく詰まるチャンクの集計」。新しいストアは作らず設定に相乗りする
+  // （台本をまたぐ小さな集計なので、これで十分な性質のデータ）。
+  // 際限なく増えないよう、上限を超えたら最も少ないものを間引く。
+  var CHUNK_STALL_MAX = 60;
 
   // 台本に属する共有情報（どちらの部屋からでも同じものを見る）
   var DEFAULT_SHARED = {
@@ -557,6 +567,67 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
     });
   }
 
+  /* ---- 語彙への追加（§5.3・F6/F8で共有） -------------------------------
+     長押しでの追加（F6）と、よく詰まるチャンクからの昇格（F8）の両方が使う。
+     UIの確認ダイアログやトーストは呼び出し側の仕事にする（ここは data だけ）。
+     戻り値: {added:true} / {added:false, reason:'exists'|'missing'} */
+  function addTopicWord(topicId, w) {
+    return get('topics', topicId).then(function (topic) {
+      if (!topic) return { added: false, reason: 'missing' };
+      var en = String((w && w.en) || '').trim();
+      if (!en) return { added: false, reason: 'missing' };
+      var exists = (topic.words || []).some(function (x) {
+        return String(x.en || '').toLowerCase() === en.toLowerCase();
+      });
+      if (exists) return { added: false, reason: 'exists' };
+
+      var words = (topic.words || []).slice();
+      var n = words.length + 1;
+      var id = 'w_' + EST.schema.pad3(n);
+      while (words.some(function (x) { return x.id === id; })) { n++; id = 'w_' + EST.schema.pad3(n); }
+      words.push({
+        id: id, en: en, ja: (w && w.ja) || '',
+        type: (w && w.type) || (EST.schema.countWords(en) > 1 ? 'phrase' : 'word'),
+        lineIds: (w && w.lineIds) || [], note: ''
+      });
+      topic.words = words;
+      topic.updatedAt = Date.now();
+      return put('topics', topic).then(function () { return { added: true, topic: topic }; });
+    });
+  }
+
+  /* ---- よく詰まるチャンクの集計（§1.8・F8） ----------------------------- */
+  function recordChunkStall(text, topicId, lineId) {
+    var key = String(text || '').trim().toLowerCase();
+    if (!key) return Promise.resolve();
+    return loadSettings().then(function (s) {
+      var map = s.chunkStalls || {};
+      var cur = map[key];
+      if (cur) {
+        cur.count = (cur.count || 0) + 1;
+        cur.updatedAt = Date.now();
+      } else {
+        // ストア上限。一番少ないものから間引く（新顔を締め出さないため）
+        var keys = Object.keys(map);
+        if (keys.length >= CHUNK_STALL_MAX) {
+          keys.sort(function (a, b) { return (map[a].count || 0) - (map[b].count || 0); });
+          delete map[keys[0]];
+        }
+        map[key] = { text: String(text).trim(), count: 1, topicId: topicId, lineId: lineId, updatedAt: Date.now() };
+      }
+      s.chunkStalls = map;
+      return saveSettings(s);
+    });
+  }
+
+  function topStalledChunks(limit) {
+    return loadSettings().then(function (s) {
+      var list = Object.keys(s.chunkStalls || {}).map(function (k) { return s.chunkStalls[k]; });
+      list.sort(function (a, b) { return (b.count || 0) - (a.count || 0); });
+      return list.slice(0, limit || 10);
+    });
+  }
+
   // ---- 設定 -----------------------------------------------------------
   function isPlainObject(x) {
     return !!x && typeof x === 'object' && !Array.isArray(x);
@@ -635,6 +706,9 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
     settingsKey: settingsKey,
     belongsToProfile: belongsToProfile,
     markLineOpened: markLineOpened,
+    addTopicWord: addTopicWord,
+    recordChunkStall: recordChunkStall,
+    topStalledChunks: topStalledChunks,
     loadShared: loadShared,
     saveShared: saveShared,
     open: open,
@@ -2321,10 +2395,10 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
   }
 
   // §1.8 詰まりが文のどのあたりで起きたかを、経過時間とチャンクの累積想定時間
-  // （語数比で按分）から推定する。厳密ではなく前半/中盤/後半程度の粒度。
-  function estimateStallPosition(chunks, elapsedMs, expectedMs) {
+  // （語数比で按分）から推定する共通処理。戻り値はチャンクの添字（厳密ではない）。
+  function stallChunkIndex(chunks, elapsedMs, expectedMs) {
     chunks = (chunks || []).map(String).filter(function (c) { return c.trim(); });
-    if (!chunks.length || !expectedMs || expectedMs <= 0 || elapsedMs == null) return null;
+    if (!chunks.length || !expectedMs || expectedMs <= 0 || elapsedMs == null) return -1;
 
     var wordCounts = chunks.map(function (c) { return Math.max(1, c.trim().split(/\s+/).length); });
     var totalWords = wordCounts.reduce(function (a, b) { return a + b; }, 0);
@@ -2334,10 +2408,25 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
       acc += (wordCounts[i] / totalWords) * expectedMs;
       if (elapsedMs <= acc) { idx = i; break; }
     }
-    var frac = (idx + 0.5) / chunks.length;
+    return idx;
+  }
+
+  // 前半/中盤/後半程度の粒度。積み上げドリルの開始位置に使う（§1.8）。
+  function estimateStallPosition(chunks, elapsedMs, expectedMs) {
+    var idx = stallChunkIndex(chunks, elapsedMs, expectedMs);
+    if (idx < 0) return null;
+    var n = (chunks || []).filter(function (c) { return String(c).trim(); }).length;
+    var frac = (idx + 0.5) / n;
     if (frac < 1 / 3) return 'front';
     if (frac < 2 / 3) return 'mid';
     return 'back';
+  }
+
+  // §1.8「よく詰まるチャンクの集計」用。実際のチャンク文字列を返す（F8）。
+  function estimateStallChunk(chunks, elapsedMs, expectedMs) {
+    var idx = stallChunkIndex(chunks, elapsedMs, expectedMs);
+    var list = (chunks || []).map(String).filter(function (c) { return c.trim(); });
+    return idx >= 0 ? list[idx] : null;
   }
 
   EST.mic = {
@@ -2364,6 +2453,7 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
     // 計測値の加工（カウント成否の判定はF5。§2.8）
     medianOfLastN: medianOfLastN,
     estimateStallPosition: estimateStallPosition,
+    estimateStallChunk: estimateStallChunk,
     // 定数（実機調整で参照する）
     STALL_MS: STALL_MS,
     REP_GAP_MS: REP_GAP_MS,
@@ -2401,6 +2491,13 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
   // §1.4 で使う定着閾値の係数（F7で使う。ここでは持つだけ）
   var MASTERY_BASE_MS = 1200;
   var MASTERY_PER_WORD_MS = 60;
+  // §1.9 F8: レイテンシ推移グラフの点の上限。超えたら間引いて分解能を半分にする。
+  var LATENCY_TREND_MAX = 120;
+  // §1.9 F8: 日次ログ（sessions）の保持日数。習慣グラフとして持つには十分な長さ。
+  var SESSION_LOG_MAX_DAYS = 120;
+  // §1.9 F8: 継続日数の判定で「今日はまだやっていない」を切らさないための猶予。
+  // 昨日までの記録が続いていれば、今日やる前でも継続日数を保つ。
+  var STREAK_GRACE_DAYS = 1;
 
   var STAGES = ['S1', 'S2', 'S3', 'S4', 'S5', 'S6'];
   var STAGE_LABELS = {
@@ -2464,6 +2561,10 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
       sessions: [],
       // §1.6 F6: S0（語彙の下ごしらえ）を済ませたか。
       s0: { done: false, doneAt: null },
+      // §1.9 F8: 可視化。latencyTrend は間引いて保持するので、x軸（累計回数）は
+      // 配列の長さに頼らずこのカウンタで別に持つ。
+      repLatencyCount: 0,
+      latencyTrend: [],
       updatedAt: 0
     };
   }
@@ -2478,6 +2579,10 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
     if (tp.activeRole === undefined) tp.activeRole = null;
     if (tp.roleSwapOffered === undefined) tp.roleSwapOffered = false;
     if (!tp.s0) tp.s0 = { done: false, doneAt: null };   // F6より前に作られた進捗を補う
+    // F8より前に作られた進捗を補う
+    if (!tp.sessions) tp.sessions = [];
+    if (!tp.latencyTrend) tp.latencyTrend = [];
+    if (tp.repLatencyCount == null) tp.repLatencyCount = 0;
 
     // 旧形式の stage / blockIndex を blocks[] へ移す
     if (tp.stage && !Object.keys(tp.blocks).length) {
@@ -2582,6 +2687,87 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
     return tp;
   }
 
+  /* ---- 可視化のための記録（§1.9。F8） -------------------------------------
+     ここで作るデータはすべて「今は貯まっていない」もの。表示側（新設の
+     進捗画面）はここが書いたものを読むだけにする。 */
+
+  // ローカル日付（"YYYY-MM-DD"）。日次ログは「その人の1日」で数えたいので
+  // toISOString（UTC）は使わない。深夜0時をまたぐタイミングの誤差は許容する。
+  function localDateStr(d) {
+    d = d || new Date();
+    var y = d.getFullYear(), m = d.getMonth() + 1, day = d.getDate();
+    return y + '-' + (m < 10 ? '0' : '') + m + '-' + (day < 10 ? '0' : '') + day;
+  }
+
+  // レイテンシ推移グラフの1点を足す。横軸は「間引いても狂わない」よう
+  // 専用のカウンタ（repLatencyCount）を別に持ち、配列の長さには頼らない。
+  function recordLatencyTrend(tp, latencyMs) {
+    if (latencyMs == null) return tp;
+    tp.repLatencyCount = (tp.repLatencyCount || 0) + 1;
+    tp.latencyTrend = (tp.latencyTrend || []).concat([{ totalCount: tp.repLatencyCount, avgMs: latencyMs }]);
+    // 上限を超えたら1つおきに間引いて分解能を半分にする（グラフの形はほぼ保たれる）
+    if (tp.latencyTrend.length > LATENCY_TREND_MAX) {
+      tp.latencyTrend = tp.latencyTrend.filter(function (_, i) { return i % 2 === 0; });
+    }
+    return tp;
+  }
+
+  // 日次ログ（sessions）。周回数はラップが確定するたびに、分数はセッションを
+  // 終えるときにそれぞれ加算する（呼び出し側が該当するほうだけ渡せばよい）。
+  function logSessionActivity(tp, delta) {
+    delta = delta || {};
+    var today = localDateStr();
+    var list = tp.sessions || [];
+    var last = list[list.length - 1];
+    var entry = (last && last.date === today) ? last : null;
+    if (!entry) {
+      entry = { date: today, laps: 0, minutes: 0 };
+      list.push(entry);
+      if (list.length > SESSION_LOG_MAX_DAYS) list = list.slice(-SESSION_LOG_MAX_DAYS);
+    }
+    if (delta.laps) entry.laps = (entry.laps || 0) + delta.laps;
+    if (delta.minutes) entry.minutes = Math.round(((entry.minutes || 0) + delta.minutes) * 10) / 10;
+    tp.sessions = list;
+    return tp;
+  }
+
+  // 継続日数。sessions は都度計算の元データとしてだけ使い、値そのものは
+  // 保存しない（保存すると sessions との整合を別途取る羽目になる）。
+  // 今日の分がまだ無くても、昨日までが続いていれば継続扱いにする
+  // （STREAK_GRACE_DAYS）。そうしないと、今日やる前の時点で毎日0に見えてしまう。
+  function currentStreak(tp) {
+    var dates = {};
+    (tp.sessions || []).forEach(function (s) { if (s && s.date) dates[s.date] = true; });
+    var cursor = new Date();
+    var n = 0, graceLeft = STREAK_GRACE_DAYS;
+    for (;;) {
+      var key = localDateStr(cursor);
+      if (dates[key]) {
+        n++;
+      } else if (graceLeft > 0 && n === 0) {
+        graceLeft--;   // 今日（まだ）分だけ待つ。1日で使い切る
+      } else {
+        break;
+      }
+      cursor.setDate(cursor.getDate() - 1);
+    }
+    return n;
+  }
+
+  // よく詰まるチャンクの集計（§1.8）。stall の elapsedMs から、その文の
+  // チャンクのどれで詰まったかを推定して積む。厳密な推定ではないので、
+  // 「よく引っかかる構文に気づく」きっかけ程度に使う。
+  function recordChunkStalls(topicId, line, stalls, expectedMs) {
+    if (!line || !line.chunks || !line.chunks.length || !stalls || !stalls.length || !expectedMs) return Promise.resolve();
+    var chain = Promise.resolve();
+    stalls.forEach(function (st) {
+      var text = EST.mic.estimateStallChunk(line.chunks, st && st.elapsedMs, expectedMs);
+      if (!text) return;
+      chain = chain.then(function () { return EST.store.recordChunkStall(text, topicId, line.id); });
+    });
+    return chain;
+  }
+
   /* ---- 進級判定（§1.2） ---------------------------------------------------
      最低回数と達成条件の両方を満たすと進める。進級は強制しない。 */
   function canAdvance(tp) {
@@ -2655,6 +2841,8 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
     } else if (st === 'S1') {
       tp.streak = tp.stageReps.S1;   // S1は聞くだけなので実施回数がそのまま
     }
+    // §1.9 F8: レイテンシ推移グラフ用。ステージを問わず、測れた回はすべて拾う。
+    recordLatencyTrend(tp, result.latencyMs);
     return tp;
   }
 
@@ -2689,6 +2877,14 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
         }
       }
       p.updatedAt = Date.now();
+      // §1.8 F8: よく詰まるチャンクの集計。expectedMs が無いと位置を推定できない
+      // ステージ（S3など、opts側で渡していない場合）は静かにスキップする。
+      if (opts && opts.expectedMs) {
+        // 集計に失敗しても本筋の進捗記録は止めない（診断用のおまけデータのため）
+        recordChunkStalls(topicId, line, result.stalls, opts.expectedMs).catch(function (e) {
+          console.warn('[stage] チャンク詰まりの集計に失敗しました', e);
+        });
+      }
       return EST.store.put('progress', p).then(function () { return p; });
     });
   }
@@ -2861,6 +3057,9 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
     setRoleStage: setRoleStage,
     s0Needed: s0Needed,
     markS0Done: markS0Done,
+    logSessionActivity: logSessionActivity,
+    currentStreak: currentStreak,
+    localDateStr: localDateStr,
     shuffle: shuffle,
     s5Items: s5Items,
     s6Pairs: s6Pairs,
@@ -3015,6 +3214,24 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
     return buildReviewQueue(now).then(function (q) { return q.length; });
   }
 
+  /* ---- 「定着した行 X/Y」（§1.9。F8） ---------------------------------
+     採点対象はト書き等（skip）を除いた行。台本を渡してもらうのは、
+     ここが Progress ストアしか知らないと「まだ一度も練習していない行」を
+     数えられないため（Progress レコード自体が無い）。 */
+  function topicMasterySummary(topic) {
+    if (!topic) return Promise.resolve({ mastered: 0, total: 0 });
+    var lines = (topic.lines || []).filter(function (l) { return !l.skip && String(l.en || '').trim(); });
+    var total = lines.length;
+    if (!total) return Promise.resolve({ mastered: 0, total: 0 });
+    var me = EST.profile.get();
+    return Promise.all(lines.map(function (l) {
+      return EST.store.get('progress', EST.store.progressKey(topic.id, l.id));
+    })).then(function (recs) {
+      var mastered = recs.filter(function (p) { return p && p.mastered && (!p.profileId || p.profileId === me); }).length;
+      return { mastered: mastered, total: total };
+    });
+  }
+
   /* ---- 再確認1回ぶんの判定（§1.4） -----------------------------------------
      閾値未満 かつ 詰まりなし → 定着を維持し、次の再確認を7日後に置き直す
      それ以外               → 定着を外す
@@ -3055,7 +3272,8 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
     isDue: isDue,
     buildReviewQueue: buildReviewQueue,
     countDue: countDue,
-    judgeReview: judgeReview
+    judgeReview: judgeReview,
+    topicMasterySummary: topicMasterySummary
   };
 })(window.EST = window.EST || {});
 
@@ -4047,6 +4265,10 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
           class: 'btn', text: '一覧を見る',
           onClick: function () { location.hash = '#/list/' + encodeURIComponent(t.id); }
         }),
+        h('button', {
+          class: 'btn', text: '進捗',
+          onClick: function () { location.hash = '#/progress/' + encodeURIComponent(t.id); }
+        }),
         canEdit ? h('button', {
           class: 'btn', text: 'JSON書き出し',
           onClick: function () { exportTopic(t); }
@@ -4055,9 +4277,7 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
           class: 'btn btn--danger', text: '削除',
           onClick: function () { removeTopic(t); }
         }) : null
-      ]),
-      h('div', { class: 'tiny muted', style: { marginTop: '.35rem' },
-        text: 'S5・S6 と積み上げドリルは F7 で追加します。' })
+      ])
     ]);
 
     var body = h('div', { class: 'card' }, buildLineList(t));
@@ -4105,7 +4325,8 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
           l.ja ? h('div', { class: 'line-view__ja', text: l.ja }) : null,
           l.note ? h('div', { class: 'tiny muted', text: l.note }) : null
         ]),
-        speakLineButton(t, l)
+        speakLineButton(t, l),
+        buildupButton(t, l)
       ]);
       lineEls[l.id] = row;
       out.push(row);
@@ -4128,6 +4349,17 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
         EST.speech.speak(l.en, { gender: genderOf(t, l.speakerId), topicId: t.id, lineId: l.id });
       }
     }, '🔊');
+  }
+
+  // §1.8「トピック詳細から手動で任意の行を分解することもできる」。
+  // チャンクが1個（＝短い行で分ける意味が無い）なら出さない。
+  function buildupButton(t, l) {
+    var chunks = (l.chunks && l.chunks.length) ? l.chunks : EST.schema.splitChunks(l.en);
+    if (!chunks || chunks.length < 2) return null;
+    return h('button', {
+      class: 'speak-btn', title: '分解して練習', 'aria-label': '分解して練習',
+      onClick: function () { location.hash = '#/buildup/' + encodeURIComponent(t.id) + '/' + encodeURIComponent(l.id); }
+    }, '🧩');
   }
 
   /* ---- 通して再生（§11 F3「台本を入れて聞き流す」） ----------------------
@@ -4223,6 +4455,8 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
   // §7.2 行が進む最短間隔の下限。何が壊れても画面が流れ去らないようにする。
   // TTSが握り潰されて即endが返るような事態でも、これ以上速くは進まない。
   var MIN_LINE_INTERVAL_MS = 1200;
+  // §1.8 積み上げドリルのオファー条件。S3またはS5で同じ行に連続で詰まったら。
+  var BUILDUP_STALL_STREAK = 3;
 
   var S = null;        // 進行中のセッション
   var wakeLock = null;
@@ -4292,7 +4526,9 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
       barTimer: null,
       expectedMs: 0,
       cueAt: 0,
-      finished: false
+      finished: false,
+      sessionStartedAt: Date.now(),  // §1.9 F8: 日次ログの分数を出すため
+      buildupOffered: {}             // §1.8: 積み上げドリルは1セッション1行につき1回だけ聞く
     };
     if (!S.queue.length) {
       U.mount(view, h('div', { class: 'empty', text: mode.myRoleOnly
@@ -4321,6 +4557,15 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
     try { EST.speech.cancel(); } catch (e) {}
     try { EST.mic.stop(); } catch (e) {}
     releaseWakeLock();
+    // §1.9 F8: 日次ログに分数を積む。10秒に満たない滞在（開いてすぐ離れた等）は
+    // ノイズになるだけなので数えない。
+    var minutes = (Date.now() - (S.sessionStartedAt || Date.now())) / 60000;
+    if (minutes >= 1 / 6 && S.tp) {
+      EST.stage.logSessionActivity(S.tp, { minutes: minutes });
+      EST.stage.saveTopicProgress(S.tp).catch(function (e) {
+        console.warn('[practice] 日次ログの保存に失敗しました', e);
+      });
+    }
     S = null;
   }
 
@@ -4680,29 +4925,13 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
       });
   }
 
+  // データの操作自体は EST.store.addTopicWord に共通化してある（F8で設定画面の
+  // チャンク昇格からも同じ経路を使うため）。ここではUIの結果表示だけを行う。
   function addWordToTopic(topicId, en, lineId) {
-    return EST.store.get('topics', topicId).then(function (topic) {
-      if (!topic) return;
-      // 長押しのあいだに他の変更が入っていた場合に備え、直前の値を読み直す
-      if ((topic.words || []).some(function (w) { return String(w.en || '').toLowerCase() === en.toLowerCase(); })) {
-        ui().toast('すでに語彙にあります: ' + en);
-        return;
-      }
-      var words = (topic.words || []).slice();
-      var n = words.length + 1;
-      var id = 'w_' + EST.schema.pad3(n);
-      while (words.some(function (w) { return w.id === id; })) { n++; id = 'w_' + EST.schema.pad3(n); }
-      words.push({
-        id: id, en: en, ja: '',
-        type: EST.schema.countWords(en) > 1 ? 'phrase' : 'word',
-        lineIds: lineId ? [lineId] : [], note: ''
-      });
-      topic.words = words;
-      topic.updatedAt = Date.now();
-      return EST.store.put('topics', topic).then(function () {
-        if (S && S.topic && S.topic.id === topicId) S.topic = topic;
-        ui().toast('語彙に追加しました');
-      });
+    return EST.store.addTopicWord(topicId, { en: en, lineIds: lineId ? [lineId] : [] }).then(function (r) {
+      if (!r.added) { ui().toast(r.reason === 'exists' ? ('すでに語彙にあります: ' + en) : '追加できませんでした'); return; }
+      if (S && S.topic && S.topic.id === topicId) S.topic = r.topic;
+      ui().toast('語彙に追加しました');
     });
   }
 
@@ -4805,20 +5034,55 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
     // §1.4 定着判定はシャッフル状態（S5以降）での測定でのみ行う
     var mode = EST.stage.stageMode(stage);
     var line = S.item && S.item.line;
-    EST.stage.recordLineProgress(S.topic.id, lineId, stage, result, line, { shuffled: !!mode.shuffled })
+    // §7.2 行が進む最短間隔に下限を置く。何かが壊れて即座に確定が返っても、
+    // これ以上速くは流れない（画面が流れ去るのを防ぐ最後の砦）。
+    var elapsed = Date.now() - (S.lineStartedAt || 0);
+    var scheduleDelay = Math.max(NEXT_LINE_DELAY_MS, MIN_LINE_INTERVAL_MS - elapsed);
+
+    EST.stage.recordLineProgress(S.topic.id, lineId, stage, result, line, { shuffled: !!mode.shuffled, expectedMs: S.expectedMs })
       .then(function (p) {
+        if (!S || S.closing) return;
         refreshMeter(lineId);
         if (p && p.mastered && !S.masteredShown) {
           // 定着した瞬間だけ控えめに出す
           el.notice.textContent = '定着しました';
         }
+        // §1.8 積み上げドリルのオファー。出している間は次の行へ進めない。
+        if (offerBuildupIfStuck(stage, line, p, scheduleDelay)) return;
+        later(nextLine, scheduleDelay);
       });
     if (result.ok && !result.listenOnly) flash();
+  }
 
-    // §7.2 行が進む最短間隔に下限を置く。何かが壊れて即座に確定が返っても、
-    // これ以上速くは流れない（画面が流れ去るのを防ぐ最後の砦）。
-    var elapsed = Date.now() - (S.lineStartedAt || 0);
-    later(nextLine, Math.max(NEXT_LINE_DELAY_MS, MIN_LINE_INTERVAL_MS - elapsed));
+  /* §1.8 S3/S5で同じ行に3回連続で詰まったら「分解して練習しますか」を出す。
+     1セッション・1行につき1回だけ（断られても連打しない）。承諾したら
+     積み上げドリル（18-ui-buildup.js）へ。自動発動はしない、あくまで提案。 */
+  function offerBuildupIfStuck(stage, line, p, scheduleDelay) {
+    if (!line || (stage !== 'S3' && stage !== 'S5')) return false;
+    if (S.buildupOffered[line.id]) return false;
+    var chunks = (line.chunks && line.chunks.length) ? line.chunks : EST.schema.splitChunks(line.en);
+    if (!chunks || chunks.length < 2) return false;
+    var recent = (p && p.recentStalls) || [];
+    var last = recent.slice(-BUILDUP_STALL_STREAK);
+    var stuck = last.length === BUILDUP_STALL_STREAK && last.every(function (n) { return n > 0; });
+    if (!stuck) return false;
+
+    S.buildupOffered[line.id] = true;
+    var topicId = S.topic.id, lineId = line.id;
+    // §1.8 直近の詰まりの経過時間から、文のどのあたりで詰まったかを大まかに
+    // 推定し、積み上げドリルの開始位置のヒントとして渡す（厳密ではない）。
+    var stalls = (S.lastResult && S.lastResult.result && S.lastResult.result.stalls) || [];
+    var posHint = (stalls.length && S.expectedMs)
+      ? EST.mic.estimateStallPosition(chunks, stalls[0].elapsedMs, S.expectedMs) : null;
+    var hash = '#/buildup/' + encodeURIComponent(topicId) + '/' + encodeURIComponent(lineId)
+      + (posHint ? '/' + encodeURIComponent(posHint) : '');
+    ui().confirm('詰まりが続いています', '「' + line.en + '」を分解して練習しますか？文末から少しずつ増やしていきます。', '分解する')
+      .then(function (ok) {
+        if (!S || S.closing) return;
+        if (ok) { location.hash = hash; return; }
+        later(nextLine, scheduleDelay);
+      });
+    return true;
   }
 
   function flash() {
@@ -4838,6 +5102,7 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
     S.tp.laps = S.tp.laps || { total: 0, byStage: {} };
     S.tp.laps.total = (S.tp.laps.total || 0) + 1;
     S.tp.laps.byStage[S.stage] = (S.tp.laps.byStage[S.stage] || 0) + 1;
+    EST.stage.logSessionActivity(S.tp, { laps: 1 });   // §1.9 F8: 日次ログ
     EST.stage.saveTopicProgress(S.tp);
 
     var mode = EST.stage.stageMode(S.stage);
@@ -6023,6 +6288,7 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
         speechCard(s),
         micCard(s),
         listModeCard(s),
+        stalledChunksCard(s),
         EST.profile.canEdit() ? publishCard() : null,
         backupCard(),
         autoBackupCard(),
@@ -6415,6 +6681,58 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
         ]),
         row
       ])
+    ]);
+  }
+
+  /* ---- よく詰まるチャンクの集計（§1.8。F8） -------------------------------
+     トピックをまたいだ集計なのでここ（設定画面）に置く。s.chunkStalls は
+     render() が読み込んだ設定をそのまま使う（ここで読み直さない）。
+     昇格したら、その語が出てきたトピックの語彙へ追加し、集計からは外す
+     （そのままだと「昇格済みなのにまだ上位に出続ける」ことになるため）。 */
+  function stalledChunksCard(s) {
+    var U = ui();
+    var box = h('div', {});
+
+    function draw() {
+      var list = Object.keys(s.chunkStalls || {}).map(function (k) { return { key: k, v: s.chunkStalls[k] }; });
+      list.sort(function (a, b) { return (b.v.count || 0) - (a.v.count || 0); });
+      list = list.slice(0, 10);
+
+      if (!list.length) {
+        U.mount(box, h('div', { class: 'small muted', text: 'まだ集計がありません。音読中に1.5秒以上詰まった箇所がここに集まります。' }));
+        return;
+      }
+      U.mount(box, list.map(function (item) {
+        return h('div', { class: 'row row--tight', style: { justifyContent: 'space-between', alignItems: 'center', padding: '.25rem 0' } }, [
+          h('div', { class: 'grow' }, [
+            h('span', { class: 'en', text: item.v.text }),
+            h('span', { class: 'tiny muted', style: { marginLeft: '.4rem' }, text: item.v.count + '回' })
+          ]),
+          h('button', {
+            class: 'btn btn--sm', text: '語彙に追加',
+            onClick: function () { promote(item); }
+          })
+        ]);
+      }));
+    }
+
+    function promote(item) {
+      if (!item.v.topicId) { U.toast('追加先のトピックが分かりませんでした'); return; }
+      EST.store.addTopicWord(item.v.topicId, { en: item.v.text, lineIds: item.v.lineId ? [item.v.lineId] : [] })
+        .then(function (r) {
+          if (!r.added && r.reason !== 'exists') { U.toast('追加できませんでした'); return; }
+          U.toast(r.added ? '語彙に追加しました' : 'すでに語彙にあります');
+          delete s.chunkStalls[item.key];
+          EST.store.saveSettings(s).then(draw);
+        });
+    }
+
+    draw();
+    return h('div', { class: 'card' }, [
+      h('h2', { class: 'card__title', text: 'よく詰まるチャンク' }),
+      h('div', { class: 'small muted', style: { marginBottom: '.4rem' },
+        text: '音読中に詰まりやすい箇所の上位10件です。目安の推定なので厳密ではありません。' }),
+      box
     ]);
   }
 
@@ -7510,6 +7828,455 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
 
 </script>
 <script>
+/* ---- 17-ui-progress.js ---- */
+/* =====================================================================
+   17-ui-progress.js — 進捗画面（SPEC §1.9。F8）
+
+   トピックごとに「定着した行 X/Y」「レイテンシ推移グラフ」「継続日数」
+   「直近の日次ログ」を出す。グラフはこれ1つだけにする（§1.9）。統計を
+   増やすとアプリを見る時間が増えて音読する時間が減る、という方針どおり。
+   外部のグラフライブラリは使わず、SVGを直接組み立てる。
+   ===================================================================== */
+;(function (EST) {
+  'use strict';
+
+  var h = null;
+  function ui() { h = EST.ui.h; return EST.ui; }
+
+  // 調整用の定数
+  var GRAPH_W = 320, GRAPH_H = 120, GRAPH_PAD = 8;
+  var SESSION_LOG_SHOW_DAYS = 14;   // 日次ログに出す直近日数
+
+  function renderProgress(view, topicId) {
+    var U = ui();
+    EST.store.get('topics', topicId).then(function (topic) {
+      if (!topic) {
+        EST.app.setBar('進捗', []);
+        U.mount(view, h('div', { class: 'empty', text: 'このトピックは見つかりませんでした。' }));
+        return;
+      }
+      if (!EST.profile.canSee(topic)) {
+        location.hash = EST.profile.canEdit() ? ('#/edit/' + encodeURIComponent(topic.id)) : '#/';
+        return;
+      }
+      EST.app.setBar((topic.title || '(無題)') + ' の進捗', [
+        h('button', { class: 'btn btn--sm', text: 'トピックへ',
+          onClick: function () { location.hash = '#/topic/' + encodeURIComponent(topic.id); } })
+      ]);
+
+      Promise.all([
+        EST.stage.loadTopicProgress(topic.id, topic),
+        EST.mastery.topicMasterySummary(topic)
+      ]).then(function (r) {
+        var tp = r[0], summary = r[1];
+        U.mount(view, [
+          masteryCard(summary),
+          latencyCard(tp),
+          streakCard(tp),
+          sessionLogCard(tp)
+        ]);
+      });
+    });
+  }
+
+  /* ---- 定着した行 X/Y ------------------------------------------------- */
+  function masteryCard(summary) {
+    var pct = summary.total ? Math.round((summary.mastered / summary.total) * 100) : 0;
+    return h('div', { class: 'card' }, [
+      h('h2', { class: 'card__title', text: '定着した行' }),
+      h('div', { class: 'stat-bar', style: { position: 'static', marginTop: '.3rem' } }, [
+        h('span', {}, [h('b', { text: String(summary.mastered) }), ' / ' + summary.total + ' 行']),
+        h('span', {}, [h('b', { text: pct + '%' })])
+      ])
+    ]);
+  }
+
+  /* ---- レイテンシ推移グラフ -------------------------------------------
+     横軸=累計回数、縦軸=平均レイテンシ。点が少ない（3点未満）うちは
+     グラフの形に意味が無いので、素直に「まだデータが足りません」を出す。 */
+  function latencyCard(tp) {
+    var trend = tp.latencyTrend || [];
+    var body;
+    if (trend.length < 3) {
+      body = h('div', { class: 'small muted', text: 'まだデータが足りません（あと' + Math.max(0, 3 - trend.length) + '回）。' });
+    } else {
+      body = latencySvg(trend);
+    }
+    return h('div', { class: 'card' }, [
+      h('h2', { class: 'card__title', text: 'レイテンシの推移' }),
+      h('div', { class: 'tiny muted', style: { marginBottom: '.3rem' }, text: '横軸: 累計回数　縦軸: レイテンシ（秒）' }),
+      body
+    ]);
+  }
+
+  function latencySvg(trend) {
+    var xs = trend.map(function (p) { return p.totalCount; });
+    var ys = trend.map(function (p) { return p.avgMs; });
+    var minX = Math.min.apply(null, xs), maxX = Math.max.apply(null, xs);
+    var minY = 0, maxY = Math.max.apply(null, ys) * 1.1 || 1;
+    var w = GRAPH_W - GRAPH_PAD * 2, hh = GRAPH_H - GRAPH_PAD * 2;
+
+    function px(x) { return GRAPH_PAD + (maxX === minX ? w / 2 : ((x - minX) / (maxX - minX)) * w); }
+    function py(y) { return GRAPH_PAD + hh - (maxY === minY ? 0 : ((y - minY) / (maxY - minY)) * hh); }
+
+    var pts = trend.map(function (p) { return px(p.totalCount).toFixed(1) + ',' + py(p.avgMs).toFixed(1); }).join(' ');
+    var last = trend[trend.length - 1];
+
+    // 数値だけを埋め込むテンプレート（ユーザー由来の文字列は入れない）ので innerHTML でよい。
+    var svg = ''
+      + '<svg viewBox="0 0 ' + GRAPH_W + ' ' + GRAPH_H + '" width="100%" height="' + GRAPH_H + '" class="latency-svg">'
+      + '<polyline points="' + pts + '" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" />'
+      + '<circle cx="' + px(last.totalCount).toFixed(1) + '" cy="' + py(last.avgMs).toFixed(1) + '" r="3" fill="currentColor" />'
+      + '</svg>';
+
+    var box = h('div', { class: 'latency-graph' });
+    box.innerHTML = svg;
+    var caption = h('div', { class: 'tiny muted', style: { marginTop: '.2rem' } }, [
+      '直近: ' + (last.avgMs / 1000).toFixed(1) + '秒（' + last.totalCount + '回目）　最速: '
+      + (Math.min.apply(null, ys) / 1000).toFixed(1) + '秒'
+    ]);
+    return h('div', {}, [box, caption]);
+  }
+
+  /* ---- 継続日数 --------------------------------------------------------- */
+  function streakCard(tp) {
+    var n = EST.stage.currentStreak(tp);
+    return h('div', { class: 'card' }, [
+      h('h2', { class: 'card__title', text: '継続日数' }),
+      h('div', { class: 'stat-bar', style: { position: 'static', marginTop: '.3rem' } }, [
+        h('span', {}, [h('b', { text: String(n) }), ' 日連続'])
+      ])
+    ]);
+  }
+
+  /* ---- 直近の日次ログ ----------------------------------------------------- */
+  function sessionLogCard(tp) {
+    var list = (tp.sessions || []).slice(-SESSION_LOG_SHOW_DAYS).reverse();
+    if (!list.length) {
+      return h('div', { class: 'card' }, [
+        h('h2', { class: 'card__title', text: '日次ログ' }),
+        h('div', { class: 'small muted', text: 'まだ記録がありません。' })
+      ]);
+    }
+    return h('div', { class: 'card' }, [
+      h('h2', { class: 'card__title', text: '日次ログ（直近' + list.length + '日）' }),
+      h('div', {}, list.map(function (s) {
+        return h('div', { class: 'row row--tight', style: { justifyContent: 'space-between', padding: '.2rem 0' } }, [
+          h('span', { class: 'tiny muted', text: s.date }),
+          h('span', { class: 'tiny', text: (s.laps || 0) + '周 / ' + (s.minutes || 0) + '分' })
+        ]);
+      }))
+    ]);
+  }
+
+  EST.uiProgress = { renderProgress: renderProgress };
+})(window.EST = window.EST || {});
+
+</script>
+<script>
+/* ---- 18-ui-buildup.js ---- */
+/* =====================================================================
+   18-ui-buildup.js — 積み上げドリル（SPEC §1.8。F7の積み残し）
+
+   詰まりが続く文を、文末から少しずつ足しながら練習する。
+     1回目   for me
+     2回目   on the scale for me
+     3回目   place it on the scale for me
+     4回目   Could you place it on the scale for me?
+   後ろから積むのは、文末の抑揚とリズムが最後まで壊れないため。
+
+   §1.8「チャンクは独立した復習単位にはしない」。ここでの1回ぶんは
+   Progress には書き込まない（累計回数・レイテンシ・定着のどれにも影響しない）。
+   あくまで「詰まった文を分解して口を慣らすための道具」であって、
+   本番の判定はもとのステージ（S3/S5）に戻ってから行う。
+
+   入口は2つ（§1.8）:
+     ・S3/S5で同じ行に3回連続で詰まったときの自動オファー（11-ui-practice.js）
+       このとき直近の詰まりの経過時間から前半/中盤/後半を推定し、後半なら
+       文末2チャンクから始める（明らかに無駄な最初の1歩を省く程度の調整）。
+     ・トピック詳細から手動で任意の行を分解する（10-ui-home.js。推定なし＝常に1チャンク目から）
+
+   チャンク境界の編集（§1.8）は投入プレビュー画面（12-ui-import.js）側にのみ
+   ある。このドリル内では編集できない。直したい場合はプレビューから直して
+   から入り直す想定。
+   ===================================================================== */
+;(function (EST) {
+  'use strict';
+
+  var h = null;
+  function ui() { h = EST.ui.h; return EST.ui; }
+
+  /* ---- 調整用の定数 ------------------------------------------------------- */
+  var NEXT_STEP_DELAY_MS = 400;
+  var MIN_STEP_INTERVAL_MS = 900;     // §7.2 と同じ考え方。壊れても流れ去らない下限
+  var TTS_CLOSE_DELAY_MS_FALLBACK = 800;
+  var FINISH_PAUSE_MS = 1400;         // 最終ステップの後、練習画面に戻るまでの間
+
+  var BS = null;   // 進行中の積み上げドリル
+  var el = {};
+
+  function renderBuildup(view, topicId, lineId, startHint) {
+    stopSession();
+    var U = ui();
+
+    EST.store.get('topics', topicId).then(function (topic) {
+      if (!topic) {
+        EST.app.setBar('分解して練習', []);
+        U.mount(view, h('div', { class: 'empty', text: 'このトピックは見つかりませんでした。' }));
+        return;
+      }
+      if (!EST.profile.canSee(topic)) {
+        location.hash = EST.profile.canEdit() ? ('#/edit/' + encodeURIComponent(topic.id)) : '#/';
+        return;
+      }
+      var line = null;
+      (topic.lines || []).forEach(function (l) { if (l.id === lineId) line = l; });
+      var chunks = line ? ((line.chunks && line.chunks.length) ? line.chunks : EST.schema.splitChunks(line.en)) : [];
+      if (!line || chunks.length < 2) {
+        EST.app.setBar('分解して練習', []);
+        U.mount(view, h('div', { class: 'empty', text: 'この行は分解できません（チャンクが1個しかありません）。' }));
+        return;
+      }
+
+      // §1.8 文末から積む。steps[0] が最初の1回（最短）、最後が全文。
+      var steps = [];
+      for (var i = 1; i <= chunks.length; i++) {
+        steps.push(chunks.slice(chunks.length - i).join(' '));
+      }
+
+      // §1.8 詰まり位置の推定（前半/中盤/後半）を開始位置のヒントに使う。
+      // 「後半で詰まっているなら文末2チャンクから始める」の一例のみ明記されて
+      // いるので、それ以外（前半・中盤・推定なし）は従来どおり最短の1チャンク
+      // から始める。厳密な最適化ではなく、明らかに無駄な最初の1歩を省く程度。
+      var startIdx = (startHint === 'back') ? Math.min(1, steps.length - 1) : 0;
+
+      return EST.store.loadSettings().then(function (settings) {
+        BS = {
+          view: view, topic: topic, line: line, steps: steps, idx: startIdx,
+          settings: settings,
+          countRatio: (typeof settings.countRatio === 'number' && settings.countRatio > 0)
+            ? settings.countRatio : EST.stage.COUNT_RATIO_DEFAULT,
+          micOn: false, tapMode: false, tapReason: '',
+          closing: false, timers: [], expectedMs: 0, cueAt: 0,
+          expectRepSource: null, repDone: false, runningLine: false,
+          stepStartedAt: 0
+        };
+        buildScreen();
+        prepareMic().then(function () { runStep(); });
+      });
+    });
+  }
+
+  function stopSession() {
+    if (!BS) return;
+    BS.closing = true;
+    clearTimers();
+    try { EST.speech.cancel(); } catch (e) {}
+    try { EST.mic.stop(); } catch (e) {}
+    BS = null;
+  }
+
+  function clearTimers() {
+    if (!BS) return;
+    BS.timers.forEach(function (t) { clearTimeout(t); });
+    BS.timers = [];
+  }
+
+  function later(fn, ms) {
+    if (!BS) return null;
+    var t = setTimeout(function () {
+      if (!BS || BS.closing) return;
+      var i = BS.timers.indexOf(t);
+      if (i >= 0) BS.timers.splice(i, 1);
+      fn();
+    }, ms);
+    BS.timers.push(t);
+    return t;
+  }
+
+  function prepareMic() {
+    return EST.mic.start().then(function () {
+      if (!BS) return;
+      BS.micOn = true;
+      EST.mic.on('level', onLevel);
+      EST.mic.on('rep', onRep);
+      EST.mic.on('timeout', onTimeout);
+    }).catch(function (err) {
+      if (!BS) return;
+      // §2.7 エラーを出さず黙ってタップモードに切り替える
+      BS.tapMode = true;
+      BS.tapReason = err && err.reason === 'denied' ? 'マイクが使えないのでタップモードです'
+        : err && err.reason === 'no-device' ? 'マイクが見つからないのでタップモードです'
+        : 'マイクが使えないのでタップモードです';
+      showTapReason();
+    });
+  }
+
+  /* ---- 画面 ---------------------------------------------------------------- */
+  function buildScreen() {
+    var U = ui();
+    EST.app.setBar('分解して練習', [
+      h('button', { class: 'btn btn--sm', text: 'やめる',
+        onClick: function () { location.hash = '#/topic/' + encodeURIComponent(BS.topic.id); } })
+    ]);
+
+    el.stepCount = h('span', { class: 'pr-head__count' });
+    el.main = h('div', { class: 'pr-main' });
+    el.levelBar = h('div', { class: 'pr-level__fill' });
+    el.notice = h('div', { class: 'pr-notice' });
+
+    var body = h('div', { class: 'practice' }, [
+      h('div', { class: 'pr-head' }, [h('span', { class: 'pr-head__stage', text: '分解して練習' }), el.stepCount]),
+      el.main,
+      h('div', { class: 'pr-level' }, [el.levelBar]),
+      el.notice
+    ]);
+
+    body.addEventListener('click', function (e) {
+      if (!BS || !BS.tapMode) return;
+      if (e.target.closest('button')) return;
+      onTapRep();
+    });
+
+    U.mount(BS.view, body);
+  }
+
+  function tapHintText() { return BS ? (BS.tapReason + '（画面をタップで1回）') : ''; }
+  function showTapReason() { if (BS && el.notice) el.notice.textContent = tapHintText(); }
+
+  /* ---- 1ステップの進行 ------------------------------------------------------ */
+  function runStep() {
+    if (!BS || BS.closing) return;
+    if (BS.runningLine) return;
+    BS.runningLine = true;
+    BS.repDone = false;
+    BS.stepStartedAt = Date.now();
+
+    var U = ui();
+    var text = BS.steps[BS.idx];
+    el.stepCount.textContent = (BS.idx + 1) + ' / ' + BS.steps.length;
+    el.notice.textContent = BS.tapMode ? tapHintText() : '';
+    U.mount(el.main, h('div', { class: 'en', text: text }));
+
+    // 実測キャッシュは行本体のIDを汚さないよう、ステップごとの合成IDを使う。
+    // （expectedMsFor はキャッシュがあれば text を無視して行本体の長さを返すため）
+    var stepKey = BS.line.id + '__bu' + BS.idx;
+    EST.speech.expectedMsFor(BS.topic.id, stepKey, text, BS.settings.ttsRate).then(function (ms) {
+      if (!BS || BS.closing) return;
+      BS.expectedMs = ms;
+      BS.cueAt = Date.now();
+
+      if (BS.micOn) {
+        EST.mic.setAutoClose(false);   // TTSが鳴るので2500msの自動確定は止める（§2.6と同じ理由）
+        BS.expectRepSource = 'closeRep';
+        EST.mic.markCue();
+      } else {
+        BS.expectRepSource = null;
+      }
+
+      EST.speech.speak(text, { gender: genderOf(), topicId: BS.topic.id, lineId: stepKey }).then(function (r) {
+        if (!BS || BS.closing) return;
+        // §7.2 鳴らなかったのに進むと、聞こえていないのに回数だけ積み上がるのと
+        // 同じ事故になる。ここは判定を書き込まないが、体験として同じなので揃える。
+        if (r && r.spoken === false) { haltForSilentTts(); return; }
+        var delay = EST.stage.TTS_CLOSE_DELAY_MS || TTS_CLOSE_DELAY_MS_FALLBACK;
+        later(function () {
+          if (!BS || BS.closing) return;
+          if (BS.micOn) EST.mic.closeRep();
+          else finishStep({ ok: true, spokenMs: 0, latencyMs: null, stalls: [], listenOnly: true });
+        }, delay);
+      });
+    });
+  }
+
+  function haltForSilentTts() {
+    if (!BS || BS.closing) return;
+    BS.runningLine = false;
+    clearTimers();
+    el.notice.textContent = '音声が鳴りませんでした。';
+    ui().dialog({
+      title: '音声が鳴りませんでした',
+      body: h('div', { class: 'small', text: '端末の音量とマナーモードを確認してください。' }),
+      buttons: [
+        { label: 'やめる', value: 'quit' },
+        { label: 'このステップからやり直す', value: 'retry', kind: 'primary' }
+      ]
+    }).then(function (v) {
+      if (!BS || BS.closing) return;
+      if (v === 'quit') { location.hash = '#/topic/' + encodeURIComponent(BS.topic.id); return; }
+      runStep();
+    });
+  }
+
+  function genderOf() {
+    var sp = (BS.topic.speakers || []).filter(function (s) { return s.id === BS.line.speakerId; })[0];
+    return sp ? sp.gender : '';
+  }
+
+  function onLevel(e) {
+    if (!BS || !el.levelBar) return;
+    el.levelBar.style.width = Math.min(100, Math.round(e.rms * 300)) + '%';
+  }
+
+  function onRep(e) {
+    if (!BS || BS.closing) return;
+    if (BS.expectRepSource && e.source && e.source !== BS.expectRepSource) return;
+    var ok = EST.stage.judgeCount(e.spokenMs, BS.expectedMs, BS.countRatio);
+    finishStep({ ok: ok, spokenMs: e.spokenMs, latencyMs: e.latencyMs, stalls: e.stalls || [] });
+  }
+
+  function onTimeout() {
+    if (!BS || BS.closing) return;
+    finishStep({ ok: false, spokenMs: 0, latencyMs: null, stalls: [], noSpeech: true });
+  }
+
+  function onTapRep() {
+    if (!BS || BS.closing) return;
+    finishStep({ ok: true, spokenMs: 0, latencyMs: null, stalls: [], tapped: true });
+  }
+
+  // §1.8 このドリルの1回はProgressに書き込まない（意図的。ファイル冒頭のコメント参照）。
+  // ここでの役目は口を慣らすことだけで、判定はもとのステージに戻ってから行う。
+  function finishStep(result) {
+    if (!BS || BS.closing || BS.repDone) return;
+    BS.repDone = true;
+    BS.runningLine = false;
+    if (result.ok && !result.listenOnly) flash();
+
+    var elapsed = Date.now() - (BS.stepStartedAt || 0);
+    var wait = Math.max(NEXT_STEP_DELAY_MS, MIN_STEP_INTERVAL_MS - elapsed);
+    later(nextStep, wait);
+  }
+
+  function flash() {
+    if (!el.main) return;
+    el.main.classList.add('is-ok');
+    later(function () { if (el.main) el.main.classList.remove('is-ok'); }, 260);
+  }
+
+  function nextStep() {
+    if (!BS || BS.closing) return;
+    BS.idx++;
+    if (BS.idx < BS.steps.length) { runStep(); return; }
+    finishDrill();
+  }
+
+  function finishDrill() {
+    if (!BS || BS.closing) return;
+    var U = ui();
+    var topicId = BS.topic.id;
+    el.notice.textContent = 'できました。練習にもどります…';
+    U.mount(el.main, h('div', { class: 'en', text: BS.line.en }));
+    later(function () {
+      if (BS && BS.topic.id === topicId) { location.hash = '#/practice/' + encodeURIComponent(topicId); }
+    }, FINISH_PAUSE_MS);
+  }
+
+  EST.uiBuildup = { renderBuildup: renderBuildup, stopSession: stopSession };
+})(window.EST = window.EST || {});
+
+</script>
+<script>
 /* ---- 99-main.js ---- */
 /* =====================================================================
    99-main.js — 起動とハッシュルーティング
@@ -7578,6 +8345,8 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
     if (parts[0] === 'edit') return { name: 'edit', id: decodeURIComponent(parts[1] || '') };
     if (parts[0] === 'practice') return { name: 'practice', id: decodeURIComponent(parts[1] || '') };
     if (parts[0] === 'list') return { name: 'list', id: decodeURIComponent(parts[1] || '') };
+    if (parts[0] === 'progress') return { name: 'progress', id: decodeURIComponent(parts[1] || '') };
+    if (parts[0] === 'buildup') return { name: 'buildup', topicId: decodeURIComponent(parts[1] || ''), lineId: decodeURIComponent(parts[2] || ''), startHint: decodeURIComponent(parts[3] || '') };
     if (parts[0] === 'search') return { name: 'search' };
     if (parts[0] === 'vocab-prep') return { name: 'vocab-prep', id: decodeURIComponent(parts[1] || '') };
     if (parts[0] === 'vocab-review') return { name: 'vocab-review' };
@@ -7597,6 +8366,8 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
     try { EST.uiPractice.stopSession(); } catch (e) {}
     // F6のS0・語彙復習・再確認も同じくタイマーで自走する（16-ui-vocab.js）。
     try { EST.uiVocab.stopSession(); } catch (e) {}
+    // §1.8 積み上げドリルも同じくタイマーで自走する（18-ui-buildup.js）。
+    try { EST.uiBuildup.stopSession(); } catch (e) {}
     try { EST.speech.cancel(); } catch (e) {}
     // マイクも画面をまたいで開いたままにしない。stop()は聞いていなければ何もしない。
     try { EST.mic.stop(); } catch (e) {}
@@ -7607,6 +8378,8 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
       else if (r.name === 'topic') EST.uiHome.renderTopic(viewEl, r.id);
       else if (r.name === 'practice') EST.uiPractice.renderPractice(viewEl, r.id);
       else if (r.name === 'list') EST.uiList.renderList(viewEl, r.id);
+      else if (r.name === 'progress') EST.uiProgress.renderProgress(viewEl, r.id);
+      else if (r.name === 'buildup') EST.uiBuildup.renderBuildup(viewEl, r.topicId, r.lineId, r.startHint);
       else if (r.name === 'search') EST.uiSearch.renderSearch(viewEl);
       else if (r.name === 'settings') EST.uiSettings.render(viewEl);
       else if (r.name === 'vocab-prep') EST.uiVocab.renderVocabPrep(viewEl, r.id);

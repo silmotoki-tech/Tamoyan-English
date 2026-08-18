@@ -450,10 +450,10 @@
   }
 
   // §1.8 詰まりが文のどのあたりで起きたかを、経過時間とチャンクの累積想定時間
-  // （語数比で按分）から推定する。厳密ではなく前半/中盤/後半程度の粒度。
-  function estimateStallPosition(chunks, elapsedMs, expectedMs) {
+  // （語数比で按分）から推定する共通処理。戻り値はチャンクの添字（厳密ではない）。
+  function stallChunkIndex(chunks, elapsedMs, expectedMs) {
     chunks = (chunks || []).map(String).filter(function (c) { return c.trim(); });
-    if (!chunks.length || !expectedMs || expectedMs <= 0 || elapsedMs == null) return null;
+    if (!chunks.length || !expectedMs || expectedMs <= 0 || elapsedMs == null) return -1;
 
     var wordCounts = chunks.map(function (c) { return Math.max(1, c.trim().split(/\s+/).length); });
     var totalWords = wordCounts.reduce(function (a, b) { return a + b; }, 0);
@@ -463,10 +463,25 @@
       acc += (wordCounts[i] / totalWords) * expectedMs;
       if (elapsedMs <= acc) { idx = i; break; }
     }
-    var frac = (idx + 0.5) / chunks.length;
+    return idx;
+  }
+
+  // 前半/中盤/後半程度の粒度。積み上げドリルの開始位置に使う（§1.8）。
+  function estimateStallPosition(chunks, elapsedMs, expectedMs) {
+    var idx = stallChunkIndex(chunks, elapsedMs, expectedMs);
+    if (idx < 0) return null;
+    var n = (chunks || []).filter(function (c) { return String(c).trim(); }).length;
+    var frac = (idx + 0.5) / n;
     if (frac < 1 / 3) return 'front';
     if (frac < 2 / 3) return 'mid';
     return 'back';
+  }
+
+  // §1.8「よく詰まるチャンクの集計」用。実際のチャンク文字列を返す（F8）。
+  function estimateStallChunk(chunks, elapsedMs, expectedMs) {
+    var idx = stallChunkIndex(chunks, elapsedMs, expectedMs);
+    var list = (chunks || []).map(String).filter(function (c) { return c.trim(); });
+    return idx >= 0 ? list[idx] : null;
   }
 
   EST.mic = {
@@ -493,6 +508,7 @@
     // 計測値の加工（カウント成否の判定はF5。§2.8）
     medianOfLastN: medianOfLastN,
     estimateStallPosition: estimateStallPosition,
+    estimateStallChunk: estimateStallChunk,
     // 定数（実機調整で参照する）
     STALL_MS: STALL_MS,
     REP_GAP_MS: REP_GAP_MS,

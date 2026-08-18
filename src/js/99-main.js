@@ -65,6 +65,8 @@
     if (parts[0] === 'edit') return { name: 'edit', id: decodeURIComponent(parts[1] || '') };
     if (parts[0] === 'practice') return { name: 'practice', id: decodeURIComponent(parts[1] || '') };
     if (parts[0] === 'list') return { name: 'list', id: decodeURIComponent(parts[1] || '') };
+    if (parts[0] === 'progress') return { name: 'progress', id: decodeURIComponent(parts[1] || '') };
+    if (parts[0] === 'buildup') return { name: 'buildup', topicId: decodeURIComponent(parts[1] || ''), lineId: decodeURIComponent(parts[2] || ''), startHint: decodeURIComponent(parts[3] || '') };
     if (parts[0] === 'search') return { name: 'search' };
     if (parts[0] === 'vocab-prep') return { name: 'vocab-prep', id: decodeURIComponent(parts[1] || '') };
     if (parts[0] === 'vocab-review') return { name: 'vocab-review' };
@@ -84,6 +86,8 @@
     try { EST.uiPractice.stopSession(); } catch (e) {}
     // F6のS0・語彙復習・再確認も同じくタイマーで自走する（16-ui-vocab.js）。
     try { EST.uiVocab.stopSession(); } catch (e) {}
+    // §1.8 積み上げドリルも同じくタイマーで自走する（18-ui-buildup.js）。
+    try { EST.uiBuildup.stopSession(); } catch (e) {}
     try { EST.speech.cancel(); } catch (e) {}
     // マイクも画面をまたいで開いたままにしない。stop()は聞いていなければ何もしない。
     try { EST.mic.stop(); } catch (e) {}
@@ -94,6 +98,8 @@
       else if (r.name === 'topic') EST.uiHome.renderTopic(viewEl, r.id);
       else if (r.name === 'practice') EST.uiPractice.renderPractice(viewEl, r.id);
       else if (r.name === 'list') EST.uiList.renderList(viewEl, r.id);
+      else if (r.name === 'progress') EST.uiProgress.renderProgress(viewEl, r.id);
+      else if (r.name === 'buildup') EST.uiBuildup.renderBuildup(viewEl, r.topicId, r.lineId, r.startHint);
       else if (r.name === 'search') EST.uiSearch.renderSearch(viewEl);
       else if (r.name === 'settings') EST.uiSettings.render(viewEl);
       else if (r.name === 'vocab-prep') EST.uiVocab.renderVocabPrep(viewEl, r.id);

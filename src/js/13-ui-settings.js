@@ -26,6 +26,7 @@
         speechCard(s),
         micCard(s),
         listModeCard(s),
+        stalledChunksCard(s),
         EST.profile.canEdit() ? publishCard() : null,
         backupCard(),
         autoBackupCard(),
@@ -418,6 +419,58 @@
         ]),
         row
       ])
+    ]);
+  }
+
+  /* ---- よく詰まるチャンクの集計（§1.8。F8） -------------------------------
+     トピックをまたいだ集計なのでここ（設定画面）に置く。s.chunkStalls は
+     render() が読み込んだ設定をそのまま使う（ここで読み直さない）。
+     昇格したら、その語が出てきたトピックの語彙へ追加し、集計からは外す
+     （そのままだと「昇格済みなのにまだ上位に出続ける」ことになるため）。 */
+  function stalledChunksCard(s) {
+    var U = ui();
+    var box = h('div', {});
+
+    function draw() {
+      var list = Object.keys(s.chunkStalls || {}).map(function (k) { return { key: k, v: s.chunkStalls[k] }; });
+      list.sort(function (a, b) { return (b.v.count || 0) - (a.v.count || 0); });
+      list = list.slice(0, 10);
+
+      if (!list.length) {
+        U.mount(box, h('div', { class: 'small muted', text: 'まだ集計がありません。音読中に1.5秒以上詰まった箇所がここに集まります。' }));
+        return;
+      }
+      U.mount(box, list.map(function (item) {
+        return h('div', { class: 'row row--tight', style: { justifyContent: 'space-between', alignItems: 'center', padding: '.25rem 0' } }, [
+          h('div', { class: 'grow' }, [
+            h('span', { class: 'en', text: item.v.text }),
+            h('span', { class: 'tiny muted', style: { marginLeft: '.4rem' }, text: item.v.count + '回' })
+          ]),
+          h('button', {
+            class: 'btn btn--sm', text: '語彙に追加',
+            onClick: function () { promote(item); }
+          })
+        ]);
+      }));
+    }
+
+    function promote(item) {
+      if (!item.v.topicId) { U.toast('追加先のトピックが分かりませんでした'); return; }
+      EST.store.addTopicWord(item.v.topicId, { en: item.v.text, lineIds: item.v.lineId ? [item.v.lineId] : [] })
+        .then(function (r) {
+          if (!r.added && r.reason !== 'exists') { U.toast('追加できませんでした'); return; }
+          U.toast(r.added ? '語彙に追加しました' : 'すでに語彙にあります');
+          delete s.chunkStalls[item.key];
+          EST.store.saveSettings(s).then(draw);
+        });
+    }
+
+    draw();
+    return h('div', { class: 'card' }, [
+      h('h2', { class: 'card__title', text: 'よく詰まるチャンク' }),
+      h('div', { class: 'small muted', style: { marginBottom: '.4rem' },
+        text: '音読中に詰まりやすい箇所の上位10件です。目安の推定なので厳密ではありません。' }),
+      box
     ]);
   }
 

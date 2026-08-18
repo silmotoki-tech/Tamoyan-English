@@ -24,6 +24,13 @@
   // §1.4 で使う定着閾値の係数（F7で使う。ここでは持つだけ）
   var MASTERY_BASE_MS = 1200;
   var MASTERY_PER_WORD_MS = 60;
+  // §1.9 F8: レイテンシ推移グラフの点の上限。超えたら間引いて分解能を半分にする。
+  var LATENCY_TREND_MAX = 120;
+  // §1.9 F8: 日次ログ（sessions）の保持日数。習慣グラフとして持つには十分な長さ。
+  var SESSION_LOG_MAX_DAYS = 120;
+  // §1.9 F8: 継続日数の判定で「今日はまだやっていない」を切らさないための猶予。
+  // 昨日までの記録が続いていれば、今日やる前でも継続日数を保つ。
+  var STREAK_GRACE_DAYS = 1;
 
   var STAGES = ['S1', 'S2', 'S3', 'S4', 'S5', 'S6'];
   var STAGE_LABELS = {
@@ -87,6 +94,10 @@
       sessions: [],
       // §1.6 F6: S0（語彙の下ごしらえ）を済ませたか。
       s0: { done: false, doneAt: null },
+      // §1.9 F8: 可視化。latencyTrend は間引いて保持するので、x軸（累計回数）は
+      // 配列の長さに頼らずこのカウンタで別に持つ。
+      repLatencyCount: 0,
+      latencyTrend: [],
       updatedAt: 0
     };
   }
@@ -101,6 +112,10 @@
     if (tp.activeRole === undefined) tp.activeRole = null;
     if (tp.roleSwapOffered === undefined) tp.roleSwapOffered = false;
     if (!tp.s0) tp.s0 = { done: false, doneAt: null };   // F6より前に作られた進捗を補う
+    // F8より前に作られた進捗を補う
+    if (!tp.sessions) tp.sessions = [];
+    if (!tp.latencyTrend) tp.latencyTrend = [];
+    if (tp.repLatencyCount == null) tp.repLatencyCount = 0;
 
     // 旧形式の stage / blockIndex を blocks[] へ移す
     if (tp.stage && !Object.keys(tp.blocks).length) {
@@ -205,6 +220,87 @@
     return tp;
   }
 
+  /* ---- 可視化のための記録（§1.9。F8） -------------------------------------
+     ここで作るデータはすべて「今は貯まっていない」もの。表示側（新設の
+     進捗画面）はここが書いたものを読むだけにする。 */
+
+  // ローカル日付（"YYYY-MM-DD"）。日次ログは「その人の1日」で数えたいので
+  // toISOString（UTC）は使わない。深夜0時をまたぐタイミングの誤差は許容する。
+  function localDateStr(d) {
+    d = d || new Date();
+    var y = d.getFullYear(), m = d.getMonth() + 1, day = d.getDate();
+    return y + '-' + (m < 10 ? '0' : '') + m + '-' + (day < 10 ? '0' : '') + day;
+  }
+
+  // レイテンシ推移グラフの1点を足す。横軸は「間引いても狂わない」よう
+  // 専用のカウンタ（repLatencyCount）を別に持ち、配列の長さには頼らない。
+  function recordLatencyTrend(tp, latencyMs) {
+    if (latencyMs == null) return tp;
+    tp.repLatencyCount = (tp.repLatencyCount || 0) + 1;
+    tp.latencyTrend = (tp.latencyTrend || []).concat([{ totalCount: tp.repLatencyCount, avgMs: latencyMs }]);
+    // 上限を超えたら1つおきに間引いて分解能を半分にする（グラフの形はほぼ保たれる）
+    if (tp.latencyTrend.length > LATENCY_TREND_MAX) {
+      tp.latencyTrend = tp.latencyTrend.filter(function (_, i) { return i % 2 === 0; });
+    }
+    return tp;
+  }
+
+  // 日次ログ（sessions）。周回数はラップが確定するたびに、分数はセッションを
+  // 終えるときにそれぞれ加算する（呼び出し側が該当するほうだけ渡せばよい）。
+  function logSessionActivity(tp, delta) {
+    delta = delta || {};
+    var today = localDateStr();
+    var list = tp.sessions || [];
+    var last = list[list.length - 1];
+    var entry = (last && last.date === today) ? last : null;
+    if (!entry) {
+      entry = { date: today, laps: 0, minutes: 0 };
+      list.push(entry);
+      if (list.length > SESSION_LOG_MAX_DAYS) list = list.slice(-SESSION_LOG_MAX_DAYS);
+    }
+    if (delta.laps) entry.laps = (entry.laps || 0) + delta.laps;
+    if (delta.minutes) entry.minutes = Math.round(((entry.minutes || 0) + delta.minutes) * 10) / 10;
+    tp.sessions = list;
+    return tp;
+  }
+
+  // 継続日数。sessions は都度計算の元データとしてだけ使い、値そのものは
+  // 保存しない（保存すると sessions との整合を別途取る羽目になる）。
+  // 今日の分がまだ無くても、昨日までが続いていれば継続扱いにする
+  // （STREAK_GRACE_DAYS）。そうしないと、今日やる前の時点で毎日0に見えてしまう。
+  function currentStreak(tp) {
+    var dates = {};
+    (tp.sessions || []).forEach(function (s) { if (s && s.date) dates[s.date] = true; });
+    var cursor = new Date();
+    var n = 0, graceLeft = STREAK_GRACE_DAYS;
+    for (;;) {
+      var key = localDateStr(cursor);
+      if (dates[key]) {
+        n++;
+      } else if (graceLeft > 0 && n === 0) {
+        graceLeft--;   // 今日（まだ）分だけ待つ。1日で使い切る
+      } else {
+        break;
+      }
+      cursor.setDate(cursor.getDate() - 1);
+    }
+    return n;
+  }
+
+  // よく詰まるチャンクの集計（§1.8）。stall の elapsedMs から、その文の
+  // チャンクのどれで詰まったかを推定して積む。厳密な推定ではないので、
+  // 「よく引っかかる構文に気づく」きっかけ程度に使う。
+  function recordChunkStalls(topicId, line, stalls, expectedMs) {
+    if (!line || !line.chunks || !line.chunks.length || !stalls || !stalls.length || !expectedMs) return Promise.resolve();
+    var chain = Promise.resolve();
+    stalls.forEach(function (st) {
+      var text = EST.mic.estimateStallChunk(line.chunks, st && st.elapsedMs, expectedMs);
+      if (!text) return;
+      chain = chain.then(function () { return EST.store.recordChunkStall(text, topicId, line.id); });
+    });
+    return chain;
+  }
+
   /* ---- 進級判定（§1.2） ---------------------------------------------------
      最低回数と達成条件の両方を満たすと進める。進級は強制しない。 */
   function canAdvance(tp) {
@@ -278,6 +374,8 @@
     } else if (st === 'S1') {
       tp.streak = tp.stageReps.S1;   // S1は聞くだけなので実施回数がそのまま
     }
+    // §1.9 F8: レイテンシ推移グラフ用。ステージを問わず、測れた回はすべて拾う。
+    recordLatencyTrend(tp, result.latencyMs);
     return tp;
   }
 
@@ -312,6 +410,14 @@
         }
       }
       p.updatedAt = Date.now();
+      // §1.8 F8: よく詰まるチャンクの集計。expectedMs が無いと位置を推定できない
+      // ステージ（S3など、opts側で渡していない場合）は静かにスキップする。
+      if (opts && opts.expectedMs) {
+        // 集計に失敗しても本筋の進捗記録は止めない（診断用のおまけデータのため）
+        recordChunkStalls(topicId, line, result.stalls, opts.expectedMs).catch(function (e) {
+          console.warn('[stage] チャンク詰まりの集計に失敗しました', e);
+        });
+      }
       return EST.store.put('progress', p).then(function () { return p; });
     });
   }
@@ -484,6 +590,9 @@
     setRoleStage: setRoleStage,
     s0Needed: s0Needed,
     markS0Done: markS0Done,
+    logSessionActivity: logSessionActivity,
+    currentStreak: currentStreak,
+    localDateStr: localDateStr,
     shuffle: shuffle,
     s5Items: s5Items,
     s6Pairs: s6Pairs,

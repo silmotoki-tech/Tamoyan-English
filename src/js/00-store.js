@@ -45,8 +45,14 @@
     theme: 'auto',
     fontScale: 1.0,
     recordOpens: true,         // §4.1 一覧モードで開いた行を復習キューに入れるか
-    autoBackups: []            // §6.4 直近3世代（部屋ごとに持つ）
+    autoBackups: [],           // §6.4 直近3世代（部屋ごとに持つ）
+    chunkStalls: {}            // §1.8 F8: よく詰まるチャンクの集計（部屋ごと）
   };
+
+  // §1.8 F8「よく詰まるチャンクの集計」。新しいストアは作らず設定に相乗りする
+  // （台本をまたぐ小さな集計なので、これで十分な性質のデータ）。
+  // 際限なく増えないよう、上限を超えたら最も少ないものを間引く。
+  var CHUNK_STALL_MAX = 60;
 
   // 台本に属する共有情報（どちらの部屋からでも同じものを見る）
   var DEFAULT_SHARED = {
@@ -155,6 +161,67 @@
     });
   }
 
+  /* ---- 語彙への追加（§5.3・F6/F8で共有） -------------------------------
+     長押しでの追加（F6）と、よく詰まるチャンクからの昇格（F8）の両方が使う。
+     UIの確認ダイアログやトーストは呼び出し側の仕事にする（ここは data だけ）。
+     戻り値: {added:true} / {added:false, reason:'exists'|'missing'} */
+  function addTopicWord(topicId, w) {
+    return get('topics', topicId).then(function (topic) {
+      if (!topic) return { added: false, reason: 'missing' };
+      var en = String((w && w.en) || '').trim();
+      if (!en) return { added: false, reason: 'missing' };
+      var exists = (topic.words || []).some(function (x) {
+        return String(x.en || '').toLowerCase() === en.toLowerCase();
+      });
+      if (exists) return { added: false, reason: 'exists' };
+
+      var words = (topic.words || []).slice();
+      var n = words.length + 1;
+      var id = 'w_' + EST.schema.pad3(n);
+      while (words.some(function (x) { return x.id === id; })) { n++; id = 'w_' + EST.schema.pad3(n); }
+      words.push({
+        id: id, en: en, ja: (w && w.ja) || '',
+        type: (w && w.type) || (EST.schema.countWords(en) > 1 ? 'phrase' : 'word'),
+        lineIds: (w && w.lineIds) || [], note: ''
+      });
+      topic.words = words;
+      topic.updatedAt = Date.now();
+      return put('topics', topic).then(function () { return { added: true, topic: topic }; });
+    });
+  }
+
+  /* ---- よく詰まるチャンクの集計（§1.8・F8） ----------------------------- */
+  function recordChunkStall(text, topicId, lineId) {
+    var key = String(text || '').trim().toLowerCase();
+    if (!key) return Promise.resolve();
+    return loadSettings().then(function (s) {
+      var map = s.chunkStalls || {};
+      var cur = map[key];
+      if (cur) {
+        cur.count = (cur.count || 0) + 1;
+        cur.updatedAt = Date.now();
+      } else {
+        // ストア上限。一番少ないものから間引く（新顔を締め出さないため）
+        var keys = Object.keys(map);
+        if (keys.length >= CHUNK_STALL_MAX) {
+          keys.sort(function (a, b) { return (map[a].count || 0) - (map[b].count || 0); });
+          delete map[keys[0]];
+        }
+        map[key] = { text: String(text).trim(), count: 1, topicId: topicId, lineId: lineId, updatedAt: Date.now() };
+      }
+      s.chunkStalls = map;
+      return saveSettings(s);
+    });
+  }
+
+  function topStalledChunks(limit) {
+    return loadSettings().then(function (s) {
+      var list = Object.keys(s.chunkStalls || {}).map(function (k) { return s.chunkStalls[k]; });
+      list.sort(function (a, b) { return (b.count || 0) - (a.count || 0); });
+      return list.slice(0, limit || 10);
+    });
+  }
+
   // ---- 設定 -----------------------------------------------------------
   function isPlainObject(x) {
     return !!x && typeof x === 'object' && !Array.isArray(x);
@@ -233,6 +300,9 @@
     settingsKey: settingsKey,
     belongsToProfile: belongsToProfile,
     markLineOpened: markLineOpened,
+    addTopicWord: addTopicWord,
+    recordChunkStall: recordChunkStall,
+    topStalledChunks: topStalledChunks,
     loadShared: loadShared,
     saveShared: saveShared,
     open: open,
