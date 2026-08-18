@@ -46,7 +46,8 @@
     fontScale: 1.0,
     recordOpens: true,         // §4.1 一覧モードで開いた行を復習キューに入れるか
     autoBackups: [],           // §6.4 直近3世代（部屋ごとに持つ）
-    chunkStalls: {}            // §1.8 F8: よく詰まるチャンクの集計（部屋ごと）
+    chunkStalls: {},           // §1.8 F8: よく詰まるチャンクの集計（部屋ごと）
+    writeStrictness: 'normal'  // §9.3 F9: 差分採点の合格ライン（loose/normal/strict）
   };
 
   // §1.8 F8「よく詰まるチャンクの集計」。新しいストアは作らず設定に相乗りする

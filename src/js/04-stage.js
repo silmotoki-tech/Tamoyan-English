@@ -403,6 +403,10 @@
       // 回ごとの詰まり件数を並びとして持っておく（合計値では判定できない）。
       p.recentStalls = (p.recentStalls || []).concat([(result.stalls || []).length]).slice(-10);
 
+      // §9.4 書くレーンで落とした行は次の音読セッションで優先出題する。
+      // 音読レーンに出た時点（＝ここ）で役目を終えるので下ろす。
+      if (p.needsAudioReview) p.needsAudioReview = false;
+
       // §1.4 定着はシャッフル状態（S5以降）での測定でのみ判定する
       if (opts && opts.shuffled && line) {
         if (!p.mastered && EST.mastery.isMastered(p, line.en, { shuffled: true })) {
@@ -442,6 +446,64 @@
       }
       p.updatedAt = Date.now();
       return EST.store.put('progress', p).then(function () { return p; });
+    });
+  }
+
+  /* ---- 書くレーンの結果を記録する（§9.4） ----------------------------------
+     同じ Progress に書き込み、counts.total は加算される。ただし byStage・
+     latency は音読レーン専用のままにし、判定（mastered）はここでは一切
+     動かさない（書くレーンで満点でも定着にはしない）。
+     lane: 'essay'（和文英訳） | 'dictation'（ディクテーション）
+     opts.replays: ディクテーションの再生回数（「3回以内で書けた率」の元データ） */
+  function recordWritingResult(topicId, lineId, lane, passed, opts) {
+    opts = opts || {};
+    var key = EST.store.progressKey(topicId, lineId);
+    return EST.store.get('progress', key).then(function (rec) {
+      var p = rec || EST.schema.defaultProgress(EST.profile.get(), topicId, lineId);
+      p.counts = p.counts || { total: 0, byStage: {} };
+      p.counts.total = (p.counts.total || 0) + 1;
+      p.writing = p.writing || { essayAttempts: 0, essayCorrect: 0, dictationAttempts: 0, dictationCorrect: 0, dictationReplayHistory: [] };
+      if (lane === 'dictation') {
+        p.writing.dictationAttempts = (p.writing.dictationAttempts || 0) + 1;
+        if (passed) p.writing.dictationCorrect = (p.writing.dictationCorrect || 0) + 1;
+        if (opts.replays != null) {
+          p.writing.dictationReplayHistory = (p.writing.dictationReplayHistory || []).concat([opts.replays]).slice(-20);
+        }
+      } else {
+        p.writing.essayAttempts = (p.writing.essayAttempts || 0) + 1;
+        if (passed) p.writing.essayCorrect = (p.writing.essayCorrect || 0) + 1;
+      }
+      // §9.4 落としたら次の音読セッションで優先出題。合格しても、音読で
+      // 確認できたわけではないのでフラグはここでは下ろさない。
+      if (!passed) p.needsAudioReview = true;
+      p.updatedAt = Date.now();
+      return EST.store.put('progress', p).then(function () { return p; });
+    });
+  }
+
+  // 「3回以内で書けた率」（§9.2）。トピック全体で集計する。
+  function within3Rate(recs) {
+    var hist = [];
+    (recs || []).forEach(function (p) {
+      ((p && p.writing && p.writing.dictationReplayHistory) || []).forEach(function (n) { hist.push(n); });
+    });
+    if (!hist.length) return null;
+    var within3 = hist.filter(function (n) { return n <= 3; }).length;
+    return { within3: within3, total: hist.length };
+  }
+
+  // §9.4 書くレーンで落とした行をキューの先頭に寄せる（S5/S6のみ。
+  // S1〜S4は「順」で読む規則があるので触らない＝§1.3参照）。
+  function applyWritingPriority(queue, topicId) {
+    if (!queue || !queue.length) return Promise.resolve(queue);
+    return Promise.all(queue.map(function (it) {
+      return EST.store.get('progress', EST.store.progressKey(topicId, it.line.id));
+    })).then(function (recs) {
+      var flagged = [], rest = [];
+      queue.forEach(function (it, i) {
+        (recs[i] && recs[i].needsAudioReview ? flagged : rest).push(it);
+      });
+      return flagged.length ? flagged.concat(rest) : queue;
     });
   }
 
@@ -607,6 +669,9 @@
     recordRep: recordRep,
     recordLineProgress: recordLineProgress,
     undoLineProgress: undoLineProgress,
+    recordWritingResult: recordWritingResult,
+    within3Rate: within3Rate,
+    applyWritingPriority: applyWritingPriority,
 
     blocksOf: blocksOf,
     usesBlocks: usesBlocks,

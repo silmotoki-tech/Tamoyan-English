@@ -71,6 +71,8 @@
     if (parts[0] === 'vocab-prep') return { name: 'vocab-prep', id: decodeURIComponent(parts[1] || '') };
     if (parts[0] === 'vocab-review') return { name: 'vocab-review' };
     if (parts[0] === 'review') return { name: 'review' };
+    if (parts[0] === 'write') return { name: 'write', id: decodeURIComponent(parts[1] || '') };
+    if (parts[0] === 'dictate') return { name: 'dictate', id: decodeURIComponent(parts[1] || '') };
     return { name: 'home' };
   }
 
@@ -88,6 +90,9 @@
     try { EST.uiVocab.stopSession(); } catch (e) {}
     // §1.8 積み上げドリルも同じくタイマーで自走する（18-ui-buildup.js）。
     try { EST.uiBuildup.stopSession(); } catch (e) {}
+    // §9 書くレーンはタイマーでは自走しないが、TTSを止め忘れないよう揃える。
+    try { EST.uiWrite.stopSession(); } catch (e) {}
+    try { EST.uiDictation.stopSession(); } catch (e) {}
     try { EST.speech.cancel(); } catch (e) {}
     // マイクも画面をまたいで開いたままにしない。stop()は聞いていなければ何もしない。
     try { EST.mic.stop(); } catch (e) {}
@@ -105,6 +110,8 @@
       else if (r.name === 'vocab-prep') EST.uiVocab.renderVocabPrep(viewEl, r.id);
       else if (r.name === 'vocab-review') EST.uiVocab.renderVocabReview(viewEl);
       else if (r.name === 'review') EST.uiVocab.renderReview(viewEl);
+      else if (r.name === 'write') EST.uiWrite.renderWrite(viewEl, r.id);
+      else if (r.name === 'dictate') EST.uiDictation.renderDictation(viewEl, r.id);
     } catch (e) {
       console.error('[route]', e);
       EST.ui.mount(viewEl, EST.ui.h('div', { class: 'note-box note-box--err',

@@ -20,6 +20,9 @@
 
   var S = null;        // 進行中のセッション
   var wakeLock = null;
+  // §9.4 キューの並び替え（書くレーンの優先出題）が非同期なので、その間に
+  // 画面が切り替わっていないかを確認するための世代カウンタ。
+  var sessionToken = 0;
 
   /* =====================================================================
      セッション
@@ -60,46 +63,58 @@
     var mode = EST.stage.stageMode(stage);
     var blockLines = linesOfCurrentBlock(topic, tp);
 
-    S = {
-      view: view,
-      topic: topic,
-      tp: tp,
-      stage: stage,
-      role: role,
-      settings: settings,
-      countRatio: (typeof settings.countRatio === 'number' && settings.countRatio > 0)
-        ? settings.countRatio : EST.stage.COUNT_RATIO_DEFAULT,
-      blockLines: blockLines,
-      // §1.3 S5・S6 はシャッフルした出題（S6は組）、S1〜S4は台本の順
-      queue: mode.shuffled
-        ? EST.stage.buildQueue(stage, topic, blockLines, role, null)
-        : blockLines.map(function (l) { return { kind: 'line', line: l }; }),
-      lines: blockLines,
-      idx: 0,
-      lastResult: null,     // 「今のはナシ」用
-      lastLineId: null,
-      micOn: false,
-      tapMode: false,
-      tapReason: '',
-      closing: false,
-      timers: [],
-      barTimer: null,
-      expectedMs: 0,
-      cueAt: 0,
-      finished: false,
-      sessionStartedAt: Date.now(),  // §1.9 F8: 日次ログの分数を出すため
-      buildupOffered: {}             // §1.8: 積み上げドリルは1セッション1行につき1回だけ聞く
-    };
-    if (!S.queue.length) {
-      U.mount(view, h('div', { class: 'empty', text: mode.myRoleOnly
-        ? 'このブロックに自分の役の行がありません。'
-        : '練習できる行がありません。' }));
-      return;
-    }
+    sessionToken++;
+    var myToken = sessionToken;
 
-    buildScreen();
-    requestWakeLock();
-    prepareMic().then(function () { runLine(); });
+    // §1.3 S5・S6 はシャッフルした出題（S6は組）、S1〜S4は台本の順。
+    // §9.4 書くレーンで落とした行はS5・S6の出題先頭に寄せる（優先出題）。
+    // S1〜S4は「順」で読む規則があるので触らない。
+    var baseQueue = mode.shuffled
+      ? EST.stage.buildQueue(stage, topic, blockLines, role, null)
+      : blockLines.map(function (l) { return { kind: 'line', line: l }; });
+    var queueP = mode.shuffled ? EST.stage.applyWritingPriority(baseQueue, topic.id) : Promise.resolve(baseQueue);
+
+    queueP.then(function (queue) {
+      if (myToken !== sessionToken) return;   // その間に画面が切り替わっていたら何もしない
+
+      S = {
+        view: view,
+        topic: topic,
+        tp: tp,
+        stage: stage,
+        role: role,
+        settings: settings,
+        countRatio: (typeof settings.countRatio === 'number' && settings.countRatio > 0)
+          ? settings.countRatio : EST.stage.COUNT_RATIO_DEFAULT,
+        blockLines: blockLines,
+        queue: queue,
+        lines: blockLines,
+        idx: 0,
+        lastResult: null,     // 「今のはナシ」用
+        lastLineId: null,
+        micOn: false,
+        tapMode: false,
+        tapReason: '',
+        closing: false,
+        timers: [],
+        barTimer: null,
+        expectedMs: 0,
+        cueAt: 0,
+        finished: false,
+        sessionStartedAt: Date.now(),  // §1.9 F8: 日次ログの分数を出すため
+        buildupOffered: {}             // §1.8: 積み上げドリルは1セッション1行につき1回だけ聞く
+      };
+      if (!S.queue.length) {
+        U.mount(view, h('div', { class: 'empty', text: mode.myRoleOnly
+          ? 'このブロックに自分の役の行がありません。'
+          : '練習できる行がありません。' }));
+        return;
+      }
+
+      buildScreen();
+      requestWakeLock();
+      prepareMic().then(function () { runLine(); });
+    });
   }
 
   // §1.5 現在ブロックの行。ブロックを使わない台本なら全行。
@@ -111,6 +126,7 @@
   }
 
   function stopSession() {
+    sessionToken++;   // §9.4 進行中の並び替え待ちを無効化する
     if (!S) return;
     S.closing = true;
     clearTimers();

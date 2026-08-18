@@ -112,6 +112,42 @@
   --------------------------------------------------------------------- */
   var homeFilter = 'mine';   // 'mine' | 'other' | 'all'
 
+  // トピックのフォルダ表示。タグ（先頭タグ）を共有するトピックが
+  // この件数以上あれば、折りたたみフォルダとしてまとめる（例:「自分ごと」11本）。
+  // 1トピックは複数タグを持てるが、フォルダは先頭タグ1つだけで決める
+  // （両方のタグでまとめると同じトピックが2つのフォルダに重複して出てしまうため）。
+  var FOLDER_MIN_TOPICS = 2;
+  var folderExpanded = {};   // { タグ名: true/false }。既定は畳んだ状態（未登録＝畳む）
+
+  function groupForFolders(list) {
+    var byTag = {}, order = [];
+    list.forEach(function (t) {
+      var tag = (t.tags && t.tags[0]) || null;
+      if (!tag) return;
+      if (!byTag[tag]) { byTag[tag] = []; order.push(tag); }
+      byTag[tag].push(t);
+    });
+    var folderOf = {};   // topicId -> tag（フォルダになったものだけ）
+    order.forEach(function (tag) {
+      if (byTag[tag].length >= FOLDER_MIN_TOPICS) {
+        byTag[tag].forEach(function (t) { folderOf[t.id] = tag; });
+      }
+    });
+
+    var entries = [], seenTag = {};
+    list.forEach(function (t) {
+      var tag = folderOf[t.id];
+      if (!tag) { entries.push({ kind: 'topic', topic: t, sortAt: t.updatedAt || 0 }); return; }
+      if (seenTag[tag]) return;   // このタグのフォルダは既に1つ追加済み
+      seenTag[tag] = true;
+      var members = byTag[tag];
+      var latest = members.reduce(function (m, x) { return Math.max(m, x.updatedAt || 0); }, 0);
+      entries.push({ kind: 'folder', tag: tag, topics: members, sortAt: latest });
+    });
+    entries.sort(function (a, b) { return b.sortAt - a.sortAt; });
+    return entries;
+  }
+
   function drawList(chipBox, listBox, topics) {
     var U = ui();
     var mine = topics.filter(function (t) { return EST.profile.canSee(t); });
@@ -139,7 +175,30 @@
       U.mount(listBox, h('div', { class: 'empty', text: emptyText(topics.length) }));
       return;
     }
-    U.mount(listBox, shown.map(topicCard));
+    var entries = groupForFolders(shown);
+    U.mount(listBox, entries.map(function (e) {
+      return e.kind === 'folder' ? folderCard(e.tag, e.topics, chipBox, listBox, topics) : topicCard(e.topic);
+    }));
+  }
+
+  function folderCard(tag, members, chipBox, listBox, topics) {
+    var U = ui();
+    var expanded = !!folderExpanded[tag];
+    var head = h('button', { class: 'topic-folder__head', type: 'button' }, [
+      h('span', { class: 'topic-folder__chevron', text: expanded ? '▾' : '▸' }),
+      h('span', { class: 'topic-folder__title', text: '📁 ' + tag }),
+      h('span', { class: 'topic-folder__count', text: '（' + members.length + '）' })
+    ]);
+    head.addEventListener('click', function () {
+      folderExpanded[tag] = !expanded;
+      drawList(chipBox, listBox, topics);
+    });
+    var body = expanded
+      ? h('div', { class: 'topic-folder__body' }, members.slice()
+          .sort(function (a, b) { return (b.updatedAt || 0) - (a.updatedAt || 0); })
+          .map(topicCard))
+      : null;
+    return h('div', { class: 'topic-folder' }, [head, body]);
   }
 
   function chip(label, value, count, chipBox, listBox, topics) {
@@ -314,6 +373,18 @@
           class: 'btn btn--danger', text: '削除',
           onClick: function () { removeTopic(t); }
         }) : null
+      ]),
+      // §1.7・§9 F9: 声を出せない時間の書くレーン。音読の代替ではなく別入口。
+      h('div', { class: 'row row--tight', style: { marginTop: '.5rem' } }, [
+        h('span', { class: 'small muted', text: '声を出せないときは：' }),
+        h('button', {
+          class: 'btn btn--sm', text: '書いて練習',
+          onClick: function () { location.hash = '#/write/' + encodeURIComponent(t.id); }
+        }),
+        h('button', {
+          class: 'btn btn--sm', text: '聞いて書く',
+          onClick: function () { location.hash = '#/dictate/' + encodeURIComponent(t.id); }
+        })
       ])
     ]);
 

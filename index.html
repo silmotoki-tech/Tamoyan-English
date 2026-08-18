@@ -250,6 +250,18 @@ label.field > .field__label { display: block; font-size: .72rem; color: var(--mu
 .topic-card__title { font-weight: 700; font-size: .92rem; }
 .topic-card__meta { font-size: .74rem; color: var(--muted); margin-top: .15rem; }
 
+/* トピックのフォルダ表示（タグでまとめる。同じタグが複数トピックにあるとき） */
+.topic-folder { margin-bottom: .45rem; }
+.topic-folder__head { display: flex; align-items: center; gap: .4rem; width: 100%;
+  text-align: left; cursor: pointer; font: inherit; color: var(--ink);
+  background: var(--panel2); border: 1px solid var(--line); border-radius: .6rem;
+  padding: .6rem .8rem; }
+.topic-folder__head:hover { background: var(--chip); }
+.topic-folder__chevron { color: var(--muted); font-size: .75rem; }
+.topic-folder__title { font-weight: 700; font-size: .88rem; }
+.topic-folder__count { color: var(--muted); font-size: .78rem; }
+.topic-folder__body { padding: .5rem 0 0 .9rem; }
+
 .empty { text-align: center; color: var(--muted); font-size: .85rem; padding: 1.6rem .5rem; }
 
 /* ---- トピック詳細 --------------------------------------------------- */
@@ -389,6 +401,39 @@ label.field > .field__label { display: block; font-size: .72rem; color: var(--mu
 .latency-graph { color: var(--accent); line-height: 0; }
 .latency-svg { display: block; }
 
+/* ---- 書くレーン（§9。F9） -------------------------------------------
+   和文英訳ドリル・ディクテーションドリルで共用する。 */
+.write-screen { display: flex; flex-direction: column; gap: .7rem; min-height: 60vh; }
+.write-count { font-size: .78rem; color: var(--muted); text-align: right; }
+.write-ja { font-size: 1.15rem; line-height: 1.5; font-family: var(--font-ja); }
+.write-input { width: 100%; min-height: 3.2rem; font-size: 1rem; font-family: var(--font-en);
+  padding: .6rem; border: 1px solid var(--line); border-radius: .5rem; background: var(--panel);
+  color: var(--ink); resize: vertical; }
+.write-hints { display: flex; flex-wrap: wrap; gap: .4rem; }
+.write-chunk { font-size: .82rem; padding: .3rem .55rem; border-radius: .4rem;
+  background: var(--panel2); border: 1px solid var(--line); font-family: var(--font-en); }
+.write-result { border-top: 1px solid var(--line); padding-top: .6rem; display: flex; flex-direction: column; gap: .5rem; }
+.write-score { font-size: .95rem; font-weight: 700; }
+.write-score--pass { color: var(--accent); }
+.write-score--warn { color: var(--warn-ink); }
+.write-score--fail { color: var(--danger); }
+.write-target { font-size: 1.05rem; line-height: 1.6; font-family: var(--font-en); }
+.write-tags { display: flex; flex-wrap: wrap; gap: .3rem; }
+.write-tag { font-size: .68rem; padding: .12rem .5rem; border-radius: 1rem; background: var(--chip); color: var(--muted); }
+.write-tag--warn { background: var(--warn-bg); color: var(--warn-ink); }
+
+.diff-word { padding: 0 .05rem; }
+.diff-word--missing { color: var(--danger); text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--danger) 55%, transparent); }
+.diff-word--extra { color: var(--muted); text-decoration: line-through; }
+.diff-word--close { color: var(--warn-ink); background: var(--warn-bg); border-radius: .2rem; }
+
+.dict-blank { display: inline-flex; flex-wrap: wrap; gap: .3rem; margin: 0 .15rem; vertical-align: middle; }
+.dict-blank__opt { font-size: .82rem; padding: .25rem .55rem; border-radius: .4rem;
+  border: 1px solid var(--line); background: var(--panel); font-family: var(--font-en); }
+.dict-blank__opt.is-selected { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.dict-mode-toggle { display: flex; gap: .4rem; }
+
 </style>
 </head>
 <body>
@@ -452,7 +497,8 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
     fontScale: 1.0,
     recordOpens: true,         // §4.1 一覧モードで開いた行を復習キューに入れるか
     autoBackups: [],           // §6.4 直近3世代（部屋ごとに持つ）
-    chunkStalls: {}            // §1.8 F8: よく詰まるチャンクの集計（部屋ごと）
+    chunkStalls: {},           // §1.8 F8: よく詰まるチャンクの集計（部屋ごと）
+    writeStrictness: 'normal'  // §9.3 F9: 差分採点の合格ライン（loose/normal/strict）
   };
 
   // §1.8 F8「よく詰まるチャンクの集計」。新しいストアは作らず設定に相乗りする
@@ -1389,6 +1435,11 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
       lastOpenedAt: null,
       mastered: false,
       masteredAt: null,
+      // §9 F9: 書くレーンの実績。音読レーンとは別に正答率だけを持つ（§9.4）。
+      // counts.total には書くレーンの回も加算されるが、byStage・latencyは
+      // 音読レーン専用のまま触らない（文と語で判定コードを混ぜないのと同じ理由）。
+      writing: { essayAttempts: 0, essayCorrect: 0, dictationAttempts: 0, dictationCorrect: 0, dictationReplayHistory: [] },
+      needsAudioReview: false,   // §9.4 書くレーンで落としたら次の音読で優先出題
       updatedAt: 0
     };
   }
@@ -2870,6 +2921,10 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
       // 回ごとの詰まり件数を並びとして持っておく（合計値では判定できない）。
       p.recentStalls = (p.recentStalls || []).concat([(result.stalls || []).length]).slice(-10);
 
+      // §9.4 書くレーンで落とした行は次の音読セッションで優先出題する。
+      // 音読レーンに出た時点（＝ここ）で役目を終えるので下ろす。
+      if (p.needsAudioReview) p.needsAudioReview = false;
+
       // §1.4 定着はシャッフル状態（S5以降）での測定でのみ判定する
       if (opts && opts.shuffled && line) {
         if (!p.mastered && EST.mastery.isMastered(p, line.en, { shuffled: true })) {
@@ -2909,6 +2964,64 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
       }
       p.updatedAt = Date.now();
       return EST.store.put('progress', p).then(function () { return p; });
+    });
+  }
+
+  /* ---- 書くレーンの結果を記録する（§9.4） ----------------------------------
+     同じ Progress に書き込み、counts.total は加算される。ただし byStage・
+     latency は音読レーン専用のままにし、判定（mastered）はここでは一切
+     動かさない（書くレーンで満点でも定着にはしない）。
+     lane: 'essay'（和文英訳） | 'dictation'（ディクテーション）
+     opts.replays: ディクテーションの再生回数（「3回以内で書けた率」の元データ） */
+  function recordWritingResult(topicId, lineId, lane, passed, opts) {
+    opts = opts || {};
+    var key = EST.store.progressKey(topicId, lineId);
+    return EST.store.get('progress', key).then(function (rec) {
+      var p = rec || EST.schema.defaultProgress(EST.profile.get(), topicId, lineId);
+      p.counts = p.counts || { total: 0, byStage: {} };
+      p.counts.total = (p.counts.total || 0) + 1;
+      p.writing = p.writing || { essayAttempts: 0, essayCorrect: 0, dictationAttempts: 0, dictationCorrect: 0, dictationReplayHistory: [] };
+      if (lane === 'dictation') {
+        p.writing.dictationAttempts = (p.writing.dictationAttempts || 0) + 1;
+        if (passed) p.writing.dictationCorrect = (p.writing.dictationCorrect || 0) + 1;
+        if (opts.replays != null) {
+          p.writing.dictationReplayHistory = (p.writing.dictationReplayHistory || []).concat([opts.replays]).slice(-20);
+        }
+      } else {
+        p.writing.essayAttempts = (p.writing.essayAttempts || 0) + 1;
+        if (passed) p.writing.essayCorrect = (p.writing.essayCorrect || 0) + 1;
+      }
+      // §9.4 落としたら次の音読セッションで優先出題。合格しても、音読で
+      // 確認できたわけではないのでフラグはここでは下ろさない。
+      if (!passed) p.needsAudioReview = true;
+      p.updatedAt = Date.now();
+      return EST.store.put('progress', p).then(function () { return p; });
+    });
+  }
+
+  // 「3回以内で書けた率」（§9.2）。トピック全体で集計する。
+  function within3Rate(recs) {
+    var hist = [];
+    (recs || []).forEach(function (p) {
+      ((p && p.writing && p.writing.dictationReplayHistory) || []).forEach(function (n) { hist.push(n); });
+    });
+    if (!hist.length) return null;
+    var within3 = hist.filter(function (n) { return n <= 3; }).length;
+    return { within3: within3, total: hist.length };
+  }
+
+  // §9.4 書くレーンで落とした行をキューの先頭に寄せる（S5/S6のみ。
+  // S1〜S4は「順」で読む規則があるので触らない＝§1.3参照）。
+  function applyWritingPriority(queue, topicId) {
+    if (!queue || !queue.length) return Promise.resolve(queue);
+    return Promise.all(queue.map(function (it) {
+      return EST.store.get('progress', EST.store.progressKey(topicId, it.line.id));
+    })).then(function (recs) {
+      var flagged = [], rest = [];
+      queue.forEach(function (it, i) {
+        (recs[i] && recs[i].needsAudioReview ? flagged : rest).push(it);
+      });
+      return flagged.length ? flagged.concat(rest) : queue;
     });
   }
 
@@ -3074,6 +3187,9 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
     recordRep: recordRep,
     recordLineProgress: recordLineProgress,
     undoLineProgress: undoLineProgress,
+    recordWritingResult: recordWritingResult,
+    within3Rate: within3Rate,
+    applyWritingPriority: applyWritingPriority,
 
     blocksOf: blocksOf,
     usesBlocks: usesBlocks,
@@ -3633,6 +3749,20 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
     return el;
   }
 
+  // §9.3 差分採点の結果（[{word, kind}]）を色分けした span 列に変換する。
+  // 和文英訳・ディクテーションの結果画面で共用する。
+  var CLOSE_KINDS = { article: 1, plural: 1, tense: 1, preposition: 1, wordorder: 1 };
+  function diffSpans(list) {
+    return (list || []).map(function (d, i) {
+      var cls = 'diff-word';
+      if (d.kind === 'missing') cls += ' diff-word--missing';
+      else if (d.kind === 'extra') cls += ' diff-word--extra';
+      else if (CLOSE_KINDS[d.kind]) cls += ' diff-word--close';
+      var sp = h('span', { class: cls, text: d.word + (i < list.length - 1 ? ' ' : '') });
+      return sp;
+    });
+  }
+
   function clear(node) { while (node && node.firstChild) node.removeChild(node.firstChild); }
 
   function mount(node, children) { clear(node); append(node, children); return node; }
@@ -3770,6 +3900,7 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
     clear: clear,
     mount: mount,
     append: append,
+    diffSpans: diffSpans,
     toast: toast,
     dialog: dialog,
     confirm: confirm,
@@ -4075,6 +4206,42 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
   --------------------------------------------------------------------- */
   var homeFilter = 'mine';   // 'mine' | 'other' | 'all'
 
+  // トピックのフォルダ表示。タグ（先頭タグ）を共有するトピックが
+  // この件数以上あれば、折りたたみフォルダとしてまとめる（例:「自分ごと」11本）。
+  // 1トピックは複数タグを持てるが、フォルダは先頭タグ1つだけで決める
+  // （両方のタグでまとめると同じトピックが2つのフォルダに重複して出てしまうため）。
+  var FOLDER_MIN_TOPICS = 2;
+  var folderExpanded = {};   // { タグ名: true/false }。既定は畳んだ状態（未登録＝畳む）
+
+  function groupForFolders(list) {
+    var byTag = {}, order = [];
+    list.forEach(function (t) {
+      var tag = (t.tags && t.tags[0]) || null;
+      if (!tag) return;
+      if (!byTag[tag]) { byTag[tag] = []; order.push(tag); }
+      byTag[tag].push(t);
+    });
+    var folderOf = {};   // topicId -> tag（フォルダになったものだけ）
+    order.forEach(function (tag) {
+      if (byTag[tag].length >= FOLDER_MIN_TOPICS) {
+        byTag[tag].forEach(function (t) { folderOf[t.id] = tag; });
+      }
+    });
+
+    var entries = [], seenTag = {};
+    list.forEach(function (t) {
+      var tag = folderOf[t.id];
+      if (!tag) { entries.push({ kind: 'topic', topic: t, sortAt: t.updatedAt || 0 }); return; }
+      if (seenTag[tag]) return;   // このタグのフォルダは既に1つ追加済み
+      seenTag[tag] = true;
+      var members = byTag[tag];
+      var latest = members.reduce(function (m, x) { return Math.max(m, x.updatedAt || 0); }, 0);
+      entries.push({ kind: 'folder', tag: tag, topics: members, sortAt: latest });
+    });
+    entries.sort(function (a, b) { return b.sortAt - a.sortAt; });
+    return entries;
+  }
+
   function drawList(chipBox, listBox, topics) {
     var U = ui();
     var mine = topics.filter(function (t) { return EST.profile.canSee(t); });
@@ -4102,7 +4269,30 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
       U.mount(listBox, h('div', { class: 'empty', text: emptyText(topics.length) }));
       return;
     }
-    U.mount(listBox, shown.map(topicCard));
+    var entries = groupForFolders(shown);
+    U.mount(listBox, entries.map(function (e) {
+      return e.kind === 'folder' ? folderCard(e.tag, e.topics, chipBox, listBox, topics) : topicCard(e.topic);
+    }));
+  }
+
+  function folderCard(tag, members, chipBox, listBox, topics) {
+    var U = ui();
+    var expanded = !!folderExpanded[tag];
+    var head = h('button', { class: 'topic-folder__head', type: 'button' }, [
+      h('span', { class: 'topic-folder__chevron', text: expanded ? '▾' : '▸' }),
+      h('span', { class: 'topic-folder__title', text: '📁 ' + tag }),
+      h('span', { class: 'topic-folder__count', text: '（' + members.length + '）' })
+    ]);
+    head.addEventListener('click', function () {
+      folderExpanded[tag] = !expanded;
+      drawList(chipBox, listBox, topics);
+    });
+    var body = expanded
+      ? h('div', { class: 'topic-folder__body' }, members.slice()
+          .sort(function (a, b) { return (b.updatedAt || 0) - (a.updatedAt || 0); })
+          .map(topicCard))
+      : null;
+    return h('div', { class: 'topic-folder' }, [head, body]);
   }
 
   function chip(label, value, count, chipBox, listBox, topics) {
@@ -4277,6 +4467,18 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
           class: 'btn btn--danger', text: '削除',
           onClick: function () { removeTopic(t); }
         }) : null
+      ]),
+      // §1.7・§9 F9: 声を出せない時間の書くレーン。音読の代替ではなく別入口。
+      h('div', { class: 'row row--tight', style: { marginTop: '.5rem' } }, [
+        h('span', { class: 'small muted', text: '声を出せないときは：' }),
+        h('button', {
+          class: 'btn btn--sm', text: '書いて練習',
+          onClick: function () { location.hash = '#/write/' + encodeURIComponent(t.id); }
+        }),
+        h('button', {
+          class: 'btn btn--sm', text: '聞いて書く',
+          onClick: function () { location.hash = '#/dictate/' + encodeURIComponent(t.id); }
+        })
       ])
     ]);
 
@@ -4460,6 +4662,9 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
 
   var S = null;        // 進行中のセッション
   var wakeLock = null;
+  // §9.4 キューの並び替え（書くレーンの優先出題）が非同期なので、その間に
+  // 画面が切り替わっていないかを確認するための世代カウンタ。
+  var sessionToken = 0;
 
   /* =====================================================================
      セッション
@@ -4500,46 +4705,58 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
     var mode = EST.stage.stageMode(stage);
     var blockLines = linesOfCurrentBlock(topic, tp);
 
-    S = {
-      view: view,
-      topic: topic,
-      tp: tp,
-      stage: stage,
-      role: role,
-      settings: settings,
-      countRatio: (typeof settings.countRatio === 'number' && settings.countRatio > 0)
-        ? settings.countRatio : EST.stage.COUNT_RATIO_DEFAULT,
-      blockLines: blockLines,
-      // §1.3 S5・S6 はシャッフルした出題（S6は組）、S1〜S4は台本の順
-      queue: mode.shuffled
-        ? EST.stage.buildQueue(stage, topic, blockLines, role, null)
-        : blockLines.map(function (l) { return { kind: 'line', line: l }; }),
-      lines: blockLines,
-      idx: 0,
-      lastResult: null,     // 「今のはナシ」用
-      lastLineId: null,
-      micOn: false,
-      tapMode: false,
-      tapReason: '',
-      closing: false,
-      timers: [],
-      barTimer: null,
-      expectedMs: 0,
-      cueAt: 0,
-      finished: false,
-      sessionStartedAt: Date.now(),  // §1.9 F8: 日次ログの分数を出すため
-      buildupOffered: {}             // §1.8: 積み上げドリルは1セッション1行につき1回だけ聞く
-    };
-    if (!S.queue.length) {
-      U.mount(view, h('div', { class: 'empty', text: mode.myRoleOnly
-        ? 'このブロックに自分の役の行がありません。'
-        : '練習できる行がありません。' }));
-      return;
-    }
+    sessionToken++;
+    var myToken = sessionToken;
 
-    buildScreen();
-    requestWakeLock();
-    prepareMic().then(function () { runLine(); });
+    // §1.3 S5・S6 はシャッフルした出題（S6は組）、S1〜S4は台本の順。
+    // §9.4 書くレーンで落とした行はS5・S6の出題先頭に寄せる（優先出題）。
+    // S1〜S4は「順」で読む規則があるので触らない。
+    var baseQueue = mode.shuffled
+      ? EST.stage.buildQueue(stage, topic, blockLines, role, null)
+      : blockLines.map(function (l) { return { kind: 'line', line: l }; });
+    var queueP = mode.shuffled ? EST.stage.applyWritingPriority(baseQueue, topic.id) : Promise.resolve(baseQueue);
+
+    queueP.then(function (queue) {
+      if (myToken !== sessionToken) return;   // その間に画面が切り替わっていたら何もしない
+
+      S = {
+        view: view,
+        topic: topic,
+        tp: tp,
+        stage: stage,
+        role: role,
+        settings: settings,
+        countRatio: (typeof settings.countRatio === 'number' && settings.countRatio > 0)
+          ? settings.countRatio : EST.stage.COUNT_RATIO_DEFAULT,
+        blockLines: blockLines,
+        queue: queue,
+        lines: blockLines,
+        idx: 0,
+        lastResult: null,     // 「今のはナシ」用
+        lastLineId: null,
+        micOn: false,
+        tapMode: false,
+        tapReason: '',
+        closing: false,
+        timers: [],
+        barTimer: null,
+        expectedMs: 0,
+        cueAt: 0,
+        finished: false,
+        sessionStartedAt: Date.now(),  // §1.9 F8: 日次ログの分数を出すため
+        buildupOffered: {}             // §1.8: 積み上げドリルは1セッション1行につき1回だけ聞く
+      };
+      if (!S.queue.length) {
+        U.mount(view, h('div', { class: 'empty', text: mode.myRoleOnly
+          ? 'このブロックに自分の役の行がありません。'
+          : '練習できる行がありません。' }));
+        return;
+      }
+
+      buildScreen();
+      requestWakeLock();
+      prepareMic().then(function () { runLine(); });
+    });
   }
 
   // §1.5 現在ブロックの行。ブロックを使わない台本なら全行。
@@ -4551,6 +4768,7 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
   }
 
   function stopSession() {
+    sessionToken++;   // §9.4 進行中の並び替え待ちを無効化する
     if (!S) return;
     S.closing = true;
     clearTimers();
@@ -6288,6 +6506,7 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
         speechCard(s),
         micCard(s),
         listModeCard(s),
+        writeStrictnessCard(s),
         stalledChunksCard(s),
         EST.profile.canEdit() ? publishCard() : null,
         backupCard(),
@@ -6678,6 +6897,33 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
         h('div', { class: 'setting-row__label' }, [
           '開いた行を復習に回す',
           h('div', { class: 'setting-row__sub', text: '一覧モードでタップして開いた行を「思い出せなかった」として記録します' })
+        ]),
+        row
+      ])
+    ]);
+  }
+
+  /* ---- 書くレーンの合格ライン（§9.3。F9） --------------------------------- */
+  var STRICTNESS_LABEL = { loose: 'ゆるい（70点）', normal: '標準（85点）', strict: '厳しい（完全一致）' };
+  function writeStrictnessCard(s) {
+    var U = ui();
+    var row = h('div', { class: 'row row--tight' });
+    function draw() {
+      U.mount(row, ['loose', 'normal', 'strict'].map(function (level) {
+        return h('button', {
+          class: 'btn btn--sm' + ((s.writeStrictness || 'normal') === level ? ' btn--primary' : ''),
+          text: STRICTNESS_LABEL[level],
+          onClick: function () { s.writeStrictness = level; EST.store.saveSettings(s).then(draw); }
+        });
+      }));
+    }
+    draw();
+    return h('div', { class: 'card' }, [
+      h('h2', { class: 'card__title', text: '和文英訳・ディクテーションの合格ライン' }),
+      h('div', { class: 'setting-row' }, [
+        h('div', { class: 'setting-row__label' }, [
+          '差分採点の厳しさ',
+          h('div', { class: 'setting-row__sub', text: '標準は冠詞・単複・時制・前置詞だけの違いなら合格（警告表示）にします' })
         ]),
         row
       ])
@@ -8277,6 +8523,908 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
 
 </script>
 <script>
+/* ---- 19-diff-score.js ---- */
+/* =====================================================================
+   19-diff-score.js — 差分・採点エンジン（SPEC §9.3）
+
+   和文英訳ドリル（§9.1）とディクテーションドリル（§9.2）で共用する。
+   EST.mic / EST.stage と同じ理由でUIから独立させ、コンソールから
+   単体で試せる形にしておく（EST.diffScore.scoreAnswer(...)）。
+
+   採点の考え方:
+     ①正規化（小文字化・短縮形展開・数字の表記ゆれ吸収など）
+     ②模範解答（line.en）と alt[] の全候補それぞれと単語単位のLCSを取り、
+       最もスコアが高い候補を採用する
+     ③LCSからあぶれた語を「同じ語が場所だけ違う（語順）」「冠詞だけ」
+       「単複だけ」「時制だけ」「前置詞だけ」「抜け」「余分」に分類する
+   ===================================================================== */
+;(function (EST) {
+  'use strict';
+
+  /* ---- 調整用の定数（実機で必ず調整する。SPEC §12） ------------------ */
+  var WORDORDER_PENALTY_PER_WORD = 3;
+  var WORDORDER_PENALTY_MAX = 15;
+
+  var STRICTNESS = {
+    loose:  { pass: 70,  requireExact: false },
+    normal: { pass: 85,  requireExact: false },
+    strict: { pass: 100, requireExact: true }   // 完全一致（惜しい系も含めて全部だめ）
+  };
+
+  // 「惜しい」判定の対象タグ（黄色表示。赤の抜け・余分・語順とは分ける）
+  var CLOSE_CALL_TAGS = { article: true, plural: true, tense: true, preposition: true };
+
+  var ARTICLES = { a: true, an: true, the: true };
+  var PREPOSITIONS = {
+    in: true, on: true, at: true, for: true, with: true, about: true, from: true, to: true,
+    of: true, by: true, into: true, onto: true, over: true, under: true, near: true,
+    through: true, during: true, before: true, after: true, between: true, without: true
+  };
+  // 不規則動詞（原形 <-> 過去/過去分詞）。同一動詞の時制違いを検出するための最小限の表。
+  var IRREGULAR_VERBS = [
+    ['go', 'went', 'gone'], ['have', 'had', 'had'], ['do', 'did', 'done'],
+    ['be', 'was', 'been'], ['be', 'were', 'been'], ['get', 'got', 'gotten'],
+    ['make', 'made', 'made'], ['take', 'took', 'taken'], ['see', 'saw', 'seen'],
+    ['come', 'came', 'come'], ['know', 'knew', 'known'], ['think', 'thought', 'thought'],
+    ['say', 'said', 'said'], ['tell', 'told', 'told'], ['find', 'found', 'found'],
+    ['give', 'gave', 'given'], ['leave', 'left', 'left'], ['bring', 'brought', 'brought'],
+    ['buy', 'bought', 'bought'], ['pay', 'paid', 'paid'], ['send', 'sent', 'sent'],
+    ['put', 'put', 'put'], ['run', 'ran', 'run'], ['eat', 'ate', 'eaten'],
+    ['write', 'wrote', 'written'], ['read', 'read', 'read'], ['speak', 'spoke', 'spoken'],
+    ['meet', 'met', 'met'], ['feel', 'felt', 'felt'], ['keep', 'kept', 'kept']
+  ];
+  var VERB_FORM_OF = {};   // 活用形 -> 原形
+  IRREGULAR_VERBS.forEach(function (row) {
+    row.forEach(function (form) { VERB_FORM_OF[form] = row[0]; });
+  });
+
+  // §9.3 数字の表記ゆれ。1〜20と主要な数（十の位・百）だけ吸収する。
+  var NUMBER_WORDS = {
+    zero: '0', one: '1', two: '2', three: '3', four: '4', five: '5', six: '6', seven: '7',
+    eight: '8', nine: '9', ten: '10', eleven: '11', twelve: '12', thirteen: '13',
+    fourteen: '14', fifteen: '15', sixteen: '16', seventeen: '17', eighteen: '18',
+    nineteen: '19', twenty: '20', thirty: '30', forty: '40', fifty: '50', sixty: '60',
+    seventy: '70', eighty: '80', ninety: '90', hundred: '100'
+  };
+
+  // ストップワード（§9.2 穴埋めの空欄自動選択で除外する。約60語）
+  var STOPWORDS = {
+    a: 1, an: 1, the: 1, i: 1, you: 1, he: 1, she: 1, it: 1, we: 1, they: 1,
+    me: 1, him: 1, her: 1, us: 1, them: 1, my: 1, your: 1, his: 1, its: 1, our: 1, their: 1,
+    am: 1, is: 1, are: 1, was: 1, were: 1, be: 1, been: 1, being: 1,
+    do: 1, does: 1, did: 1, doing: 1, done: 1,
+    have: 1, has: 1, had: 1, having: 1,
+    will: 1, would: 1, shall: 1, should: 1, can: 1, could: 1, may: 1, might: 1, must: 1,
+    and: 1, or: 1, but: 1, so: 1, if: 1, because: 1, that: 1, this: 1, these: 1, those: 1,
+    of: 1, to: 1, in: 1, on: 1, at: 1, for: 1, with: 1, about: 1, from: 1, by: 1, as: 1,
+    not: 1, no: 1, yes: 1, up: 1, out: 1, than: 1, then: 1, there: 1, here: 1, what: 1,
+    who: 1, whom: 1, which: 1, when: 1, where: 1, why: 1, how: 1, please: 1
+  };
+
+  /* ---- 正規化（§9.3） ----------------------------------------------------
+     曖昧な短縮形（it's）は候補を2つ持つので、戻り値は配列。
+     通常は要素1つだけの配列になる。 */
+  function normalizeVariants(text) {
+    var s = String(text || '').toLowerCase().trim().replace(/\s+/g, ' ');
+    // カーリークォートを直立に統一
+    s = s.replace(/[‘’]/g, "'").replace(/[“”]/g, '"');
+    // 文末の句読点を除去、文中のカンマを除去
+    s = s.replace(/[.!?]+(\s|$)/g, '$1').trim();
+    s = s.replace(/,/g, '');
+
+    var variants = [s];
+    variants = expandAmbiguous(variants, /\bit's\b/, ['it is', 'it has']);
+
+    variants = variants.map(function (v) { return expandContractions(v); });
+    variants = variants.map(function (v) { return v.replace(/\s+/g, ' ').trim(); });
+
+    return variants.map(function (v) { return tokenize(v); });
+  }
+
+  // 曖昧な短縮形を、他の候補に影響しないよう複製して展開する
+  function expandAmbiguous(variants, pattern, replacements) {
+    var out = [];
+    variants.forEach(function (v) {
+      if (pattern.test(v)) {
+        replacements.forEach(function (r) { out.push(v.replace(pattern, r)); });
+      } else {
+        out.push(v);
+      }
+    });
+    return out;
+  }
+
+  function expandContractions(s) {
+    // 固有の短縮形（曖昧でないもの）
+    s = s.replace(/\bi'm\b/g, 'i am');
+    s = s.replace(/\bdon't\b/g, 'do not');
+    s = s.replace(/\bdoesn't\b/g, 'does not');
+    s = s.replace(/\bdidn't\b/g, 'did not');
+    s = s.replace(/\blet's\b/g, 'let us');
+    s = s.replace(/\bcan't\b/g, 'cannot');
+    s = s.replace(/\bwon't\b/g, 'will not');
+    s = s.replace(/\bshan't\b/g, 'shall not');
+    // 一般形（語幹+'ll/'ve/'d/'re）。isn't/aren't/wasn't/weren't 等の
+    // 「動詞+n't」は "not" 展開ではなく素直に1語として残す（誤爆を避ける）。
+    s = s.replace(/([a-z]+)'ll\b/g, '$1 will');
+    s = s.replace(/([a-z]+)'ve\b/g, '$1 have');
+    s = s.replace(/([a-z]+)'d\b/g, '$1 would');
+    s = s.replace(/([a-z]+)'re\b/g, '$1 are');
+    return s;
+  }
+
+  function tokenize(s) {
+    return s.split(' ').filter(function (w) { return w; }).map(canonicalizeNumber);
+  }
+
+  function canonicalizeNumber(w) {
+    return Object.prototype.hasOwnProperty.call(NUMBER_WORDS, w) ? NUMBER_WORDS[w] : w;
+  }
+
+  /* ---- 単語単位のLCS -------------------------------------------------- */
+  function wordLCS(a, b) {
+    var n = a.length, m = b.length;
+    var dp = [];
+    for (var i = 0; i <= n; i++) dp.push(new Array(m + 1).fill(0));
+    for (i = 1; i <= n; i++) {
+      for (var j = 1; j <= m; j++) {
+        dp[i][j] = (a[i - 1] === b[j - 1]) ? dp[i - 1][j - 1] + 1 : Math.max(dp[i - 1][j], dp[i][j - 1]);
+      }
+    }
+    // 経路を戻ってマッチしたペア (aIdx, bIdx) を集める
+    var pairs = [];
+    i = n; var j = m;
+    while (i > 0 && j > 0) {
+      if (a[i - 1] === b[j - 1]) { pairs.unshift([i - 1, j - 1]); i--; j--; }
+      else if (dp[i - 1][j] >= dp[i][j - 1]) { i--; }
+      else { j--; }
+    }
+    return pairs;
+  }
+
+  /* ---- 語幹の簡易比較（単複判定用） ------------------------------------
+     "es"/"s" を落として同じになれば同一語幹とみなす。ごく単純な近似。 */
+  function stem(w) {
+    if (w.length > 4 && /ies$/.test(w)) return w.slice(0, -3) + 'y';
+    if (w.length > 3 && /(sses|shes|ches|xes)$/.test(w)) return w.slice(0, -2);
+    if (w.length > 3 && /s$/.test(w) && !/ss$/.test(w)) return w.slice(0, -1);
+    return w;
+  }
+
+  function verbRoot(w) {
+    if (VERB_FORM_OF[w]) return VERB_FORM_OF[w];
+    if (w.length > 4 && /ied$/.test(w)) return w.slice(0, -3) + 'y';
+    if (w.length > 3 && /ed$/.test(w)) return w.slice(0, -2).replace(/(.)\1$/, '$1'); // 二重子音を1つに戻す
+    return w;
+  }
+
+  /* ---- 1組の候補（answerTokens vs targetTokens）を採点する ---------------- */
+  function scoreOne(answerTokens, targetTokens) {
+    var pairs = wordLCS(answerTokens, targetTokens);
+    var matchedA = {}, matchedB = {};
+    pairs.forEach(function (p) { matchedA[p[0]] = true; matchedB[p[1]] = true; });
+
+    var unmatchedA = [];   // {idx, word}
+    var unmatchedB = [];
+    answerTokens.forEach(function (w, i) { if (!matchedA[i]) unmatchedA.push({ idx: i, word: w }); });
+    targetTokens.forEach(function (w, i) { if (!matchedB[i]) unmatchedB.push({ idx: i, word: w }); });
+
+    var tags = [];          // 出現したタグの集合（表示用バッジ）
+    var wordDiff = [];      // 単語ごとの表示情報
+
+    // Step B: 完全に同じ語（語順だけ違う）を先に拾う
+    unmatchedB.forEach(function (b) {
+      if (b.used) return;
+      var hit = null;
+      for (var k = 0; k < unmatchedA.length; k++) {
+        if (!unmatchedA[k].used && unmatchedA[k].word === b.word) { hit = unmatchedA[k]; break; }
+      }
+      if (hit) { hit.used = true; b.used = true; hit.tag = 'wordorder'; b.tag = 'wordorder'; }
+    });
+
+    // Step C: 冠詞・単複・時制・前置詞の近似ペアリング（残りだけを対象に、出現順で貪欲に）
+    unmatchedA.forEach(function (a) {
+      if (a.used) return;
+      for (var k = 0; k < unmatchedB.length; k++) {
+        var b = unmatchedB[k];
+        if (b.used) continue;
+        var tag = classifyPair(a.word, b.word);
+        if (tag) { a.used = true; b.used = true; a.tag = tag; b.tag = tag; break; }
+      }
+    });
+
+    var wordorderCount = 0;
+    unmatchedA.filter(function (a) { return a.tag === 'wordorder'; }).forEach(function () { wordorderCount++; });
+
+    unmatchedA.forEach(function (a) { if (!a.used) a.tag = 'extra'; });
+    unmatchedB.forEach(function (b) { if (!b.used) b.tag = 'missing'; });
+
+    tags = uniq(unmatchedA.map(function (a) { return a.tag; }).concat(unmatchedB.map(function (b) { return b.tag; })));
+
+    var lcsLen = pairs.length;
+    var scoreBase = 100 * lcsLen / Math.max(answerTokens.length, targetTokens.length, 1);
+    var penalty = Math.min(wordorderCount * WORDORDER_PENALTY_PER_WORD, WORDORDER_PENALTY_MAX);
+    var score = clamp(scoreBase - penalty, 0, 100);
+
+    // 表示用の単語列を作る（模範解答側の並びを軸に、抜け・一致を並べ、
+    // 余分は解答側にしかないので別に持つ）
+    var targetWordDiff = targetTokens.map(function (w, i) {
+      if (matchedB[i]) return { word: w, kind: 'match' };
+      var b = unmatchedB.filter(function (x) { return x.idx === i; })[0];
+      return { word: w, kind: b ? b.tag : 'missing' };
+    });
+    var answerWordDiff = answerTokens.map(function (w, i) {
+      if (matchedA[i]) return { word: w, kind: 'match' };
+      var a = unmatchedA.filter(function (x) { return x.idx === i; })[0];
+      return { word: w, kind: a ? a.tag : 'extra' };
+    });
+
+    return {
+      score: score, tags: tags, wordorderCount: wordorderCount,
+      targetWordDiff: targetWordDiff, answerWordDiff: answerWordDiff
+    };
+  }
+
+  function classifyPair(aWord, bWord) {
+    if (aWord === bWord) return null; // 完全一致はここに来ないはず（呼び出し側で除外済み）
+    if (ARTICLES[aWord] && ARTICLES[bWord]) return 'article';
+    if (stem(aWord) === stem(bWord) && aWord !== bWord) return 'plural';
+    if (PREPOSITIONS[aWord] && PREPOSITIONS[bWord]) return 'preposition';
+    if (verbRoot(aWord) === verbRoot(bWord) && aWord !== bWord) return 'tense';
+    return null;
+  }
+
+  function uniq(arr) {
+    var seen = {}, out = [];
+    arr.forEach(function (x) { if (x && !seen[x]) { seen[x] = true; out.push(x); } });
+    return out;
+  }
+  function clamp(n, lo, hi) { return Math.max(lo, Math.min(hi, n)); }
+
+  /* ---- 解答を採点する（§9.3） --------------------------------------------
+     line.en と line.alt[] の全候補と比較し、最高スコアの結果を採用する。
+     opts: { strictness: 'loose'|'normal'|'strict', checkCase, rawAnswer } */
+  function scoreAnswer(answerText, line, opts) {
+    opts = opts || {};
+    var strictness = STRICTNESS[opts.strictness] || STRICTNESS.normal;
+    var answerVariants = normalizeVariants(answerText);
+    var targets = [line.en].concat(line.alt || []);
+
+    var best = null;
+    targets.forEach(function (t) {
+      normalizeVariants(t).forEach(function (targetTokens) {
+        answerVariants.forEach(function (answerTokens) {
+          // Step B/C の前に単独の冠詞を先に拾っておく（"a/an/the" 単独の有無）
+          var r = scoreOneWithLoneArticles(answerTokens, targetTokens);
+          if (!best || r.score > best.score) { best = r; best.targetText = t; }
+        });
+      });
+    });
+    if (!best) best = { score: 0, tags: [], targetWordDiff: [], answerWordDiff: [], targetText: line.en };
+
+    var closeCallOnly = best.tags.length > 0 && best.tags.every(function (t) { return CLOSE_CALL_TAGS[t]; });
+    var exact = best.score === 100 && best.tags.length === 0;
+
+    var passed;
+    if (strictness.requireExact) {
+      passed = exact;
+    } else {
+      passed = best.score >= strictness.pass;
+    }
+
+    var result = {
+      score: Math.round(best.score),
+      tags: best.tags,
+      closeCallOnly: closeCallOnly,
+      exact: exact,
+      passed: passed,
+      warn: passed && !exact && closeCallOnly,   // normalで合格したが惜しい系が残っている
+      targetText: best.targetText,
+      targetWordDiff: best.targetWordDiff,
+      answerWordDiff: best.answerWordDiff
+    };
+
+    // ディクテーションのみ：大文字小文字は別枠でチェックする（§9.2）
+    if (opts.checkCase && opts.rawAnswer != null) {
+      result.caseIssues = checkCasing(opts.rawAnswer, best.targetText);
+      if (strictness.requireExact && result.caseIssues.length) result.passed = false;
+    }
+
+    return result;
+  }
+
+  function scoreOneWithLoneArticles(answerTokens, targetTokens) {
+    var r = scoreOne(answerTokens, targetTokens);
+    // scoreOne内部の未使用配列は外に出ていないので、単独冠詞の再分類は
+    // wordDiff の 'missing'/'extra' から拾い直して 'article' に格上げする
+    r.targetWordDiff = r.targetWordDiff.map(function (d) {
+      return (d.kind === 'missing' && ARTICLES[d.word]) ? { word: d.word, kind: 'article' } : d;
+    });
+    r.answerWordDiff = r.answerWordDiff.map(function (d) {
+      return (d.kind === 'extra' && ARTICLES[d.word]) ? { word: d.word, kind: 'article' } : d;
+    });
+    var tagSet = {};
+    r.targetWordDiff.concat(r.answerWordDiff).forEach(function (d) { if (d.kind !== 'match') tagSet[d.kind] = true; });
+    r.tags = Object.keys(tagSet);
+    return r;
+  }
+
+  // 単語ごとの大文字小文字チェック（正規化後は失われるので原文同士を単語数だけ揃えて見る）
+  function checkCasing(rawAnswer, targetText) {
+    var a = String(rawAnswer || '').trim().split(/\s+/);
+    var b = String(targetText || '').trim().split(/\s+/);
+    var issues = [];
+    var n = Math.min(a.length, b.length);
+    for (var i = 0; i < n; i++) {
+      var aw = a[i].replace(/[.,!?]+$/, ''), bw = b[i].replace(/[.,!?]+$/, '');
+      if (aw.toLowerCase() === bw.toLowerCase() && aw !== bw) {
+        issues.push({ index: i, expected: bw, got: aw });
+      }
+    }
+    return issues;
+  }
+
+  /* ---- §9.2 穴埋めの空欄自動選択 -------------------------------------------
+     ストップワードを除いた内容語のうち、優先順位:
+       ①行の note に出てくる語  ②words[] に登録されている語
+       ③文中で最も長い語        ④動詞と思われる語
+     1文あたり1〜3語。5語以下の文は1語だけ。 */
+  function contentWords(line) {
+    var raw = String(line.en || '').replace(/[.,!?]/g, '').split(/\s+/).filter(Boolean);
+    return raw.map(function (w, i) { return { word: w, lower: w.toLowerCase(), idx: i }; })
+      .filter(function (t) { return !STOPWORDS[t.lower]; });
+  }
+
+  function pickBlanks(line, topic) {
+    var words = contentWords(line);
+    if (!words.length) return [];
+    var totalWords = String(line.en || '').split(/\s+/).filter(Boolean).length;
+    var maxBlanks = totalWords <= 5 ? 1 : Math.min(3, Math.max(1, Math.ceil(words.length / 4)));
+
+    var noteWords = extractNoteWords(line.note);
+    var vocabWords = {};
+    ((topic && topic.words) || []).forEach(function (w) {
+      String(w.en || '').toLowerCase().split(/\s+/).forEach(function (tok) { vocabWords[tok] = true; });
+    });
+
+    function priority(t) {
+      if (noteWords[t.lower]) return 0;
+      if (vocabWords[t.lower]) return 1;
+      return looksLikeVerb(t.lower) ? 3 : 2;   // 長さ優先(2)を動詞疑い(3)より先にする
+    }
+    var ranked = words.slice().sort(function (x, y) {
+      var px = priority(x), py = priority(y);
+      if (px !== py) return px - py;
+      if (px === 2) return y.word.length - x.word.length;  // 長さ優先枠は長い語から
+      return x.idx - y.idx;
+    });
+    var picked = [];
+    var usedIdx = {};
+    for (var i = 0; i < ranked.length && picked.length < maxBlanks; i++) {
+      if (usedIdx[ranked[i].idx]) continue;
+      usedIdx[ranked[i].idx] = true;
+      picked.push(ranked[i]);
+    }
+    picked.sort(function (a, b) { return a.idx - b.idx; });
+    return picked.map(function (t) { return { word: t.word, index: t.idx }; });
+  }
+
+  function extractNoteWords(note) {
+    var out = {};
+    if (!note) return out;
+    // "run out of = 使い切る、切らす" のような "X = 意味" パターン（§5.3と同じ約束）
+    var m = String(note).split('=')[0];
+    m.toLowerCase().split(/\s+/).forEach(function (w) { if (w) out[w] = true; });
+    return out;
+  }
+
+  var VERB_SUFFIXES = ['ing', 'ed', 'ize', 'ise', 'ify', 'ate'];
+  var COMMON_VERBS = { is: 1, are: 1, was: 1, were: 1, go: 1, get: 1, take: 1, make: 1, have: 1,
+    check: 1, want: 1, need: 1, see: 1, know: 1, think: 1, come: 1, give: 1, use: 1, find: 1 };
+  function looksLikeVerb(lower) {
+    if (COMMON_VERBS[lower]) return true;
+    return VERB_SUFFIXES.some(function (suf) { return lower.length > suf.length + 2 && lower.slice(-suf.length) === suf; });
+  }
+
+  /* ---- §9.2 4択のダミー ----------------------------------------------------
+     同じトピックの他の行から、語長と品詞（動詞らしさ）が近い語を借りる。 */
+  function buildDistractors(word, topic, count) {
+    count = count || 3;
+    var lower = String(word).toLowerCase();
+    var pool = {};
+    ((topic && topic.lines) || []).forEach(function (l) {
+      contentWords(l).forEach(function (t) { if (t.lower !== lower) pool[t.lower] = t.word; });
+    });
+    var candidates = Object.keys(pool).map(function (k) { return pool[k]; });
+    var wantVerb = looksLikeVerb(lower);
+    candidates.sort(function (a, b) {
+      var da = Math.abs(a.length - word.length) + (looksLikeVerb(a.toLowerCase()) === wantVerb ? 0 : 2);
+      var db = Math.abs(b.length - word.length) + (looksLikeVerb(b.toLowerCase()) === wantVerb ? 0 : 2);
+      return da - db;
+    });
+    return candidates.slice(0, count);
+  }
+
+  EST.diffScore = {
+    STRICTNESS: STRICTNESS,
+    CLOSE_CALL_TAGS: CLOSE_CALL_TAGS,
+    STOPWORDS: STOPWORDS,
+    normalizeVariants: normalizeVariants,
+    scoreAnswer: scoreAnswer,
+    pickBlanks: pickBlanks,
+    buildDistractors: buildDistractors,
+    // テスト・デバッグ用に内部関数も少しだけ出す
+    tokenize: tokenize
+  };
+})(window.EST = window.EST || {});
+
+</script>
+<script>
+/* ---- 20-ui-write.js ---- */
+/* =====================================================================
+   20-ui-write.js — 和文英訳ドリル（SPEC §9.1・§1.7）
+
+   声を出せない時間の書くレーン。和訳だけを見せて英文をキーボードで
+   入力させる。音読レーンのS5の筆記版にあたるので、対象は自分の役の行、
+   順序はシャッフル。レイテンシは測らない（打鍵速度が混ざるため）。
+
+   採点は 19-diff-score.js に丸投げする。ヒントは3段階、使っても減点しない
+   （§9.1）。「これも正解として登録」は §9.3 の要にあたるので必ず出す。
+   ===================================================================== */
+;(function (EST) {
+  'use strict';
+
+  var h = null;
+  function ui() { h = EST.ui.h; return EST.ui; }
+
+  var W = null;   // 進行中のドリル
+
+  function renderWrite(view, topicId) {
+    stopSession();
+    var U = ui();
+
+    EST.store.get('topics', topicId).then(function (topic) {
+      if (!topic) {
+        EST.app.setBar('和文英訳', []);
+        U.mount(view, h('div', { class: 'empty', text: 'このトピックは見つかりませんでした。' }));
+        return;
+      }
+      if (!EST.profile.canSee(topic)) {
+        location.hash = EST.profile.canEdit() ? ('#/edit/' + encodeURIComponent(topic.id)) : '#/';
+        return;
+      }
+      return EST.stage.loadTopicProgress(topic.id, topic).then(function (tp) {
+        return EST.store.loadSettings().then(function (settings) {
+          var role = EST.stage.activeRole(tp, topic);
+          var lines = (topic.lines || []).filter(function (l) {
+            return !l.skip && String(l.en || '').trim() && l.speakerId === role;
+          });
+          if (!lines.length) {
+            EST.app.setBar('和文英訳', []);
+            U.mount(view, h('div', { class: 'empty', text: '自分の役の行がありません。' }));
+            return;
+          }
+          var items = EST.stage.shuffle(lines, null, function (l) { return l.id; })
+            .map(function (l) { return { line: l }; });
+          W = {
+            view: view, topic: topic, tp: tp, role: role, settings: settings,
+            strictness: settings.writeStrictness || 'normal',
+            queue: items, idx: 0, correct: 0, total: 0,
+            hintLevel: 0, result: null, closing: false, el: {}
+          };
+          runItem();
+        });
+      });
+    });
+  }
+
+  function stopSession() {
+    if (!W) return;
+    W.closing = true;
+    try { EST.speech.cancel(); } catch (e) {}
+    W = null;
+  }
+
+  /* ---- 画面 ---------------------------------------------------------------- */
+  function runItem() {
+    if (!W || W.closing) return;
+    if (W.idx >= W.queue.length) { finishDrill(); return; }
+    W.hintLevel = 0;
+    W.result = null;
+    buildScreen();
+  }
+
+  function buildScreen() {
+    var U = ui();
+    var line = W.queue[W.idx].line;
+
+    EST.app.setBar('和文英訳', [
+      h('button', { class: 'btn btn--sm', text: 'やめる',
+        onClick: function () { location.hash = '#/topic/' + encodeURIComponent(W.topic.id); } })
+    ]);
+
+    var count = h('div', { class: 'write-count', text: (W.idx + 1) + ' / ' + W.queue.length + '（正解 ' + W.correct + '）' });
+    var ja = h('div', { class: 'write-ja', text: line.ja || '' });
+    var input = h('textarea', { class: 'write-input', rows: 2, placeholder: '英語で入力…' });
+    input.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submit(input.value); }
+    });
+
+    var hintArea = h('div', { class: 'write-hints' });
+    var hintBtn = h('button', { class: 'btn btn--sm', text: 'ヒント' });
+    hintBtn.addEventListener('click', function () { W.hintLevel = Math.min(3, W.hintLevel + 1); renderHint(hintArea, line, input); });
+
+    var submitBtn = h('button', { class: 'btn btn--primary', text: '答え合わせ' });
+    submitBtn.addEventListener('click', function () { submit(input.value); });
+
+    var resultHost = h('div', {});
+    W.el = { resultHost: resultHost, count: count };
+
+    U.mount(W.view, h('div', { class: 'write-screen' }, [
+      count, ja, input,
+      h('div', { style: { display: 'flex', gap: '.5rem' } }, [hintBtn, submitBtn]),
+      hintArea, resultHost
+    ]));
+    setTimeout(function () { try { input.focus(); } catch (e) {} }, 0);
+  }
+
+  // §9.1 ヒントは3段階。使っても減点しない。
+  //  ①語数だけ　②最初の1語　③チャンクを並べ替え候補として提示（タップで挿入）
+  function renderHint(hintArea, line, input) {
+    var U = ui();
+    if (W.hintLevel === 1) {
+      var words = EST.schema.countWords(line.en);
+      U.mount(hintArea, h('div', { class: 'write-hint', text: Array(words).fill('_').join(' ') }));
+    } else if (W.hintLevel === 2) {
+      var first = String(line.en || '').trim().split(/\s+/)[0] || '';
+      U.mount(hintArea, h('div', { class: 'write-hint', text: '最初の1語: ' + first }));
+    } else if (W.hintLevel >= 3) {
+      var chunks = (line.chunks && line.chunks.length) ? line.chunks : EST.schema.splitChunks(line.en);
+      var shuffled = EST.stage.shuffle(chunks, null, function (c) { return c; });
+      U.mount(hintArea, h('div', { class: 'write-hints' }, shuffled.map(function (c) {
+        var chip = h('button', { class: 'write-chunk', type: 'button', text: c });
+        chip.addEventListener('click', function () {
+          input.value = (input.value ? input.value.replace(/\s+$/, '') + ' ' : '') + c + ' ';
+          input.focus();
+        });
+        return chip;
+      })));
+    }
+  }
+
+  function submit(answerText) {
+    if (!W || W.closing || W.result) return;
+    var line = W.queue[W.idx].line;
+    var r = EST.diffScore.scoreAnswer(answerText, line, { strictness: W.strictness });
+    W.result = r;
+    W.total++;
+    if (r.passed) W.correct++;
+    if (W.el.count) W.el.count.textContent = (W.idx + 1) + ' / ' + W.queue.length + '（正解 ' + W.correct + '）';
+    EST.stage.recordWritingResult(W.topic.id, line.id, 'essay', r.passed);
+    renderResult(line, answerText, r);
+  }
+
+  function renderResult(line, answerText, r) {
+    var U = ui();
+    var scoreClass = r.exact ? 'write-score--pass' : (r.passed ? 'write-score--warn' : 'write-score--fail');
+    var scoreLabel = r.exact ? '正解' : (r.passed ? '合格（惜しい）' : '不合格');
+
+    var target = h('div', { class: 'write-target' }, U.diffSpans(r.targetWordDiff));
+    var tags = h('div', { class: 'write-tags' }, r.tags.map(function (t) {
+      return h('span', { class: 'write-tag' + (EST.diffScore.CLOSE_CALL_TAGS[t] ? ' write-tag--warn' : ''), text: TAG_LABEL[t] || t });
+    }));
+
+    var playBtn = h('button', { class: 'btn btn--sm', text: '🔊 模範解答を再生' });
+    playBtn.addEventListener('click', function () {
+      EST.speech.speak(r.targetText, { gender: genderOf(line), topicId: W.topic.id, lineId: line.id });
+    });
+
+    var actions = [playBtn];
+    if (!r.exact) {
+      var registerBtn = h('button', { class: 'btn btn--sm', text: 'これも正解として登録' });
+      registerBtn.addEventListener('click', function () { registerAlt(line, answerText, registerBtn); });
+      actions.push(registerBtn);
+    }
+
+    var nextBtn = h('button', { class: 'btn btn--primary', text: W.idx + 1 < W.queue.length ? '次へ' : '終える' });
+    nextBtn.addEventListener('click', function () { W.idx++; runItem(); });
+
+    U.mount(W.el.resultHost, h('div', { class: 'write-result' }, [
+      h('div', { class: 'write-score ' + scoreClass, text: scoreLabel + '（' + r.score + '点）' }),
+      target,
+      r.tags.length ? tags : null,
+      h('div', { style: { display: 'flex', gap: '.5rem', flexWrap: 'wrap' } }, actions),
+      nextBtn
+    ]));
+  }
+
+  function registerAlt(line, answerText, btn) {
+    var text = String(answerText || '').trim().replace(/\s+/g, ' ');
+    if (!text) return;
+    (line.alt = line.alt || []);
+    var lower = text.toLowerCase();
+    if (line.alt.some(function (a) { return String(a).toLowerCase() === lower; })) {
+      ui().toast('すでに登録されています'); return;
+    }
+    line.alt.push(text);
+    W.topic.updatedAt = Date.now();
+    EST.store.put('topics', W.topic).then(function () {
+      btn.textContent = '登録しました';
+      btn.disabled = true;
+      ui().toast('これ以降は正解として扱います');
+    });
+  }
+
+  function genderOf(line) {
+    var sp = (W.topic.speakers || []).filter(function (s) { return s.id === line.speakerId; })[0];
+    return sp ? sp.gender : '';
+  }
+
+  var TAG_LABEL = {
+    article: '冠詞', plural: '単複', tense: '時制', preposition: '前置詞',
+    wordorder: '語順', missing: '抜け', extra: '余分'
+  };
+
+  function finishDrill() {
+    var U = ui();
+    EST.app.setBar('和文英訳', []);
+    U.mount(W.view, h('div', { class: 'empty' }, [
+      h('div', { text: '終わりました（' + W.correct + ' / ' + W.total + '）' }),
+      h('button', { class: 'btn btn--primary', style: { marginTop: '.8rem' }, text: 'トピックに戻る',
+        onClick: function () { location.hash = '#/topic/' + encodeURIComponent(W.topic.id); } })
+    ]));
+  }
+
+  EST.uiWrite = { renderWrite: renderWrite, stopSession: stopSession };
+})(window.EST = window.EST || {});
+
+</script>
+<script>
+/* ---- 21-ui-dictation.js ---- */
+/* =====================================================================
+   21-ui-dictation.js — ディクテーションドリル（SPEC §9.2・§1.7）
+
+   音声を聞いて英文を書き取る。全文書き取りと、キーワード穴埋め（4択）の
+   2段階。「3回以内で書けた率」を指標にするので、再生回数を必ず記録する。
+   採点は 19-diff-score.js に丸投げする（大文字小文字は別枠でチェック）。
+   ===================================================================== */
+;(function (EST) {
+  'use strict';
+
+  var h = null;
+  function ui() { h = EST.ui.h; return EST.ui; }
+
+  var SLOW_RATE = 0.7;   // §9.2 速度は0.7倍を下限とする
+  var D = null;   // 進行中のドリル
+
+  function renderDictation(view, topicId) {
+    stopSession();
+    var U = ui();
+
+    EST.store.get('topics', topicId).then(function (topic) {
+      if (!topic) {
+        EST.app.setBar('ディクテーション', []);
+        U.mount(view, h('div', { class: 'empty', text: 'このトピックは見つかりませんでした。' }));
+        return;
+      }
+      if (!EST.profile.canSee(topic)) {
+        location.hash = EST.profile.canEdit() ? ('#/edit/' + encodeURIComponent(topic.id)) : '#/';
+        return;
+      }
+      return EST.stage.loadTopicProgress(topic.id, topic).then(function (tp) {
+        return EST.store.loadSettings().then(function (settings) {
+          var role = EST.stage.activeRole(tp, topic);
+          var lines = (topic.lines || []).filter(function (l) {
+            return !l.skip && String(l.en || '').trim() && l.speakerId === role;
+          });
+          if (!lines.length) {
+            EST.app.setBar('ディクテーション', []);
+            U.mount(view, h('div', { class: 'empty', text: '自分の役の行がありません。' }));
+            return;
+          }
+          var items = EST.stage.shuffle(lines, null, function (l) { return l.id; })
+            .map(function (l) { return { line: l }; });
+          D = {
+            view: view, topic: topic, tp: tp, role: role, settings: settings,
+            strictness: settings.writeStrictness || 'normal',
+            mode: 'full',   // 'full' | 'blank'
+            queue: items, idx: 0, correct: 0, total: 0, within3: 0,
+            replays: 0, result: null, closing: false, el: {}, blankPicks: {}
+          };
+          runItem();
+        });
+      });
+    });
+  }
+
+  function stopSession() {
+    if (!D) return;
+    D.closing = true;
+    try { EST.speech.cancel(); } catch (e) {}
+    D = null;
+  }
+
+  function runItem() {
+    if (!D || D.closing) return;
+    if (D.idx >= D.queue.length) { finishDrill(); return; }
+    D.replays = 0;
+    D.result = null;
+    D.blankPicks = {};
+    buildScreen();
+  }
+
+  function genderOf(line) {
+    var sp = (D.topic.speakers || []).filter(function (s) { return s.id === line.speakerId; })[0];
+    return sp ? sp.gender : '';
+  }
+
+  function play(line, rate) {
+    D.replays++;
+    if (D.el.replayCount) D.el.replayCount.textContent = '再生 ' + D.replays + '回';
+    EST.speech.speak(line.en, { rate: rate, gender: genderOf(line), topicId: D.topic.id, lineId: line.id });
+  }
+
+  /* ---- 画面 ---------------------------------------------------------------- */
+  function buildScreen() {
+    var U = ui();
+    var line = D.queue[D.idx].line;
+
+    var modeToggle = h('div', { class: 'dict-mode-toggle' }, [
+      h('button', { class: 'btn btn--sm' + (D.mode === 'full' ? ' btn--primary' : ''), text: '全文書き取り',
+        onClick: function () { D.mode = 'full'; runItem(); } }),
+      h('button', { class: 'btn btn--sm' + (D.mode === 'blank' ? ' btn--primary' : ''), text: '穴埋め',
+        onClick: function () { D.mode = 'blank'; runItem(); } })
+    ]);
+
+    EST.app.setBar('ディクテーション', [
+      h('button', { class: 'btn btn--sm', text: 'やめる',
+        onClick: function () { location.hash = '#/topic/' + encodeURIComponent(D.topic.id); } })
+    ]);
+
+    var count = h('div', { class: 'write-count',
+      text: (D.idx + 1) + ' / ' + D.queue.length + '（3回以内 ' + D.within3 + ' / ' + D.total + '）' });
+
+    D.el.replayCount = h('span', { class: 'muted', text: '再生 0回' });
+    var playBtn = h('button', { class: 'btn', text: '🔊 再生' });
+    playBtn.addEventListener('click', function () { play(line, D.settings.ttsRate); });
+    var slowBtn = h('button', { class: 'btn btn--sm', text: 'ゆっくり(0.7x)' });
+    slowBtn.addEventListener('click', function () { play(line, SLOW_RATE); });
+
+    var body = D.mode === 'blank' ? buildBlankBody(line) : buildFullBody(line);
+
+    var resultHost = h('div', {});
+    D.el.resultHost = resultHost;
+    D.el.count = count;
+
+    U.mount(D.view, h('div', { class: 'write-screen' }, [
+      modeToggle, count,
+      h('div', { style: { display: 'flex', gap: '.5rem', alignItems: 'center' } }, [playBtn, slowBtn, D.el.replayCount]),
+      body, resultHost
+    ]));
+  }
+
+  function buildFullBody(line) {
+    var U = ui();
+    var input = h('textarea', { class: 'write-input', rows: 2, placeholder: '聞こえた英文を入力…' });
+    input.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submitFull(line, input.value); }
+    });
+    var submitBtn = h('button', { class: 'btn btn--primary', text: '答え合わせ' });
+    submitBtn.addEventListener('click', function () { submitFull(line, input.value); });
+    setTimeout(function () { try { input.focus(); } catch (e) {} }, 0);
+    return h('div', { style: { display: 'flex', flexDirection: 'column', gap: '.5rem' } }, [input, submitBtn]);
+  }
+
+  function submitFull(line, answerText) {
+    if (!D || D.closing || D.result) return;
+    var r = EST.diffScore.scoreAnswer(answerText, line, {
+      strictness: D.strictness, checkCase: true, rawAnswer: answerText
+    });
+    finishItem(line, r.passed, r);
+  }
+
+  // §9.2 穴埋めの空欄は自動選択（19-diff-score.js）。4択で選ばせる。
+  function buildBlankBody(line) {
+    var U = ui();
+    var blanks = EST.diffScore.pickBlanks(line, D.topic);
+    var words = String(line.en || '').replace(/[.,!?]/g, '').split(/\s+/).filter(Boolean);
+    var blankByIdx = {};
+    blanks.forEach(function (b) { blankByIdx[b.index] = b.word; });
+
+    var sentenceEl = h('div', { class: 'write-target' });
+    words.forEach(function (w, i) {
+      if (blankByIdx[i] == null) {
+        U.append(sentenceEl, w + ' ');
+        return;
+      }
+      var correctWord = blankByIdx[i];
+      var options = EST.stage.shuffle(
+        [correctWord].concat(EST.diffScore.buildDistractors(correctWord, D.topic, 3)),
+        null, function (x) { return x; }
+      );
+      var optEls = options.map(function (opt) {
+        var btn = h('button', { class: 'dict-blank__opt', type: 'button', text: opt });
+        btn.addEventListener('click', function () {
+          D.blankPicks[i] = opt;
+          Array.prototype.forEach.call(btn.parentNode.children, function (c) { c.classList.remove('is-selected'); });
+          btn.classList.add('is-selected');
+        });
+        return btn;
+      });
+      U.append(sentenceEl, h('span', { class: 'dict-blank' }, optEls));
+      U.append(sentenceEl, ' ');
+    });
+
+    D.el.blankAnswerKey = blankByIdx;
+
+    var submitBtn = h('button', { class: 'btn btn--primary', text: '答え合わせ' });
+    submitBtn.addEventListener('click', function () { submitBlank(line, blankByIdx); });
+    return h('div', { style: { display: 'flex', flexDirection: 'column', gap: '.6rem' } }, [sentenceEl, submitBtn]);
+  }
+
+  function submitBlank(line, blankByIdx) {
+    if (!D || D.closing || D.result) return;
+    var keys = Object.keys(blankByIdx);
+    var allPicked = keys.every(function (i) { return D.blankPicks[i] != null; });
+    if (!allPicked) { ui().toast('すべての空欄を選んでください'); return; }
+    var allCorrect = keys.every(function (i) { return D.blankPicks[i] === blankByIdx[i]; });
+    finishItem(line, allCorrect, null);
+  }
+
+  function finishItem(line, passed, diffResult) {
+    D.total++;
+    if (passed) D.correct++;
+    if (D.replays > 0 && D.replays <= 3) D.within3++;
+    D.result = { passed: passed };
+    if (D.el.count) D.el.count.textContent = (D.idx + 1) + ' / ' + D.queue.length + '（3回以内 ' + D.within3 + ' / ' + D.total + '）';
+    EST.stage.recordWritingResult(D.topic.id, line.id, 'dictation', passed, { replays: D.replays });
+    renderResult(line, passed, diffResult);
+  }
+
+  function renderResult(line, passed, diffResult) {
+    var U = ui();
+    var parts = [];
+    parts.push(h('div', { class: 'write-score ' + (passed ? 'write-score--pass' : 'write-score--fail'),
+      text: passed ? '正解' : '不正解' }));
+
+    if (diffResult) {
+      parts.push(h('div', { class: 'write-target' }, U.diffSpans(diffResult.targetWordDiff)));
+      if (diffResult.caseIssues && diffResult.caseIssues.length) {
+        parts.push(h('div', { class: 'write-tags' }, [
+          h('span', { class: 'write-tag write-tag--warn', text: '大文字小文字の違いあり' })
+        ]));
+      }
+    } else {
+      parts.push(h('div', { class: 'write-target', text: line.en }));
+    }
+
+    var playBtn = h('button', { class: 'btn btn--sm', text: '🔊 もう一度聞く' });
+    playBtn.addEventListener('click', function () { play(line, D.settings.ttsRate); });
+
+    var nextBtn = h('button', { class: 'btn btn--primary', text: D.idx + 1 < D.queue.length ? '次へ' : '終える' });
+    nextBtn.addEventListener('click', function () { D.idx++; runItem(); });
+
+    parts.push(h('div', { style: { display: 'flex', gap: '.5rem' } }, [playBtn]));
+    parts.push(nextBtn);
+
+    U.mount(D.el.resultHost, h('div', { class: 'write-result' }, parts));
+  }
+
+  function finishDrill() {
+    var U = ui();
+    EST.app.setBar('ディクテーション', []);
+    U.mount(D.view, h('div', { class: 'empty' }, [
+      h('div', { text: '終わりました（' + D.correct + ' / ' + D.total + '、3回以内 ' + D.within3 + ' / ' + D.total + '）' }),
+      h('button', { class: 'btn btn--primary', style: { marginTop: '.8rem' }, text: 'トピックに戻る',
+        onClick: function () { location.hash = '#/topic/' + encodeURIComponent(D.topic.id); } })
+    ]));
+  }
+
+  EST.uiDictation = { renderDictation: renderDictation, stopSession: stopSession };
+})(window.EST = window.EST || {});
+
+</script>
+<script>
 /* ---- 99-main.js ---- */
 /* =====================================================================
    99-main.js — 起動とハッシュルーティング
@@ -8351,6 +9499,8 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
     if (parts[0] === 'vocab-prep') return { name: 'vocab-prep', id: decodeURIComponent(parts[1] || '') };
     if (parts[0] === 'vocab-review') return { name: 'vocab-review' };
     if (parts[0] === 'review') return { name: 'review' };
+    if (parts[0] === 'write') return { name: 'write', id: decodeURIComponent(parts[1] || '') };
+    if (parts[0] === 'dictate') return { name: 'dictate', id: decodeURIComponent(parts[1] || '') };
     return { name: 'home' };
   }
 
@@ -8368,6 +9518,9 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
     try { EST.uiVocab.stopSession(); } catch (e) {}
     // §1.8 積み上げドリルも同じくタイマーで自走する（18-ui-buildup.js）。
     try { EST.uiBuildup.stopSession(); } catch (e) {}
+    // §9 書くレーンはタイマーでは自走しないが、TTSを止め忘れないよう揃える。
+    try { EST.uiWrite.stopSession(); } catch (e) {}
+    try { EST.uiDictation.stopSession(); } catch (e) {}
     try { EST.speech.cancel(); } catch (e) {}
     // マイクも画面をまたいで開いたままにしない。stop()は聞いていなければ何もしない。
     try { EST.mic.stop(); } catch (e) {}
@@ -8385,6 +9538,8 @@ window.EST.SAMPLES = [{"id":"tpc_sample_checkin","title":"空港のチェック�
       else if (r.name === 'vocab-prep') EST.uiVocab.renderVocabPrep(viewEl, r.id);
       else if (r.name === 'vocab-review') EST.uiVocab.renderVocabReview(viewEl);
       else if (r.name === 'review') EST.uiVocab.renderReview(viewEl);
+      else if (r.name === 'write') EST.uiWrite.renderWrite(viewEl, r.id);
+      else if (r.name === 'dictate') EST.uiDictation.renderDictation(viewEl, r.id);
     } catch (e) {
       console.error('[route]', e);
       EST.ui.mount(viewEl, EST.ui.h('div', { class: 'note-box note-box--err',

@@ -660,6 +660,11 @@
       lastOpenedAt: null,
       mastered: false,
       masteredAt: null,
+      // §9 F9: 書くレーンの実績。音読レーンとは別に正答率だけを持つ（§9.4）。
+      // counts.total には書くレーンの回も加算されるが、byStage・latencyは
+      // 音読レーン専用のまま触らない（文と語で判定コードを混ぜないのと同じ理由）。
+      writing: { essayAttempts: 0, essayCorrect: 0, dictationAttempts: 0, dictationCorrect: 0, dictationReplayHistory: [] },
+      needsAudioReview: false,   // §9.4 書くレーンで落としたら次の音読で優先出題
       updatedAt: 0
     };
   }

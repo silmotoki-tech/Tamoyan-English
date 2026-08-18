@@ -26,6 +26,7 @@
         speechCard(s),
         micCard(s),
         listModeCard(s),
+        writeStrictnessCard(s),
         stalledChunksCard(s),
         EST.profile.canEdit() ? publishCard() : null,
         backupCard(),
@@ -416,6 +417,33 @@
         h('div', { class: 'setting-row__label' }, [
           '開いた行を復習に回す',
           h('div', { class: 'setting-row__sub', text: '一覧モードでタップして開いた行を「思い出せなかった」として記録します' })
+        ]),
+        row
+      ])
+    ]);
+  }
+
+  /* ---- 書くレーンの合格ライン（§9.3。F9） --------------------------------- */
+  var STRICTNESS_LABEL = { loose: 'ゆるい（70点）', normal: '標準（85点）', strict: '厳しい（完全一致）' };
+  function writeStrictnessCard(s) {
+    var U = ui();
+    var row = h('div', { class: 'row row--tight' });
+    function draw() {
+      U.mount(row, ['loose', 'normal', 'strict'].map(function (level) {
+        return h('button', {
+          class: 'btn btn--sm' + ((s.writeStrictness || 'normal') === level ? ' btn--primary' : ''),
+          text: STRICTNESS_LABEL[level],
+          onClick: function () { s.writeStrictness = level; EST.store.saveSettings(s).then(draw); }
+        });
+      }));
+    }
+    draw();
+    return h('div', { class: 'card' }, [
+      h('h2', { class: 'card__title', text: '和文英訳・ディクテーションの合格ライン' }),
+      h('div', { class: 'setting-row' }, [
+        h('div', { class: 'setting-row__label' }, [
+          '差分採点の厳しさ',
+          h('div', { class: 'setting-row__sub', text: '標準は冠詞・単複・時制・前置詞だけの違いなら合格（警告表示）にします' })
         ]),
         row
       ])

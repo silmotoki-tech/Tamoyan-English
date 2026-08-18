@@ -33,6 +33,20 @@
     return el;
   }
 
+  // §9.3 差分採点の結果（[{word, kind}]）を色分けした span 列に変換する。
+  // 和文英訳・ディクテーションの結果画面で共用する。
+  var CLOSE_KINDS = { article: 1, plural: 1, tense: 1, preposition: 1, wordorder: 1 };
+  function diffSpans(list) {
+    return (list || []).map(function (d, i) {
+      var cls = 'diff-word';
+      if (d.kind === 'missing') cls += ' diff-word--missing';
+      else if (d.kind === 'extra') cls += ' diff-word--extra';
+      else if (CLOSE_KINDS[d.kind]) cls += ' diff-word--close';
+      var sp = h('span', { class: cls, text: d.word + (i < list.length - 1 ? ' ' : '') });
+      return sp;
+    });
+  }
+
   function clear(node) { while (node && node.firstChild) node.removeChild(node.firstChild); }
 
   function mount(node, children) { clear(node); append(node, children); return node; }
@@ -170,6 +184,7 @@
     clear: clear,
     mount: mount,
     append: append,
+    diffSpans: diffSpans,
     toast: toast,
     dialog: dialog,
     confirm: confirm,

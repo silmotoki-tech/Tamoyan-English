@@ -233,6 +233,18 @@ label.field > .field__label { display: block; font-size: .72rem; color: var(--mu
 .topic-card__title { font-weight: 700; font-size: .92rem; }
 .topic-card__meta { font-size: .74rem; color: var(--muted); margin-top: .15rem; }
 
+/* トピックのフォルダ表示（タグでまとめる。同じタグが複数トピックにあるとき） */
+.topic-folder { margin-bottom: .45rem; }
+.topic-folder__head { display: flex; align-items: center; gap: .4rem; width: 100%;
+  text-align: left; cursor: pointer; font: inherit; color: var(--ink);
+  background: var(--panel2); border: 1px solid var(--line); border-radius: .6rem;
+  padding: .6rem .8rem; }
+.topic-folder__head:hover { background: var(--chip); }
+.topic-folder__chevron { color: var(--muted); font-size: .75rem; }
+.topic-folder__title { font-weight: 700; font-size: .88rem; }
+.topic-folder__count { color: var(--muted); font-size: .78rem; }
+.topic-folder__body { padding: .5rem 0 0 .9rem; }
+
 .empty { text-align: center; color: var(--muted); font-size: .85rem; padding: 1.6rem .5rem; }
 
 /* ---- トピック詳細 --------------------------------------------------- */
@@ -371,3 +383,36 @@ label.field > .field__label { display: block; font-size: .72rem; color: var(--mu
 /* 進捗画面のレイテンシ推移グラフ（§1.9。F8。SVGを直接組み立てる） */
 .latency-graph { color: var(--accent); line-height: 0; }
 .latency-svg { display: block; }
+
+/* ---- 書くレーン（§9。F9） -------------------------------------------
+   和文英訳ドリル・ディクテーションドリルで共用する。 */
+.write-screen { display: flex; flex-direction: column; gap: .7rem; min-height: 60vh; }
+.write-count { font-size: .78rem; color: var(--muted); text-align: right; }
+.write-ja { font-size: 1.15rem; line-height: 1.5; font-family: var(--font-ja); }
+.write-input { width: 100%; min-height: 3.2rem; font-size: 1rem; font-family: var(--font-en);
+  padding: .6rem; border: 1px solid var(--line); border-radius: .5rem; background: var(--panel);
+  color: var(--ink); resize: vertical; }
+.write-hints { display: flex; flex-wrap: wrap; gap: .4rem; }
+.write-chunk { font-size: .82rem; padding: .3rem .55rem; border-radius: .4rem;
+  background: var(--panel2); border: 1px solid var(--line); font-family: var(--font-en); }
+.write-result { border-top: 1px solid var(--line); padding-top: .6rem; display: flex; flex-direction: column; gap: .5rem; }
+.write-score { font-size: .95rem; font-weight: 700; }
+.write-score--pass { color: var(--accent); }
+.write-score--warn { color: var(--warn-ink); }
+.write-score--fail { color: var(--danger); }
+.write-target { font-size: 1.05rem; line-height: 1.6; font-family: var(--font-en); }
+.write-tags { display: flex; flex-wrap: wrap; gap: .3rem; }
+.write-tag { font-size: .68rem; padding: .12rem .5rem; border-radius: 1rem; background: var(--chip); color: var(--muted); }
+.write-tag--warn { background: var(--warn-bg); color: var(--warn-ink); }
+
+.diff-word { padding: 0 .05rem; }
+.diff-word--missing { color: var(--danger); text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--danger) 55%, transparent); }
+.diff-word--extra { color: var(--muted); text-decoration: line-through; }
+.diff-word--close { color: var(--warn-ink); background: var(--warn-bg); border-radius: .2rem; }
+
+.dict-blank { display: inline-flex; flex-wrap: wrap; gap: .3rem; margin: 0 .15rem; vertical-align: middle; }
+.dict-blank__opt { font-size: .82rem; padding: .25rem .55rem; border-radius: .4rem;
+  border: 1px solid var(--line); background: var(--panel); font-family: var(--font-en); }
+.dict-blank__opt.is-selected { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.dict-mode-toggle { display: flex; gap: .4rem; }
